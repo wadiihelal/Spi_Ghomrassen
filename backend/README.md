@@ -66,10 +66,25 @@ Au premier démarrage, Flyway applique `V1__baseline.sql` et crée les 11 tables
 | `DATABASE_URL` | prod | obligatoire |
 | `APP_CORS_ALLOWED_ORIGINS` | prod | obligatoire |
 
-## Données de démonstration
+## Données de démonstration — profil `demo`
 
-Les données fictives ne sont plus chargées automatiquement. Voir la section « Profil demo »
-plus bas.
+Les données fictives ne sont plus chargées automatiquement.
+
+`ReferenceDataInitializer` tourne dans tous les profils et ne crée que les données de
+référence manquantes : catégories de dépense et types de fournisseur. Sur une base vide, un
+démarrage en `dev` crée donc 6 catégories et 5 types, et rien d'autre : zéro projet, zéro
+client, zéro appartement.
+
+`DemoDataInitializer` est annoté `@Profile("demo")` et porte tout le reste : 5 « Résidence
+Démo », 120 appartements, ~120 clients synthétiques en `@demo-spi.tn`, leurs achats et leurs
+acomptes. Il journalise un avertissement au démarrage.
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=dev,demo
+```
+
+**Ne jamais activer le profil `demo` en production** : il injecte des acquéreurs fictifs dans
+la comptabilité réelle.
 
 ## Console H2
 

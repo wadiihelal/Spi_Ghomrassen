@@ -4,7 +4,6 @@ import com.promoteur.app.dto.ApartmentRequest;
 import com.promoteur.app.dto.ClientAdvanceRequest;
 import com.promoteur.app.dto.ClientPurchaseRequest;
 import com.promoteur.app.dto.ExpenseRequest;
-import com.promoteur.app.dto.SupplierTypeOptionRequest;
 import com.promoteur.app.entity.Apartment;
 import com.promoteur.app.entity.Client;
 import com.promoteur.app.entity.ExpenseCategory;
@@ -25,9 +24,12 @@ import com.promoteur.app.service.ApartmentService;
 import com.promoteur.app.service.ClientAdvanceService;
 import com.promoteur.app.service.ClientPurchaseService;
 import com.promoteur.app.service.ExpenseService;
-import com.promoteur.app.service.SupplierTypeOptionService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,13 +43,19 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Application start-up seed: ensures reference data (expense categories, supplier types),
- * optionally loads full demo business data when the database is empty, and always ensures
- * SPI demo residences (projects, apartments, clients, purchases, advances) for presentations.
+ * Fictitious business data for demonstrations: projects, suppliers, clients, apartments,
+ * purchases, advances and expenses, plus the five SPI demo residences.
+ *
+ * <p>Active only under the {@code demo} profile. Never enable it against a production
+ * database: it injects synthetic buyers into live accounting.</p>
  */
 @Component
+@Profile("demo")
+@Order(2)
 @RequiredArgsConstructor
-public class DataInitializer implements CommandLineRunner {
+public class DemoDataInitializer implements CommandLineRunner {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DemoDataInitializer.class);
 
     /** Number of floors generated for each SPI demo residence. */
     private static final int DEMO_RESIDENCE_FLOORS = 6;
@@ -82,7 +90,6 @@ public class DataInitializer implements CommandLineRunner {
     private final ClientAdvanceService clientAdvanceService;
     private final ClientPurchaseService clientPurchaseService;
     private final SupplierTypeOptionRepository supplierTypeOptionRepository;
-    private final SupplierTypeOptionService supplierTypeOptionService;
 
     /**
      * Runs after the application context is loaded. Idempotent: skips heavy seeding when core
@@ -93,8 +100,7 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        ensureCategories();
-        ensureSupplierTypes();
+        LOGGER.warn("Profil demo actif — chargement de données fictives. Ne jamais activer en production.");
 
         if (shouldSkipBusinessSeed()) {
             ensureDemoResidenceData();
@@ -371,39 +377,6 @@ public class DataInitializer implements CommandLineRunner {
         };
     }
 
-    /** Seeds default expense categories when the table is empty. */
-    private void ensureCategories() {
-        if (expenseCategoryRepository.count() == 0) {
-            expenseCategoryRepository.saveAll(List.of(
-                    buildCategory("Frais Baladiya"),
-                    buildCategory("Frais Ingénieurs"),
-                    buildCategory("Frais Fournisseurs"),
-                    buildCategory("Frais Administratifs"),
-                    buildCategory("Frais Notaire"),
-                    buildCategory("Autres")
-            ));
-        }
-    }
-
-    /** Seeds supplier type options when none exist. */
-    private void ensureSupplierTypes() {
-        if (supplierTypeOptionRepository.count() == 0) {
-            saveSupplierType("Fournisseur");
-            saveSupplierType("Ingénieur");
-            saveSupplierType("Architecte");
-            saveSupplierType("Entrepreneur");
-            saveSupplierType("Autre");
-        }
-    }
-
-    /** Persists one supplier type option with the given label. */
-    private void saveSupplierType(String label) {
-        SupplierTypeOptionRequest request = new SupplierTypeOptionRequest();
-        request.setLabel(label);
-        request.setActive(true);
-        supplierTypeOptionService.create(request);
-    }
-
     /** Creates the fixed demo supplier set and returns them keyed by legal name. */
     private Map<String, Supplier> seedSuppliers(Map<String, SupplierTypeOption> supplierTypes) {
         Supplier materials = buildSupplier("Comptoir des Matériaux du Sud", "MF-1289456/A/M/000", "75200110", "contact@cmsud.tn", "Zone industrielle, Médenine", supplierTypes.get("Fournisseur"));
@@ -608,13 +581,6 @@ public class DataInitializer implements CommandLineRunner {
         request.setProjectId(projectId);
         request.setApartmentId(findApartmentIdForSeed(clientId, projectId));
         clientPurchaseService.create(request);
-    }
-
-    /** Builds a bare {@link ExpenseCategory} for initial {@link #ensureCategories()} inserts. */
-    private ExpenseCategory buildCategory(String name) {
-        ExpenseCategory category = new ExpenseCategory();
-        category.setName(name);
-        return category;
     }
 
     /** Static definition of one SPI demo residence (code, marketing data, budget, dates). */
