@@ -25,4 +25,11 @@ public class AuditLog extends BaseEntity {
 
     @Column(nullable = false, length = 1000)
     private String summary;
+
+    /**
+     * Who performed the action. {@code system} for start-up and scheduled work, and for every
+     * action taken through the console while the application has no authentication (SEC-01).
+     */
+    @Column(nullable = false)
+    private String actor;
 }

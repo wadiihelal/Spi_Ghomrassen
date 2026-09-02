@@ -6,6 +6,7 @@ import com.promoteur.app.exception.ResourceNotFoundException;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.ExpenseCategoryService;
+import com.promoteur.app.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +20,7 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
 
     private final ExpenseCategoryRepository expenseCategoryRepository;
     private final AuditLogService auditLogService;
+    private final MessageService messageService;
 
     @Override
     public Page<ExpenseCategory> findAll(final Pageable pageable) {
@@ -36,7 +38,8 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
         final ExpenseCategory category = new ExpenseCategory();
         this.map(category, request);
         final ExpenseCategory saved = this.expenseCategoryRepository.save(category);
-        this.auditLogService.create("EXPENSE_CATEGORY", saved.getId(), "CREATE", "Categorie de depense " + saved.getName() + " creee.");
+        this.auditLogService.create("EXPENSE_CATEGORY", saved.getId(), "CREATE",
+                this.messageService.get("audit.expenseCategory.created", saved.getName()));
         return saved;
     }
 
@@ -45,15 +48,18 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
         final ExpenseCategory category = this.findById(id);
         this.map(category, request);
         final ExpenseCategory saved = this.expenseCategoryRepository.save(category);
-        this.auditLogService.create("EXPENSE_CATEGORY", saved.getId(), "UPDATE", "Categorie de depense " + saved.getName() + " modifiee.");
+        this.auditLogService.create("EXPENSE_CATEGORY", saved.getId(), "UPDATE",
+                this.messageService.get("audit.expenseCategory.updated", saved.getName()));
         return saved;
     }
 
     @Override
     public void delete(final Long id) {
         final ExpenseCategory category = this.findById(id);
+        final String name = category.getName();
         this.expenseCategoryRepository.delete(category);
-        this.auditLogService.create("EXPENSE_CATEGORY", id, "DELETE", "Categorie de depense " + category.getName() + " supprimee.");
+        this.auditLogService.create("EXPENSE_CATEGORY", id, "DELETE",
+                this.messageService.get("audit.expenseCategory.deleted", name));
     }
 
     private void map(final ExpenseCategory category, final ExpenseCategoryRequest request) {

@@ -10,6 +10,7 @@ import com.promoteur.app.repository.ClientRepository;
 import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.service.ApartmentService;
 import com.promoteur.app.service.AuditLogService;
+import com.promoteur.app.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +26,7 @@ public class ApartmentServiceImpl implements ApartmentService {
     private final ProjectRepository projectRepository;
     private final ClientRepository clientRepository;
     private final AuditLogService auditLogService;
+    private final MessageService messageService;
 
     @Override
     public Page<Apartment> findAll(final Pageable pageable) {
@@ -42,7 +44,8 @@ public class ApartmentServiceImpl implements ApartmentService {
         final Apartment apartment = new Apartment();
         this.map(apartment, request);
         final Apartment saved = this.apartmentRepository.save(apartment);
-        this.auditLogService.create("APARTMENT", saved.getId(), "CREATE", "Appartement " + saved.getApartmentNumber() + " cree.");
+        this.auditLogService.create("APARTMENT", saved.getId(), "CREATE",
+                this.messageService.get("audit.apartment.created", saved.getApartmentNumber()));
         return saved;
     }
 
@@ -51,15 +54,18 @@ public class ApartmentServiceImpl implements ApartmentService {
         final Apartment apartment = this.findById(id);
         this.map(apartment, request);
         final Apartment saved = this.apartmentRepository.save(apartment);
-        this.auditLogService.create("APARTMENT", saved.getId(), "UPDATE", "Appartement " + saved.getApartmentNumber() + " modifie.");
+        this.auditLogService.create("APARTMENT", saved.getId(), "UPDATE",
+                this.messageService.get("audit.apartment.updated", saved.getApartmentNumber()));
         return saved;
     }
 
     @Override
     public void delete(final Long id) {
         final Apartment apartment = this.findById(id);
+        final String apartmentNumber = apartment.getApartmentNumber();
         this.apartmentRepository.delete(apartment);
-        this.auditLogService.create("APARTMENT", id, "DELETE", "Appartement " + apartment.getApartmentNumber() + " supprime.");
+        this.auditLogService.create("APARTMENT", id, "DELETE",
+                this.messageService.get("audit.apartment.deleted", apartmentNumber));
     }
 
     @Override

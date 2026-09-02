@@ -7,6 +7,7 @@ import com.promoteur.app.exception.ResourceNotFoundException;
 import com.promoteur.app.repository.SupplierRepository;
 import com.promoteur.app.repository.SupplierTypeOptionRepository;
 import com.promoteur.app.service.AuditLogService;
+import com.promoteur.app.service.MessageService;
 import com.promoteur.app.service.SupplierService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,6 +23,7 @@ public class SupplierServiceImpl implements SupplierService {
     private final SupplierRepository supplierRepository;
     private final SupplierTypeOptionRepository supplierTypeOptionRepository;
     private final AuditLogService auditLogService;
+    private final MessageService messageService;
 
     @Override
     public Page<Supplier> findAll(final Pageable pageable) {
@@ -39,7 +41,8 @@ public class SupplierServiceImpl implements SupplierService {
         final Supplier supplier = new Supplier();
         this.map(supplier, request);
         final Supplier saved = this.supplierRepository.save(supplier);
-        this.auditLogService.create("SUPPLIER", saved.getId(), "CREATE", "Fournisseur " + saved.getName() + " cree.");
+        this.auditLogService.create("SUPPLIER", saved.getId(), "CREATE",
+                this.messageService.get("audit.supplier.created", saved.getName()));
         return saved;
     }
 
@@ -48,15 +51,18 @@ public class SupplierServiceImpl implements SupplierService {
         final Supplier supplier = this.findById(id);
         this.map(supplier, request);
         final Supplier saved = this.supplierRepository.save(supplier);
-        this.auditLogService.create("SUPPLIER", saved.getId(), "UPDATE", "Fournisseur " + saved.getName() + " modifie.");
+        this.auditLogService.create("SUPPLIER", saved.getId(), "UPDATE",
+                this.messageService.get("audit.supplier.updated", saved.getName()));
         return saved;
     }
 
     @Override
     public void delete(final Long id) {
         final Supplier supplier = this.findById(id);
+        final String name = supplier.getName();
         this.supplierRepository.delete(supplier);
-        this.auditLogService.create("SUPPLIER", id, "DELETE", "Fournisseur " + supplier.getName() + " supprime.");
+        this.auditLogService.create("SUPPLIER", id, "DELETE",
+                this.messageService.get("audit.supplier.deleted", name));
     }
 
     private void map(final Supplier supplier, final SupplierRequest request) {

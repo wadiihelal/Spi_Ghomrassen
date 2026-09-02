@@ -5,6 +5,7 @@ import com.promoteur.app.entity.Project;
 import com.promoteur.app.exception.ResourceNotFoundException;
 import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.service.AuditLogService;
+import com.promoteur.app.service.MessageService;
 import com.promoteur.app.service.ProjectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectRepository projectRepository;
     private final AuditLogService auditLogService;
+    private final MessageService messageService;
 
     @Override
     public Page<Project> findAll(final Pageable pageable) {
@@ -39,7 +41,8 @@ public class ProjectServiceImpl implements ProjectService {
             project.setActiveContext(true);
         }
         final Project saved = this.projectRepository.save(project);
-        this.auditLogService.create("PROJECT", saved.getId(), "CREATE", "Projet " + saved.getName() + " cree.");
+        this.auditLogService.create("PROJECT", saved.getId(), "CREATE",
+                this.messageService.get("audit.project.created", saved.getName()));
         return saved;
     }
 
@@ -48,13 +51,15 @@ public class ProjectServiceImpl implements ProjectService {
         final Project project = this.findById(id);
         this.map(project, request);
         final Project saved = this.projectRepository.save(project);
-        this.auditLogService.create("PROJECT", saved.getId(), "UPDATE", "Projet " + saved.getName() + " modifie.");
+        this.auditLogService.create("PROJECT", saved.getId(), "UPDATE",
+                this.messageService.get("audit.project.updated", saved.getName()));
         return saved;
     }
 
     @Override
     public void delete(final Long id) {
         final Project project = this.findById(id);
+        final String name = project.getName();
         final boolean wasActive = Boolean.TRUE.equals(project.getActiveContext());
         this.projectRepository.delete(project);
         if (wasActive) {
@@ -63,7 +68,8 @@ public class ProjectServiceImpl implements ProjectService {
                 this.projectRepository.save(next);
             });
         }
-        this.auditLogService.create("PROJECT", id, "DELETE", "Projet " + project.getName() + " supprime.");
+        this.auditLogService.create("PROJECT", id, "DELETE",
+                this.messageService.get("audit.project.deleted", name));
     }
 
     @Override
@@ -82,7 +88,8 @@ public class ProjectServiceImpl implements ProjectService {
                 this.projectRepository.save(project);
             }
         });
-        this.auditLogService.create("PROJECT_CONTEXT", selected.getId(), "UPDATE", "Projet actif defini sur " + selected.getName() + ".");
+        this.auditLogService.create("PROJECT_CONTEXT", selected.getId(), "UPDATE",
+                this.messageService.get("audit.projectContext.set", selected.getName()));
         return this.findById(id);
     }
 
@@ -94,7 +101,8 @@ public class ProjectServiceImpl implements ProjectService {
                 this.projectRepository.save(project);
             }
         });
-        this.auditLogService.create("PROJECT_CONTEXT", 0L, "CLEAR", "Projet actif reinitialise.");
+        this.auditLogService.create("PROJECT_CONTEXT", 0L, "CLEAR",
+                this.messageService.get("audit.projectContext.cleared"));
     }
 
     private void map(final Project project, final ProjectRequest request) {

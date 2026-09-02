@@ -5,6 +5,7 @@ import com.promoteur.app.entity.SupplierTypeOption;
 import com.promoteur.app.exception.ResourceNotFoundException;
 import com.promoteur.app.repository.SupplierTypeOptionRepository;
 import com.promoteur.app.service.AuditLogService;
+import com.promoteur.app.service.MessageService;
 import com.promoteur.app.service.SupplierTypeOptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ public class SupplierTypeOptionServiceImpl implements SupplierTypeOptionService 
 
     private final SupplierTypeOptionRepository supplierTypeOptionRepository;
     private final AuditLogService auditLogService;
+    private final MessageService messageService;
 
     @Override
     public Page<SupplierTypeOption> findAll(final Pageable pageable) {
@@ -36,7 +38,8 @@ public class SupplierTypeOptionServiceImpl implements SupplierTypeOptionService 
         final SupplierTypeOption type = new SupplierTypeOption();
         this.map(type, request);
         final SupplierTypeOption saved = this.supplierTypeOptionRepository.save(type);
-        this.auditLogService.create("SUPPLIER_TYPE", saved.getId(), "CREATE", "Type fournisseur " + saved.getLabel() + " cree.");
+        this.auditLogService.create("SUPPLIER_TYPE", saved.getId(), "CREATE",
+                this.messageService.get("audit.supplierType.created", saved.getLabel()));
         return saved;
     }
 
@@ -45,15 +48,18 @@ public class SupplierTypeOptionServiceImpl implements SupplierTypeOptionService 
         final SupplierTypeOption type = this.findById(id);
         this.map(type, request);
         final SupplierTypeOption saved = this.supplierTypeOptionRepository.save(type);
-        this.auditLogService.create("SUPPLIER_TYPE", saved.getId(), "UPDATE", "Type fournisseur " + saved.getLabel() + " modifie.");
+        this.auditLogService.create("SUPPLIER_TYPE", saved.getId(), "UPDATE",
+                this.messageService.get("audit.supplierType.updated", saved.getLabel()));
         return saved;
     }
 
     @Override
     public void delete(final Long id) {
         final SupplierTypeOption type = this.findById(id);
+        final String label = type.getLabel();
         this.supplierTypeOptionRepository.delete(type);
-        this.auditLogService.create("SUPPLIER_TYPE", id, "DELETE", "Type fournisseur " + type.getLabel() + " supprime.");
+        this.auditLogService.create("SUPPLIER_TYPE", id, "DELETE",
+                this.messageService.get("audit.supplierType.deleted", label));
     }
 
     private void map(final SupplierTypeOption type, final SupplierTypeOptionRequest request) {

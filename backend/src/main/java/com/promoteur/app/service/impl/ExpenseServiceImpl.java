@@ -12,6 +12,7 @@ import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.repository.SupplierRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.ExpenseService;
+import com.promoteur.app.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +33,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final ProjectRepository projectRepository;
     private final SupplierRepository supplierRepository;
     private final AuditLogService auditLogService;
+    private final MessageService messageService;
 
     @Override
     public Page<Expense> findAll(final Pageable pageable) {
@@ -52,7 +54,8 @@ public class ExpenseServiceImpl implements ExpenseService {
         Expense saved = this.expenseRepository.save(expense);
         saved = this.finalizeGeneratedReference(saved, request.getReference());
 
-        this.auditLogService.create("EXPENSE", saved.getId(), "CREATE", "Depense " + saved.getDescription() + " enregistree.");
+        this.auditLogService.create("EXPENSE", saved.getId(), "CREATE",
+                this.messageService.get("audit.expense.created", saved.getDescription()));
         return saved;
     }
 
@@ -61,15 +64,18 @@ public class ExpenseServiceImpl implements ExpenseService {
         final Expense expense = this.findById(id);
         this.map(expense, request);
         final Expense saved = this.expenseRepository.save(expense);
-        this.auditLogService.create("EXPENSE", saved.getId(), "UPDATE", "Depense " + saved.getDescription() + " modifiee.");
+        this.auditLogService.create("EXPENSE", saved.getId(), "UPDATE",
+                this.messageService.get("audit.expense.updated", saved.getDescription()));
         return saved;
     }
 
     @Override
     public void delete(final Long id) {
         final Expense expense = this.findById(id);
+        final String description = expense.getDescription();
         this.expenseRepository.delete(expense);
-        this.auditLogService.create("EXPENSE", id, "DELETE", "Depense " + expense.getDescription() + " supprimee.");
+        this.auditLogService.create("EXPENSE", id, "DELETE",
+                this.messageService.get("audit.expense.deleted", description));
     }
 
     @Override

@@ -15,6 +15,7 @@ import com.promoteur.app.repository.ClientRepository;
 import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.ClientPurchaseService;
+import com.promoteur.app.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +37,7 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
     private final ProjectRepository projectRepository;
     private final ApartmentRepository apartmentRepository;
     private final AuditLogService auditLogService;
+    private final MessageService messageService;
 
     @Override
     public Page<ClientPurchase> findAll(final Pageable pageable) {
@@ -55,7 +57,8 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
         this.map(purchase, request);
         final ClientPurchase saved = this.clientPurchaseRepository.save(purchase);
         final ClientPurchase enrichedPurchase = this.enrichPurchase(saved);
-        this.auditLogService.create("PURCHASE", saved.getId(), "CREATE", "Achat client " + saved.getReference() + " enregistre pour l'appartement " + saved.getApartment().getApartmentNumber() + ".");
+        this.auditLogService.create("PURCHASE", saved.getId(), "CREATE",
+                this.messageService.get("audit.purchase.created", saved.getReference(), saved.getApartment().getApartmentNumber()));
         return enrichedPurchase;
     }
 
@@ -65,15 +68,18 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
         this.map(purchase, request);
         final ClientPurchase saved = this.clientPurchaseRepository.save(purchase);
         final ClientPurchase enrichedPurchase = this.enrichPurchase(saved);
-        this.auditLogService.create("PURCHASE", saved.getId(), "UPDATE", "Achat client " + saved.getReference() + " modifie pour l'appartement " + saved.getApartment().getApartmentNumber() + ".");
+        this.auditLogService.create("PURCHASE", saved.getId(), "UPDATE",
+                this.messageService.get("audit.purchase.updated", saved.getReference(), saved.getApartment().getApartmentNumber()));
         return enrichedPurchase;
     }
 
     @Override
     public void delete(final Long id) {
         final ClientPurchase purchase = this.findById(id);
+        final String reference = purchase.getReference();
         this.clientPurchaseRepository.delete(purchase);
-        this.auditLogService.create("PURCHASE", id, "DELETE", "Achat client " + purchase.getReference() + " supprime.");
+        this.auditLogService.create("PURCHASE", id, "DELETE",
+                this.messageService.get("audit.purchase.deleted", reference));
     }
 
     @Override

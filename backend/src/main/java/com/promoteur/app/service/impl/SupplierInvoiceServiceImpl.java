@@ -9,6 +9,7 @@ import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.repository.SupplierInvoiceRepository;
 import com.promoteur.app.repository.SupplierRepository;
 import com.promoteur.app.service.AuditLogService;
+import com.promoteur.app.service.MessageService;
 import com.promoteur.app.service.SupplierInvoiceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,6 +28,7 @@ public class SupplierInvoiceServiceImpl implements SupplierInvoiceService {
     private final SupplierRepository supplierRepository;
     private final ProjectRepository projectRepository;
     private final AuditLogService auditLogService;
+    private final MessageService messageService;
 
     @Override
     public Page<SupplierInvoice> findAll(final Pageable pageable) {
@@ -44,7 +46,8 @@ public class SupplierInvoiceServiceImpl implements SupplierInvoiceService {
         final SupplierInvoice invoice = new SupplierInvoice();
         this.map(invoice, request);
         final SupplierInvoice saved = this.supplierInvoiceRepository.save(invoice);
-        this.auditLogService.create("SUPPLIER_INVOICE", saved.getId(), "CREATE", "Facture fournisseur " + saved.getInvoiceNumber() + " creee.");
+        this.auditLogService.create("SUPPLIER_INVOICE", saved.getId(), "CREATE",
+                this.messageService.get("audit.supplierInvoice.created", saved.getInvoiceNumber()));
         return saved;
     }
 
@@ -53,15 +56,18 @@ public class SupplierInvoiceServiceImpl implements SupplierInvoiceService {
         final SupplierInvoice invoice = this.findById(id);
         this.map(invoice, request);
         final SupplierInvoice saved = this.supplierInvoiceRepository.save(invoice);
-        this.auditLogService.create("SUPPLIER_INVOICE", saved.getId(), "UPDATE", "Facture fournisseur " + saved.getInvoiceNumber() + " modifiee.");
+        this.auditLogService.create("SUPPLIER_INVOICE", saved.getId(), "UPDATE",
+                this.messageService.get("audit.supplierInvoice.updated", saved.getInvoiceNumber()));
         return saved;
     }
 
     @Override
     public void delete(final Long id) {
         final SupplierInvoice invoice = this.findById(id);
+        final String invoiceNumber = invoice.getInvoiceNumber();
         this.supplierInvoiceRepository.delete(invoice);
-        this.auditLogService.create("SUPPLIER_INVOICE", id, "DELETE", "Facture fournisseur " + invoice.getInvoiceNumber() + " supprimee.");
+        this.auditLogService.create("SUPPLIER_INVOICE", id, "DELETE",
+                this.messageService.get("audit.supplierInvoice.deleted", invoiceNumber));
     }
 
     @Override

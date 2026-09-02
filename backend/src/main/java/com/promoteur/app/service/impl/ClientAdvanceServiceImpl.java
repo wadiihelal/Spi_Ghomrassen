@@ -12,6 +12,7 @@ import com.promoteur.app.repository.ClientAdvanceRepository;
 import com.promoteur.app.repository.ClientPurchaseRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.ClientAdvanceService;
+import com.promoteur.app.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +32,7 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
     private final ClientPurchaseRepository clientPurchaseRepository;
     private final ApartmentRepository apartmentRepository;
     private final AuditLogService auditLogService;
+    private final MessageService messageService;
 
     @Override
     public Page<ClientAdvance> findAll(final Pageable pageable) {
@@ -51,7 +53,8 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
         ClientAdvance saved = this.clientAdvanceRepository.save(advance);
         saved = this.finalizeGeneratedReference(saved, request.getReference());
 
-        this.auditLogService.create("ADVANCE", saved.getId(), "CREATE", "Acompte " + saved.getReference() + " enregistre.");
+        this.auditLogService.create("ADVANCE", saved.getId(), "CREATE",
+                this.messageService.get("audit.advance.created", saved.getReference()));
         return saved;
     }
 
@@ -60,15 +63,18 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
         final ClientAdvance advance = this.findById(id);
         this.map(advance, request);
         final ClientAdvance saved = this.clientAdvanceRepository.save(advance);
-        this.auditLogService.create("ADVANCE", saved.getId(), "UPDATE", "Acompte " + saved.getReference() + " modifie.");
+        this.auditLogService.create("ADVANCE", saved.getId(), "UPDATE",
+                this.messageService.get("audit.advance.updated", saved.getReference()));
         return saved;
     }
 
     @Override
     public void delete(final Long id) {
         final ClientAdvance advance = this.findById(id);
+        final String reference = advance.getReference();
         this.clientAdvanceRepository.delete(advance);
-        this.auditLogService.create("ADVANCE", id, "DELETE", "Acompte " + advance.getReference() + " supprime.");
+        this.auditLogService.create("ADVANCE", id, "DELETE",
+                this.messageService.get("audit.advance.deleted", reference));
     }
 
     @Override

@@ -8,6 +8,7 @@ import com.promoteur.app.repository.ClientRepository;
 import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.ClientService;
+import com.promoteur.app.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,7 @@ public class ClientServiceImpl implements ClientService {
     private final ClientRepository clientRepository;
     private final ProjectRepository projectRepository;
     private final AuditLogService auditLogService;
+    private final MessageService messageService;
 
     @Override
     public Page<Client> findAll(final Pageable pageable) {
@@ -39,7 +41,8 @@ public class ClientServiceImpl implements ClientService {
         final Client client = new Client();
         this.map(client, request);
         final Client saved = this.clientRepository.save(client);
-        this.auditLogService.create("CLIENT", saved.getId(), "CREATE", "Client " + saved.getFullName() + " cree.");
+        this.auditLogService.create("CLIENT", saved.getId(), "CREATE",
+                this.messageService.get("audit.client.created", saved.getFullName()));
         return saved;
     }
 
@@ -48,15 +51,18 @@ public class ClientServiceImpl implements ClientService {
         final Client client = this.findById(id);
         this.map(client, request);
         final Client saved = this.clientRepository.save(client);
-        this.auditLogService.create("CLIENT", saved.getId(), "UPDATE", "Client " + saved.getFullName() + " modifie.");
+        this.auditLogService.create("CLIENT", saved.getId(), "UPDATE",
+                this.messageService.get("audit.client.updated", saved.getFullName()));
         return saved;
     }
 
     @Override
     public void delete(final Long id) {
         final Client client = this.findById(id);
+        final String fullName = client.getFullName();
         this.clientRepository.delete(client);
-        this.auditLogService.create("CLIENT", id, "DELETE", "Client " + client.getFullName() + " supprime.");
+        this.auditLogService.create("CLIENT", id, "DELETE",
+                this.messageService.get("audit.client.deleted", fullName));
     }
 
     private void map(final Client client, final ClientRequest request) {
