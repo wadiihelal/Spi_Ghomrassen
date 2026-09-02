@@ -12,7 +12,10 @@ import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { Expense, ExpenseCategory, Project, Supplier } from '../../shared/models/models';
-import { environment } from '../../../environments/environment';
+
+// TODO CALC-01 : taux de TVA figé à 19 % côté navigateur. La Tunisie applique 0 %, 7 %,
+// 13 % et 19 % ; la phase 2.2 déplace le calcul vers le backend et rend le taux saisissable.
+const DEFAULT_VAT_RATE = 0.19;
 
 @Component({
   selector: 'app-expenses',
@@ -34,7 +37,7 @@ export class ExpensesComponent implements OnInit {
   editingId: number | null = null;
   expenseDialogVisible = false;
   categoryDialogVisible = false;
-  readonly vatRate = environment.vatRate;
+  readonly vatRate = DEFAULT_VAT_RATE;
   selectedProjectId: number | null = null;
   filters = {
     search: '',

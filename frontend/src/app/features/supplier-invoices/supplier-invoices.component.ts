@@ -12,7 +12,6 @@ import { Project, Supplier, SupplierInvoice } from '../../shared/models/models';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
-import { environment } from '../../../environments/environment';
 
 interface GeneratedWithholdingRow {
   invoiceDate: string;
@@ -24,6 +23,14 @@ interface GeneratedWithholdingRow {
   withholdingAmount: number;
   netToPay: number;
 }
+
+// TODO CALC-01 : taux de TVA figé à 19 % côté navigateur. La phase 2.2 déplace le calcul
+// vers le backend et rend le taux saisissable.
+const DEFAULT_VAT_RATE = 0.19;
+
+// TODO CALC-02 : la retenue à la source doit être retirée de l'application (décision métier).
+// La phase 2.2 supprime les colonnes, les champs du formulaire et l'export CSV.
+const DEFAULT_WITHHOLDING_RATE = 0.015;
 
 @Component({
   selector: 'app-supplier-invoices',
@@ -44,8 +51,8 @@ export class SupplierInvoicesComponent implements OnInit {
   editingId: number | null = null;
   dialogVisible = false;
   selectedProjectId: number | null = null;
-  readonly vatRate = environment.vatRate;
-  readonly withholdingRate = environment.withholdingRate;
+  readonly vatRate = DEFAULT_VAT_RATE;
+  readonly withholdingRate = DEFAULT_WITHHOLDING_RATE;
   filters = {
     projectId: null as number | null,
     supplierId: null as number | null,

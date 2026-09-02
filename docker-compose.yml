@@ -17,5 +17,34 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build: ./backend
+    container_name: spi-ghomrassen-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DATABASE_URL: jdbc:postgresql://postgres:5432/spi_ghomrassen
+      DB_USER: spi
+      DB_PASSWORD: spi
+      # L'interface est servie par nginx sur le meme hote et appelle /api : aucune origine
+      # externe n'est autorisee par defaut.
+      APP_CORS_ALLOWED_ORIGINS: http://localhost
+    # Pas de "ports:" — le backend n'est joignable que par le service frontend.
+    # L'application n'a pas d'authentification (SEC-01) : ne jamais publier 8080.
+    expose:
+      - "8080"
+
+  frontend:
+    build: ./frontend
+    container_name: spi-ghomrassen-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
 volumes:
   spi-postgres-data:

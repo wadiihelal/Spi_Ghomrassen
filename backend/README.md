@@ -90,6 +90,32 @@ la comptabilité réelle.
 
 Désactivée dans tous les profils (`spring.h2.console.enabled=false`).
 
+## Déploiement
+
+```bash
+docker compose up --build
+```
+
+Trois services : `postgres`, `backend` (image multi-étapes, JRE 17, utilisateur non root) et
+`frontend` (build Node puis nginx). Seul `frontend` publie un port, le 80 ; il sert
+l'application Angular et relaie `/api/` vers le backend. `environment.prod.ts` pointe donc sur
+`/api` et non sur `http://localhost:8080/api`.
+
+### Exposition réseau — à lire avant de publier sur un serveur
+
+L'application **n'a aucune authentification** (constat SEC-01, laissé ouvert par décision
+métier). Tout appelant capable d'atteindre l'API peut lire les CIN, téléphones, adresses et
+montants de contrat de tous les acquéreurs, et peut supprimer n'importe quel enregistrement.
+Sur un serveur public, la protection doit donc venir du réseau :
+
+- ne jamais publier le port 8080 : `docker-compose.yml` place le backend derrière nginx,
+  garder cette configuration ;
+- restreindre le port 80 par pare-feu aux adresses IP du bureau
+  (`ufw allow from <ip> to any port 80`), ou placer le tout derrière un VPN ;
+- à défaut, ajouter une authentification HTTP basique dans nginx
+  (`auth_basic` + `auth_basic_user_file`), ce qui protège l'API sans écran de connexion dans
+  l'application.
+
 ## Endpoints principaux
 ### CRUD de base
 - `/api/clients`
