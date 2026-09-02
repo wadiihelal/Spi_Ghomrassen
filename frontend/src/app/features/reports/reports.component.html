@@ -33,19 +33,22 @@
         </p-table>
     </p-card>
 
-    <p-card header="Exports des rapports" class="full-span">
+    <p-card header="Période et périmètre" class="full-span">
         <div class="table-toolbar report-filters">
             <div class="filters-left">
                 <label>Année</label>
-                <input type="number" [(ngModel)]="selectedYear" min="2000" max="2100" />
+                <input type="number" [(ngModel)]="selectedYear" (ngModelChange)="loadReports()" min="2000" max="2100" />
                 <label>Mois</label>
-                <input type="number" [(ngModel)]="selectedMonth" min="1" max="12" />
+                <input type="number" [(ngModel)]="selectedMonth" (ngModelChange)="loadReports()" min="1" max="12" />
+                <p-checkbox [(ngModel)]="allProjects" (ngModelChange)="loadReports()" [binary]="true" inputId="allProjects"></p-checkbox>
+                <label for="allProjects">Tous les projets</label>
             </div>
             <div class="filters-right">
                 <button pButton type="button" label="Export Excel" [loading]="exportingExcel" (click)="exportExcel()"></button>
                 <button pButton type="button" label="Export PDF" severity="secondary" [loading]="exportingPdf" (click)="exportPdf()"></button>
             </div>
         </div>
+        <p class="report-scope">Chiffres affichés et exportés : {{ scopeLabel }}</p>
     </p-card>
 
     <p-card header="Situation clients" class="full-span">

@@ -12,7 +12,13 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.promoteur.app.dto.report.AmountByLabelDto;
 import com.promoteur.app.dto.report.ClientStatementDto;
+import com.promoteur.app.dto.report.ReportFilter;
+import com.promoteur.app.dto.report.ReportScope;
 import com.promoteur.app.entity.Client;
+import com.promoteur.app.entity.ClientAdvance;
+import com.promoteur.app.entity.ClientPurchase;
+import com.promoteur.app.entity.Expense;
+import com.promoteur.app.entity.Project;
 import com.promoteur.app.exception.ResourceNotFoundException;
 import com.promoteur.app.repository.ClientAdvanceRepository;
 import com.promoteur.app.repository.ClientPurchaseRepository;
@@ -37,8 +43,11 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
+import java.time.format.TextStyle;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -54,12 +63,92 @@ public class ReportServiceImpl implements ReportService {
     private final ClientPurchaseRepository clientPurchaseRepository;
 
     @Override
-    public Page<AmountByLabelDto> expensesByCategory(Pageable pageable) {
-        return toPage(expensesByCategoryList(), pageable);
+    public ReportScope resolveScope(ReportFilter filter) {
+        Long projectId = resolveProjectId(filter);
+        return new ReportScope(
+                projectId,
+                projectLabel(projectId),
+                periodLabel(filter),
+                periodStart(filter),
+                periodEnd(filter));
     }
 
-    private List<AmountByLabelDto> expensesByCategoryList() {
-        return expenseRepository.findAll().stream()
+    /**
+     * @return the project the figures must cover: the explicit one, else the active project
+     *         context, else {@code null} for every project. An explicit {@code projectId=ALL}
+     *         and an unset context both yield {@code null}, but only the first is deliberate.
+     */
+    private Long resolveProjectId(ReportFilter filter) {
+        if (filter.allProjects()) {
+            return null;
+        }
+        if (filter.projectId() != null) {
+            return filter.projectId();
+        }
+        return projectRepository.findFirstByActiveContextTrue().map(Project::getId).orElse(null);
+    }
+
+    private String projectLabel(Long projectId) {
+        if (projectId == null) {
+            return "Tous les projets";
+        }
+        return "Projet : " + projectRepository.findById(projectId)
+                .map(Project::getName)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id " + projectId));
+    }
+
+    private String periodLabel(ReportFilter filter) {
+        if (filter.year() == null) {
+            return "Toutes périodes";
+        }
+        if (filter.month() == null) {
+            return "Année " + filter.year();
+        }
+        String monthName = Month.of(filter.month()).getDisplayName(TextStyle.FULL, Locale.FRENCH);
+        return "Période : " + monthName + " " + filter.year();
+    }
+
+    /** @return the first day covered, or {@code null} when no period was requested */
+    private LocalDate periodStart(ReportFilter filter) {
+        if (filter.year() == null) {
+            return null;
+        }
+        return filter.month() == null
+                ? LocalDate.of(filter.year(), 1, 1)
+                : LocalDate.of(filter.year(), filter.month(), 1);
+    }
+
+    /** @return the last day covered, inclusive, or {@code null} when no period was requested */
+    private LocalDate periodEnd(ReportFilter filter) {
+        if (filter.year() == null) {
+            return null;
+        }
+        if (filter.month() == null) {
+            return LocalDate.of(filter.year(), 12, 31);
+        }
+        LocalDate start = periodStart(filter);
+        return start.withDayOfMonth(start.lengthOfMonth());
+    }
+
+    private List<Expense> scopedExpenses(ReportScope scope) {
+        return expenseRepository.findForReport(scope.projectId(), scope.dateFrom(), scope.dateTo());
+    }
+
+    private List<ClientAdvance> scopedAdvances(ReportScope scope, Long clientId) {
+        return clientAdvanceRepository.findForReport(clientId, scope.projectId(), scope.dateFrom(), scope.dateTo());
+    }
+
+    private List<ClientPurchase> scopedPurchases(ReportScope scope, Long clientId) {
+        return clientPurchaseRepository.findForReport(clientId, scope.projectId(), scope.dateFrom(), scope.dateTo());
+    }
+
+    @Override
+    public Page<AmountByLabelDto> expensesByCategory(ReportFilter filter, Pageable pageable) {
+        return toPage(expensesByCategoryList(resolveScope(filter)), pageable);
+    }
+
+    private List<AmountByLabelDto> expensesByCategoryList(ReportScope scope) {
+        return scopedExpenses(scope).stream()
                 .collect(Collectors.groupingBy(e -> e.getCategory().getName(),
                         Collectors.mapping(e -> safe(e.getAmountTtc()),
                                 Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
@@ -70,12 +159,12 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public Page<AmountByLabelDto> expensesByProject(Pageable pageable) {
-        return toPage(expensesByProjectList(), pageable);
+    public Page<AmountByLabelDto> expensesByProject(ReportFilter filter, Pageable pageable) {
+        return toPage(expensesByProjectList(resolveScope(filter)), pageable);
     }
 
-    private List<AmountByLabelDto> expensesByProjectList() {
-        return expenseRepository.findAll().stream()
+    private List<AmountByLabelDto> expensesByProjectList(ReportScope scope) {
+        return scopedExpenses(scope).stream()
                 .collect(Collectors.groupingBy(e -> e.getProject().getName(),
                         Collectors.mapping(e -> safe(e.getAmountTtc()),
                                 Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
@@ -86,49 +175,68 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public Page<ClientStatementDto> clientStatements(Pageable pageable) {
-        return toPage(clientStatementsList(), pageable);
+    public Page<ClientStatementDto> clientStatements(ReportFilter filter, Pageable pageable) {
+        return toPage(clientStatementsList(resolveScope(filter)), pageable);
     }
 
-    private List<ClientStatementDto> clientStatementsList() {
-        return clientRepository.findAll().stream()
-                .map(client -> buildStatement(client.getId(), client.getFullName()))
+    /**
+     * Statements for the clients in scope. When a project is resolved, only the clients attached
+     * to that project are listed, and their figures cover that project and period only.
+     */
+    private List<ClientStatementDto> clientStatementsList(ReportScope scope) {
+        List<Client> clients = scope.projectId() == null
+                ? clientRepository.findAll()
+                : clientRepository.findByProjectId(scope.projectId());
+        return clients.stream()
+                .map(client -> buildStatement(client.getId(), client.getFullName(), scope))
                 .sorted((a, b) -> safe(b.getRemainingToPay()).compareTo(safe(a.getRemainingToPay())))
                 .toList();
     }
 
     @Override
-    public ClientStatementDto clientStatement(Long clientId) {
+    public ClientStatementDto clientStatement(Long clientId, ReportFilter filter) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id " + clientId));
-        return buildStatement(client.getId(), client.getFullName());
+        return buildStatement(client.getId(), client.getFullName(), resolveScope(filter));
     }
 
     @Override
-    public Map<String, Object> globalSummary() {
-        BigDecimal totalExpenses = expenseRepository.findAll().stream()
+    public Map<String, Object> globalSummary(ReportFilter filter) {
+        ReportScope scope = resolveScope(filter);
+
+        List<Expense> expenses = scopedExpenses(scope);
+        List<ClientAdvance> advances = scopedAdvances(scope, null);
+        List<ClientPurchase> purchases = scopedPurchases(scope, null);
+
+        BigDecimal totalExpenses = expenses.stream()
                 .map(e -> safe(e.getAmountTtc()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal totalCollected = clientAdvanceRepository.findAll().stream()
+        BigDecimal totalCollected = advances.stream()
                 .map(a -> safe(a.getAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        totalCollected = totalCollected.add(clientPurchaseRepository.findAll().stream()
+        totalCollected = totalCollected.add(purchases.stream()
                 .map(p -> safe(p.getPaidAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        BigDecimal totalPurchases = clientPurchaseRepository.findAll().stream()
+        BigDecimal totalPurchases = purchases.stream()
                 .map(p -> safe(p.getTotalAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("clients", clientRepository.count());
-        result.put("projects", projectRepository.count());
+        result.put("projectId", scope.projectId());
+        result.put("projectLabel", scope.projectLabel());
+        result.put("periodLabel", scope.periodLabel());
+        result.put("clients", scope.projectId() == null
+                ? clientRepository.count()
+                : (long) clientRepository.findByProjectId(scope.projectId()).size());
+        result.put("projects", scope.projectId() == null ? projectRepository.count() : 1L);
+        // Les fournisseurs ne sont pas rattaches a un projet : le compteur reste global.
         result.put("suppliers", supplierRepository.count());
-        result.put("expenses", expenseRepository.count());
-        result.put("clientAdvances", clientAdvanceRepository.count());
-        result.put("clientPurchases", clientPurchaseRepository.count());
+        result.put("expenses", (long) expenses.size());
+        result.put("clientAdvances", (long) advances.size());
+        result.put("clientPurchases", (long) purchases.size());
         result.put("totalExpenses", totalExpenses);
         result.put("totalAdvances", totalCollected);
         result.put("totalPurchases", totalPurchases);
@@ -137,11 +245,12 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public byte[] exportReportsExcel(Integer year, Integer month) {
+    public byte[] exportReportsExcel(ReportFilter filter) {
+        ReportScope scope = resolveScope(filter);
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            List<AmountByLabelDto> byCategory = expensesByCategoryList();
-            List<AmountByLabelDto> byProject = expensesByProjectList();
-            List<ClientStatementDto> statements = clientStatementsList();
+            List<AmountByLabelDto> byCategory = expensesByCategoryList(scope);
+            List<AmountByLabelDto> byProject = expensesByProjectList(scope);
+            List<ClientStatementDto> statements = clientStatementsList(scope);
 
             CellStyle headerStyle = workbook.createCellStyle();
             org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont();
@@ -149,9 +258,9 @@ public class ReportServiceImpl implements ReportService {
             headerStyle.setFont(headerFont);
             headerStyle.setAlignment(HorizontalAlignment.CENTER);
 
-            createAmountSheet(workbook, "Dépenses par catégorie", "Catégorie", byCategory, headerStyle);
-            createAmountSheet(workbook, "Dépenses par projet", "Projet", byProject, headerStyle);
-            createClientsSheet(workbook, statements, headerStyle);
+            createAmountSheet(workbook, "Dépenses par catégorie", "Catégorie", byCategory, headerStyle, scope);
+            createAmountSheet(workbook, "Dépenses par projet", "Projet", byProject, headerStyle, scope);
+            createClientsSheet(workbook, statements, headerStyle, scope);
 
             workbook.write(outputStream);
             return outputStream.toByteArray();
@@ -161,10 +270,11 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public byte[] exportReportsPdf(Integer year, Integer month) {
-        List<AmountByLabelDto> byCategory = expensesByCategoryList();
-        List<AmountByLabelDto> byProject = expensesByProjectList();
-        List<ClientStatementDto> statements = clientStatementsList();
+    public byte[] exportReportsPdf(ReportFilter filter) {
+        ReportScope scope = resolveScope(filter);
+        List<AmountByLabelDto> byCategory = expensesByCategoryList(scope);
+        List<AmountByLabelDto> byProject = expensesByProjectList(scope);
+        List<ClientStatementDto> statements = clientStatementsList(scope);
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4.rotate(), 24, 24, 24, 24);
@@ -175,7 +285,9 @@ public class ReportServiceImpl implements ReportService {
             Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
             Font textFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
 
-            document.add(new Paragraph("SP Immobilière GHOMRASSEN - Rapport global", titleFont));
+            document.add(new Paragraph("SP Immobilière GHOMRASSEN - Rapport", titleFont));
+            document.add(new Paragraph(scope.projectLabel(), sectionFont));
+            document.add(new Paragraph(scope.periodLabel(), sectionFont));
             document.add(new Paragraph("Date d'édition : " + LocalDate.now(), textFont));
             document.add(new Paragraph(" "));
 
@@ -198,12 +310,13 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
-    private void createAmountSheet(Workbook workbook, String sheetName, String labelHeader, List<AmountByLabelDto> rows, CellStyle headerStyle) {
+    private void createAmountSheet(Workbook workbook, String sheetName, String labelHeader, List<AmountByLabelDto> rows, CellStyle headerStyle, ReportScope scope) {
         Sheet sheet = workbook.createSheet(sheetName);
-        Row header = sheet.createRow(0);
+        writeCell(sheet.createRow(0), 0, scope.describe(), headerStyle);
+        Row header = sheet.createRow(1);
         writeCell(header, 0, labelHeader, headerStyle);
         writeCell(header, 1, "Total (DT)", headerStyle);
-        int rowIndex = 1;
+        int rowIndex = 2;
         for (AmountByLabelDto row : rows) {
             Row excelRow = sheet.createRow(rowIndex++);
             excelRow.createCell(0).setCellValue(row.getLabel());
@@ -212,14 +325,15 @@ public class ReportServiceImpl implements ReportService {
         autosize(sheet, 2);
     }
 
-    private void createClientsSheet(Workbook workbook, List<ClientStatementDto> rows, CellStyle headerStyle) {
+    private void createClientsSheet(Workbook workbook, List<ClientStatementDto> rows, CellStyle headerStyle, ReportScope scope) {
         Sheet sheet = workbook.createSheet("Situation clients");
-        Row header = sheet.createRow(0);
+        writeCell(sheet.createRow(0), 0, scope.describe(), headerStyle);
+        Row header = sheet.createRow(1);
         writeCell(header, 0, "Client", headerStyle);
         writeCell(header, 1, "Achats (DT)", headerStyle);
         writeCell(header, 2, "Paiements (DT)", headerStyle);
         writeCell(header, 3, "Reste à payer (DT)", headerStyle);
-        int rowIndex = 1;
+        int rowIndex = 2;
         for (ClientStatementDto row : rows) {
             Row excelRow = sheet.createRow(rowIndex++);
             excelRow.createCell(0).setCellValue(row.getClientName());
@@ -293,16 +407,18 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
-    private ClientStatementDto buildStatement(Long clientId, String clientName) {
-        BigDecimal totalPurchases = clientPurchaseRepository.findByClientId(clientId).stream()
+    private ClientStatementDto buildStatement(Long clientId, String clientName, ReportScope scope) {
+        List<ClientPurchase> purchases = scopedPurchases(scope, clientId);
+
+        BigDecimal totalPurchases = purchases.stream()
                 .map(p -> safe(p.getTotalAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal totalCollected = clientAdvanceRepository.findByClientId(clientId).stream()
+        BigDecimal totalCollected = scopedAdvances(scope, clientId).stream()
                 .map(a -> safe(a.getAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        totalCollected = totalCollected.add(clientPurchaseRepository.findByClientId(clientId).stream()
+        totalCollected = totalCollected.add(purchases.stream()
                 .map(p -> safe(p.getPaidAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 

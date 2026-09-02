@@ -2,6 +2,7 @@ package com.promoteur.app.controller;
 
 import com.promoteur.app.dto.report.AmountByLabelDto;
 import com.promoteur.app.dto.report.ClientStatementDto;
+import com.promoteur.app.dto.report.ReportFilter;
 import com.promoteur.app.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,6 +17,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Reports and exports.
+ *
+ * <p>Every endpoint accepts the same optional scope parameters: {@code projectId} (a project
+ * identifier, or {@code ALL} to aggregate across projects; absent means the active project
+ * context), {@code year} and {@code month}.</p>
+ */
 @RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
@@ -24,31 +32,48 @@ public class ReportController {
     private final ReportService reportService;
 
     @GetMapping("/expenses/by-category")
-    public Page<AmountByLabelDto> expensesByCategory(Pageable pageable) {
-        return reportService.expensesByCategory(pageable);
+    public Page<AmountByLabelDto> expensesByCategory(
+            @RequestParam(required = false) String projectId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            Pageable pageable) {
+        return reportService.expensesByCategory(ReportFilter.of(projectId, year, month), pageable);
     }
 
     @GetMapping("/expenses/by-project")
-    public Page<AmountByLabelDto> expensesByProject(Pageable pageable) {
-        return reportService.expensesByProject(pageable);
+    public Page<AmountByLabelDto> expensesByProject(
+            @RequestParam(required = false) String projectId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            Pageable pageable) {
+        return reportService.expensesByProject(ReportFilter.of(projectId, year, month), pageable);
     }
 
     @GetMapping("/clients/statements")
-    public Page<ClientStatementDto> clientStatements(Pageable pageable) {
-        return reportService.clientStatements(pageable);
+    public Page<ClientStatementDto> clientStatements(
+            @RequestParam(required = false) String projectId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            Pageable pageable) {
+        return reportService.clientStatements(ReportFilter.of(projectId, year, month), pageable);
     }
 
     @GetMapping("/clients/{clientId}/statement")
-    public ClientStatementDto clientStatement(@PathVariable Long clientId) {
-        return reportService.clientStatement(clientId);
+    public ClientStatementDto clientStatement(
+            @PathVariable Long clientId,
+            @RequestParam(required = false) String projectId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        return reportService.clientStatement(clientId, ReportFilter.of(projectId, year, month));
     }
 
     @GetMapping("/export/excel")
     public ResponseEntity<byte[]> exportExcel(
             @RequestParam("year") Integer year,
-            @RequestParam("month") Integer month
+            @RequestParam("month") Integer month,
+            @RequestParam(required = false) String projectId
     ) {
-        byte[] data = reportService.exportReportsExcel(year, month);
+        byte[] data = reportService.exportReportsExcel(ReportFilter.of(projectId, year, month));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
         headers.setContentDisposition(ContentDisposition.attachment()
@@ -60,9 +85,10 @@ public class ReportController {
     @GetMapping("/export/pdf")
     public ResponseEntity<byte[]> exportPdf(
             @RequestParam("year") Integer year,
-            @RequestParam("month") Integer month
+            @RequestParam("month") Integer month,
+            @RequestParam(required = false) String projectId
     ) {
-        byte[] data = reportService.exportReportsPdf(year, month);
+        byte[] data = reportService.exportReportsPdf(ReportFilter.of(projectId, year, month));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.setContentDisposition(ContentDisposition.attachment()

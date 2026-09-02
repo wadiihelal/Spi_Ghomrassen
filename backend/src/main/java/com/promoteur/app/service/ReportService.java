@@ -2,6 +2,8 @@ package com.promoteur.app.service;
 
 import com.promoteur.app.dto.report.AmountByLabelDto;
 import com.promoteur.app.dto.report.ClientStatementDto;
+import com.promoteur.app.dto.report.ReportFilter;
+import com.promoteur.app.dto.report.ReportScope;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -9,41 +11,55 @@ import java.util.Map;
 
 /**
  * Service exposing aggregated dashboard and export reports.
+ *
+ * <p>Every method is scoped by a {@link ReportFilter}. A filter with no project resolves to the
+ * active project context; only an explicit {@code projectId=ALL} aggregates across projects
+ * (RPT-02). A filter with a year, optionally a month, restricts the figures to that period
+ * (RPT-01).</p>
  */
 public interface ReportService {
 
     /**
-     * Returns expense totals grouped by category.
+     * Resolves a filter against the active project context and the calendar.
+     *
+     * @return the concrete project and date bounds the figures will cover, with French labels
      */
-    Page<AmountByLabelDto> expensesByCategory(Pageable pageable);
+    ReportScope resolveScope(ReportFilter filter);
 
     /**
-     * Returns expense totals grouped by project.
+     * Returns expense totals grouped by category, inside the filter's scope.
      */
-    Page<AmountByLabelDto> expensesByProject(Pageable pageable);
+    Page<AmountByLabelDto> expensesByCategory(ReportFilter filter, Pageable pageable);
 
     /**
-     * Returns paginated client financial statements.
+     * Returns expense totals grouped by project, inside the filter's scope.
      */
-    Page<ClientStatementDto> clientStatements(Pageable pageable);
+    Page<AmountByLabelDto> expensesByProject(ReportFilter filter, Pageable pageable);
 
     /**
-     * Returns the financial statement for a single client.
+     * Returns paginated client financial statements, inside the filter's scope.
      */
-    ClientStatementDto clientStatement(Long clientId);
+    Page<ClientStatementDto> clientStatements(ReportFilter filter, Pageable pageable);
 
     /**
-     * Returns the global dashboard summary.
+     * Returns the financial statement for a single client, inside the filter's scope.
      */
-    Map<String, Object> globalSummary();
+    ClientStatementDto clientStatement(Long clientId, ReportFilter filter);
 
     /**
-     * Exports the current reports as an Excel document.
+     * Returns the dashboard summary, inside the filter's scope.
      */
-    byte[] exportReportsExcel(Integer year, Integer month);
+    Map<String, Object> globalSummary(ReportFilter filter);
 
     /**
-     * Exports the current reports as a PDF document.
+     * Exports the reports for the filter's scope as an Excel document. The workbook states its
+     * own project and period in the first row of every sheet.
      */
-    byte[] exportReportsPdf(Integer year, Integer month);
+    byte[] exportReportsExcel(ReportFilter filter);
+
+    /**
+     * Exports the reports for the filter's scope as a PDF document. The title block states the
+     * project and the period.
+     */
+    byte[] exportReportsPdf(ReportFilter filter);
 }

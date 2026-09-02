@@ -8,7 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
-import { DashboardSummary, ClientStatement, Project, Expense, ClientPurchase, ClientAdvance } from '../../shared/models/models';
+import { DashboardSummary, ClientStatement, Project, Expense, ClientPurchase, ClientAdvance, ReportScopeParams } from '../../shared/models/models';
 
 @Component({
   selector: 'app-dashboard',
@@ -33,24 +33,13 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.projectContext.selectedProjectId$.subscribe((projectId) => {
       this.selectedProjectId = projectId;
+      this.loadScopedAggregates();
     });
     let completedCalls = 0;
     const done = () => {
       completedCalls += 1;
-      if (completedCalls >= 6) this.loading = false;
+      if (completedCalls >= 4) this.loading = false;
     };
-
-    this.api.getDashboardSummary().subscribe({
-      next: (data) => (this.summary = data),
-      error: () => undefined,
-      complete: done
-    });
-
-    this.api.getClientStatements().subscribe({
-      next: (data) => (this.statements = data),
-      error: () => undefined,
-      complete: done
-    });
 
     this.api.getProjects().subscribe({
       next: (data) => (this.projects = data),
@@ -74,6 +63,22 @@ export class DashboardComponent implements OnInit {
       next: (data) => (this.advances = data),
       error: () => undefined,
       complete: done
+    });
+  }
+
+  /**
+   * Summary and client statements are aggregated by the backend, so they must be re-requested
+   * whenever the selected project changes (RPT-02).
+   */
+  private loadScopedAggregates(): void {
+    const scope: ReportScopeParams = { projectId: this.selectedProjectId };
+    this.api.getDashboardSummary(scope).subscribe({
+      next: (data) => (this.summary = data),
+      error: () => undefined
+    });
+    this.api.getClientStatements(scope).subscribe({
+      next: (data) => (this.statements = data),
+      error: () => undefined
     });
   }
 
@@ -132,7 +137,7 @@ export class DashboardComponent implements OnInit {
   }
 
   get totalBudget(): number {
-    return this.projects.reduce((sum, project) => sum + (project.budget ?? 0), 0);
+    return this.filteredProjects.reduce((sum, project) => sum + (project.budget ?? 0), 0);
   }
 
   get budgetConsumptionRate(): number {

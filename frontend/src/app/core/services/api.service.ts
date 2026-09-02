@@ -16,6 +16,7 @@ import {
   ExpenseCategory,
   PagedResponse,
   Project,
+  ReportScopeParams,
   Supplier,
   SupplierInvoice,
   SupplierTypeOption
@@ -43,8 +44,10 @@ export class ApiService {
     );
   }
 
-  getDashboardSummary(): Observable<DashboardSummary> {
-    return this.http.get<DashboardSummary>(`${this.baseUrl}/dashboard/summary`);
+  getDashboardSummary(scope?: ReportScopeParams): Observable<DashboardSummary> {
+    return this.http.get<DashboardSummary>(`${this.baseUrl}/dashboard/summary`, {
+      params: this.scopeParams(scope)
+    });
   }
 
   getExpenses(): Observable<Expense[]> {
@@ -195,27 +198,51 @@ export class ApiService {
     return this.http.put<ClientAdvance>(`${this.baseUrl}/client-advances/${id}`, payload);
   }
 
-  getClientStatements(): Observable<ClientStatement[]> {
-    return this.getPaged<ClientStatement>('/reports/clients/statements');
+  getClientStatements(scope?: ReportScopeParams): Observable<ClientStatement[]> {
+    return this.getPaged<ClientStatement>('/reports/clients/statements', this.scopeRecord(scope));
   }
 
   getAuditLogs(entityType: string, entityId: number): Observable<AuditLog[]> {
     return this.getPaged<AuditLog>(`/audit-logs/by-entity/${entityType}/${entityId}`);
   }
 
-  getExpensesByCategory(): Observable<AmountByLabel[]> {
-    return this.getPaged<AmountByLabel>('/reports/expenses/by-category');
+  getExpensesByCategory(scope?: ReportScopeParams): Observable<AmountByLabel[]> {
+    return this.getPaged<AmountByLabel>('/reports/expenses/by-category', this.scopeRecord(scope));
   }
 
-  getExpensesByProject(): Observable<AmountByLabel[]> {
-    return this.getPaged<AmountByLabel>('/reports/expenses/by-project');
+  getExpensesByProject(scope?: ReportScopeParams): Observable<AmountByLabel[]> {
+    return this.getPaged<AmountByLabel>('/reports/expenses/by-project', this.scopeRecord(scope));
   }
 
-  downloadReportsExcel(year: number, month: number): Observable<Blob> {
-    return this.http.get(`${this.baseUrl}/reports/export/excel?year=${year}&month=${month}`, { responseType: 'blob' });
+  downloadReportsExcel(scope: ReportScopeParams): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/reports/export/excel`, {
+      params: this.scopeParams(scope),
+      responseType: 'blob'
+    });
   }
 
-  downloadReportsPdf(year: number, month: number): Observable<Blob> {
-    return this.http.get(`${this.baseUrl}/reports/export/pdf?year=${year}&month=${month}`, { responseType: 'blob' });
+  downloadReportsPdf(scope: ReportScopeParams): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/reports/export/pdf`, {
+      params: this.scopeParams(scope),
+      responseType: 'blob'
+    });
+  }
+
+  private scopeRecord(scope?: ReportScopeParams): Record<string, string | number | null | undefined> {
+    return {
+      projectId: scope?.projectId ?? undefined,
+      year: scope?.year ?? undefined,
+      month: scope?.month ?? undefined
+    };
+  }
+
+  private scopeParams(scope?: ReportScopeParams): HttpParams {
+    let params = new HttpParams();
+    Object.entries(this.scopeRecord(scope)).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        params = params.set(key, String(value));
+      }
+    });
+    return params;
   }
 }

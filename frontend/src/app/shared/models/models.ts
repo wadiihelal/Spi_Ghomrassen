@@ -9,6 +9,20 @@ export interface DashboardSummary {
   expenses?: number;
   clientAdvances?: number;
   clientPurchases?: number;
+  /** Scope the figures cover, resolved by the backend. */
+  projectId?: number | null;
+  projectLabel?: string;
+  periodLabel?: string;
+}
+
+/**
+ * Scope sent to every report endpoint. `projectId` absent means "the active project context";
+ * `'ALL'` aggregates across projects.
+ */
+export interface ReportScopeParams {
+  projectId?: number | 'ALL' | null;
+  year?: number | null;
+  month?: number | null;
 }
 
 export interface PagedResponse<T> {

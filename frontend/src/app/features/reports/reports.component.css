@@ -12,3 +12,5 @@
 .report-filters{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;}
 .filters-left,.filters-right{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;}
 .filters-right{margin-left:auto;}
+
+.report-scope{margin:0;color:#6b7280;font-size:.9rem;}
