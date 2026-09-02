@@ -1,0 +1,87 @@
+<section class="page-grid">
+  <div class="section-header">
+    <div>
+      <h2 class="page-title">Projets</h2>
+      <p class="page-subtitle">Création et suivi des projets immobiliers SP Immobilière GHOMRASSEN.</p>
+    </div>
+    <button pButton type="button" label="Nouveau projet" icon="pi pi-plus" (click)="openCreateDialog()"></button>
+  </div>
+
+  <p-card header="Liste des projets">
+    <p-table #dt [value]="filteredProjects" responsiveLayout="scroll" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
+      <ng-template pTemplate="caption">
+        <div class="filter-grid">
+          <input pInputText type="text" placeholder="Recherche..." [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" />
+          <p-dropdown [(ngModel)]="filters.status" [ngModelOptions]="{ standalone: true }" [options]="statuses" optionLabel="label" optionValue="value" placeholder="Statut"></p-dropdown>
+          <input pInputText type="text" placeholder="Localisation..." [(ngModel)]="filters.location" [ngModelOptions]="{ standalone: true }" />
+        </div>
+      </ng-template>
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Projet</th>
+          <th>Lieu</th>
+          <th>Statut</th>
+          <th>Budget</th>
+          <th>Actions</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>
+            <div class="table-main">{{ row.name }}</div>
+            <div class="table-meta">{{ row.code || '-' }}</div>
+          </td>
+          <td>{{ row.location || '-' }}</td>
+          <td>{{ getStatusLabel(row.status) }}</td>
+          <td>{{ row.budget != null ? ((row.budget | number:'1.0-2') + ' DT') : '-' }}</td>
+          <td class="actions-cell">
+            <a pButton type="button" icon="pi pi-chart-line" text [routerLink]="['/projects', row.id]"></a>
+            <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir projet" (click)="edit(row)"></button>
+            <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <p-dialog [header]="editingId ? 'Modifier projet' : 'Nouveau projet'" [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '60rem', maxWidth: '96vw' }" (onHide)="resetForm()">
+    <form [formGroup]="form" class="form-grid" (ngSubmit)="submit()">
+      <div class="field">
+        <label>Code projet</label>
+        <input pInputText formControlName="code" />
+      </div>
+      <div class="field">
+        <label>Nom du projet</label>
+        <input pInputText formControlName="name" />
+      </div>
+      <div class="field">
+        <label>Localisation</label>
+        <input pInputText formControlName="location" />
+      </div>
+      <div class="field">
+        <label>Statut</label>
+        <p-dropdown formControlName="status" [options]="statuses" optionLabel="label" optionValue="value" placeholder="Choisir"></p-dropdown>
+      </div>
+      <div class="field">
+        <label>Date début</label>
+        <input pInputText type="date" formControlName="startDate" />
+      </div>
+      <div class="field">
+        <label>Date fin prévue</label>
+        <input pInputText type="date" formControlName="expectedEndDate" />
+      </div>
+      <div class="field">
+        <label>Budget</label>
+        <input pInputText type="number" formControlName="budget" />
+      </div>
+      <div class="field field-full">
+        <label>Description</label>
+        <input pInputText formControlName="description" />
+      </div>
+      <div class="form-actions">
+        <button pButton type="submit" [label]="editingId ? 'Mettre à jour' : 'Enregistrer'"></button>
+        <button pButton type="button" severity="secondary" label="Annuler" (click)="resetForm()"></button>
+      </div>
+    </form>
+  </p-dialog>
+</section>

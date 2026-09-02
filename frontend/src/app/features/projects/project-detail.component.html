@@ -1,0 +1,134 @@
+<section class="page-grid" *ngIf="project as currentProject">
+  <div class="page-head">
+    <div>
+      <div class="back-link">
+        <a routerLink="/projects">Retour aux projets</a>
+      </div>
+      <h2 class="page-title">{{ currentProject.name }}</h2>
+      <p class="page-subtitle">{{ currentProject.location || 'Localisation non renseignée' }}</p>
+    </div>
+    <p-tag [value]="getStatusLabel(currentProject.status)" [severity]="getStatusSeverity(currentProject.status)"></p-tag>
+  </div>
+
+  <section class="kpi-grid">
+    <p-card>
+      <div class="kpi-label">Budget projet</div>
+      <div class="kpi-value">{{ currentProject.budget ?? 0 | number:'1.0-2' }} DT</div>
+    </p-card>
+    <p-card>
+      <div class="kpi-label">Dépenses engagées</div>
+      <div class="kpi-value">{{ totalExpenses | number:'1.0-2' }} DT</div>
+    </p-card>
+    <p-card>
+      <div class="kpi-label">Achats enregistrés</div>
+      <div class="kpi-value">{{ totalPurchases | number:'1.0-2' }} DT</div>
+    </p-card>
+    <p-card>
+      <div class="kpi-label">Reste à encaisser</div>
+      <div class="kpi-value">{{ remainingToCollect | number:'1.0-2' }} DT</div>
+    </p-card>
+  </section>
+
+  <section class="detail-grid">
+    <p-card header="Synthèse financière" class="span-4">
+      <div class="metric-list">
+        <div class="metric-row">
+          <span>Budget consommé</span>
+          <strong>{{ budgetUsage }}%</strong>
+        </div>
+        <div class="progress-shell">
+          <div class="progress-fill" [style.width.%]="budgetUsage"></div>
+        </div>
+        <div class="metric-row">
+          <span>Marge estimée</span>
+          <strong>{{ estimatedMargin | number:'1.0-2' }} DT</strong>
+        </div>
+        <div class="metric-row">
+          <span>Total encaissé</span>
+          <strong>{{ totalAdvances | number:'1.0-2' }} DT</strong>
+        </div>
+        <div class="metric-row">
+          <span>Dernière mise à jour</span>
+          <strong>{{ currentProject.updatedAt | date:'dd/MM/yyyy HH:mm' }}</strong>
+        </div>
+      </div>
+    </p-card>
+
+    <p-card header="Dépenses liées" class="span-8">
+      <p-table [value]="expenses" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Montant</th>
+            <th>Justificatif</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>{{ row.expenseDate | date:'dd/MM/yyyy' }}</td>
+            <td>{{ row.description }}</td>
+            <td>{{ row.amountTtc | number:'1.0-2' }} DT</td>
+            <td>
+              <a *ngIf="row.attachmentUrl" [href]="row.attachmentUrl" target="_blank" rel="noreferrer">
+                {{ row.attachmentName || 'Ouvrir' }}
+              </a>
+              <span *ngIf="!row.attachmentUrl">-</span>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+
+    <p-card header="Achats clients" class="span-6">
+      <p-table [value]="purchases" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Référence</th>
+            <th>Bien</th>
+            <th>Montant</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>{{ row.reference || '-' }}</td>
+            <td>{{ row.assetDescription }}</td>
+            <td>{{ row.totalAmount | number:'1.0-2' }} DT</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+
+    <p-card header="Acomptes reçus" class="span-6">
+      <p-table [value]="advances" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Référence</th>
+            <th>Date</th>
+            <th>Montant</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>{{ row.reference || '-' }}</td>
+            <td>{{ row.advanceDate | date:'dd/MM/yyyy' }}</td>
+            <td>{{ row.amount | number:'1.0-2' }} DT</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+
+    <p-card header="Historique projet" class="span-12">
+      <div class="audit-list">
+        <div class="audit-row" *ngFor="let log of auditLogs">
+          <div>
+            <strong>{{ log.action }}</strong>
+            <div class="audit-summary">{{ log.summary }}</div>
+          </div>
+          <div class="audit-date">{{ log.createdAt | date:'dd/MM/yyyy HH:mm' }}</div>
+        </div>
+        <div class="empty-state" *ngIf="!auditLogs.length">Aucun historique disponible pour ce projet.</div>
+      </div>
+    </p-card>
+  </section>
+</section>

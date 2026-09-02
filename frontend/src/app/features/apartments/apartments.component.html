@@ -1,0 +1,155 @@
+<section class="page-grid">
+  <div>
+    <h2 class="page-title">Inventaire appartements</h2>
+    <p class="page-subtitle">Gestion par projet des appartements, acquéreurs et encaissements.</p>
+  </div>
+
+  <p-card *ngIf="!editingId" header="Génération automatique par bloc">
+    <form [formGroup]="bulkForm" class="form-grid" (ngSubmit)="submitBulk()">
+      <div class="field">
+        <label>Projet</label>
+        <div class="value-box">{{ currentProjectName }}</div>
+      </div>
+      <div class="field">
+        <label>Bloc</label>
+        <input pInputText formControlName="blockCode" placeholder="A" />
+      </div>
+      <div class="field">
+        <label>Nombre d’étages</label>
+        <p-inputNumber formControlName="floorCount"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Appartements / étage</label>
+        <p-inputNumber formControlName="apartmentsPerFloor"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Type standard</label>
+        <p-dropdown formControlName="apartmentType" [options]="apartmentTypes" optionLabel="label" optionValue="value"></p-dropdown>
+      </div>
+      <div class="field">
+        <label>Surface standard m²</label>
+        <p-inputNumber formControlName="totalSurface" mode="decimal"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Surface jardin</label>
+        <p-inputNumber formControlName="gardenSurface" mode="decimal"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Place parking</label>
+        <input pInputText formControlName="parkingCount" placeholder="Ex: P1, P2 + P3" />
+      </div>
+      <div class="field">
+        <label>Celliers</label>
+        <p-inputNumber formControlName="cellarCount"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Prix standard</label>
+        <p-inputNumber formControlName="totalSalePrice" mode="decimal"></p-inputNumber>
+      </div>
+      <div class="field full-width">
+        <label>Détail standard</label>
+        <input pInputText formControlName="detail" placeholder="Ce détail sera recopié sur tout le bloc" />
+      </div>
+      <div class="generator-preview">
+        Exemple: si Bloc `A`, 5 étages et 3 appartements/étage, le système crée `A01, A02, A03`, puis `A11, A12, A13`...
+      </div>
+      <div class="form-actions">
+        <button pButton type="submit" label="Générer le bloc"></button>
+        <button pButton type="button" severity="secondary" label="Réinitialiser" (click)="resetBulkForm()"></button>
+      </div>
+    </form>
+  </p-card>
+
+  <div class="section-header">
+    <div></div>
+    <button pButton type="button" label="Ajouter appartement" icon="pi pi-plus" (click)="openCreateDialog()"></button>
+  </div>
+
+  <p-card header="Stock appartements par projet">
+    <p-table [value]="filteredApartments" responsiveLayout="scroll" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 20, 30]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
+      <ng-template pTemplate="caption">
+        <div class="filter-grid">
+          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" [options]="projects" optionLabel="name" optionValue="id" placeholder="Filtrer par projet"></p-dropdown>
+          <input pInputText [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" placeholder="Recherche numéro/type/client..." />
+        </div>
+      </ng-template>
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Appartement</th>
+          <th>Projet</th>
+          <th>Acquéreur</th>
+          <th>Prix</th>
+          <th>Encaissé</th>
+          <th>Reste</th>
+          <th>Actions</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>
+            <div class="table-main">{{ row.apartmentNumber }}</div>
+            <div class="table-meta">{{ row.apartmentType }} · {{ row.totalSurface | number:'1.0-2' }} m² · {{ getPricePerSquareMeter(row) | number:'1.0-0' }} DT/m²</div>
+          </td>
+          <td>{{ getProjectName(row) }}</td>
+          <td>{{ getClientName(row) }}</td>
+          <td>{{ row.totalSalePrice | number:'1.0-2' }} DT</td>
+          <td>{{ getTotalCollected(row) | number:'1.0-2' }} DT</td>
+          <td>{{ getRemainingToCollect(row) | number:'1.0-2' }} DT</td>
+          <td class="actions-cell">
+            <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir appartement" (click)="edit(row)"></button>
+            <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <p-dialog [header]="editingId ? 'Modifier appartement' : 'Ajout manuel appartement'" [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '68rem', maxWidth: '96vw' }" (onHide)="resetForm()">
+    <form [formGroup]="form" class="form-grid" (ngSubmit)="submit()">
+      <div class="field">
+        <label>Projet</label>
+        <div class="value-box">{{ currentProjectName }}</div>
+      </div>
+      <div class="field">
+        <label>Numéro appartement</label>
+        <input pInputText formControlName="apartmentNumber" />
+      </div>
+      <div class="field">
+        <label>Type</label>
+        <p-dropdown formControlName="apartmentType" [options]="apartmentTypes" optionLabel="label" optionValue="value"></p-dropdown>
+      </div>
+      <div class="field">
+        <label>Surface totale vente m²</label>
+        <p-inputNumber formControlName="totalSurface" mode="decimal"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Surface jardin</label>
+        <p-inputNumber formControlName="gardenSurface" mode="decimal"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Place parking</label>
+        <input pInputText formControlName="parkingCount" placeholder="Ex: P1, Sous-sol 02" />
+      </div>
+      <div class="field">
+        <label>Celliers</label>
+        <p-inputNumber formControlName="cellarCount"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Acquéreur</label>
+        <p-dropdown formControlName="acquirerId" [options]="availableClients" optionLabel="fullName" optionValue="id" placeholder="Choisir client"></p-dropdown>
+      </div>
+      <div class="field">
+        <label>Prix (DT)</label>
+        <p-inputNumber formControlName="totalSalePrice" mode="decimal"></p-inputNumber>
+      </div>
+      <div class="field full-width">
+        <label>Détail</label>
+        <input pInputText formControlName="detail" />
+      </div>
+      <div class="form-actions">
+        <button pButton type="submit" [label]="editingId ? 'Mettre à jour' : 'Enregistrer'"></button>
+        <button pButton type="button" severity="secondary" label="Annuler" (click)="resetForm()"></button>
+      </div>
+    </form>
+  </p-dialog>
+</section>

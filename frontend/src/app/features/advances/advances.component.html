@@ -1,0 +1,186 @@
+<section class="page-grid">
+  <div class="section-header">
+    <div>
+      <h2 class="page-title">Acomptes clients</h2>
+      <p class="page-subtitle">Encaissements liés aux appartements du projet actif.</p>
+    </div>
+    <button pButton type="button" label="Nouvel acompte" icon="pi pi-plus" (click)="openCreateDialog()"></button>
+  </div>
+
+  <div class="summary-grid">
+    <p-card>
+      <div class="metric-label">Acomptes affichés</div>
+      <div class="metric-value">{{ filteredAdvanceCount }}</div>
+    </p-card>
+    <p-card>
+      <div class="metric-label">Total encaissé</div>
+      <div class="metric-value">{{ filteredAdvanceTotal | number:'1.0-0' }} DT</div>
+    </p-card>
+    <p-card>
+      <div class="metric-label">Virements</div>
+      <div class="metric-value">{{ filteredBankTransferTotal | number:'1.0-0' }} DT</div>
+    </p-card>
+  </div>
+
+  <p-card header="Liste des acomptes">
+    <p-table #dt [value]="filteredAdvances" responsiveLayout="scroll" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
+      <ng-template pTemplate="caption">
+        <div class="filter-grid">
+          <input pInputText type="text" placeholder="Recherche..." [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" />
+          <p-dropdown [(ngModel)]="filters.clientId" [ngModelOptions]="{ standalone: true }" [options]="projectClients" optionLabel="fullName" optionValue="id" placeholder="Client"></p-dropdown>
+          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" [options]="projects" optionLabel="name" optionValue="id" placeholder="Projet"></p-dropdown>
+          <p-dropdown [(ngModel)]="filters.paymentMethod" [ngModelOptions]="{ standalone: true }" [options]="paymentMethods" optionLabel="label" optionValue="value" placeholder="Paiement"></p-dropdown>
+          <input pInputText type="date" [(ngModel)]="filters.dateFrom" [ngModelOptions]="{ standalone: true }" />
+          <input pInputText type="date" [(ngModel)]="filters.dateTo" [ngModelOptions]="{ standalone: true }" />
+          <button pButton type="button" severity="secondary" icon="pi pi-filter-slash" label="Réinitialiser" (click)="resetFilters()"></button>
+        </div>
+      </ng-template>
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Acompte</th>
+          <th>Appartement</th>
+          <th>Client</th>
+          <th>Montant</th>
+          <th>Paiement</th>
+          <th>Reste achat</th>
+          <th>Actions</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>
+            <div class="table-main">{{ row.reference || '-' }}</div>
+            <div class="table-meta">{{ row.advanceDate || '-' }} · {{ getProjectName(row) }}</div>
+          </td>
+          <td>
+            <div class="table-main">{{ getApartmentName(row) }}</div>
+            <div class="table-meta">
+              <ng-container *ngIf="getPurchaseForAdvance(row) as purchase; else noPurchaseMeta">
+                {{ getPurchaseStatusLabel(purchase.paymentStatus) }}
+              </ng-container>
+              <ng-template #noPurchaseMeta>Achat non déclaré</ng-template>
+            </div>
+          </td>
+          <td>{{ getClientName(row) }}</td>
+          <td>{{ row.amount | number:'1.0-2' }} DT</td>
+          <td>{{ getPaymentMethodLabel(row.paymentMethod) }}</td>
+          <td>
+            <span *ngIf="getRemainingForAdvance(row) !== null">{{ getRemainingForAdvance(row) | number:'1.0-2' }} DT</span>
+            <span *ngIf="getRemainingForAdvance(row) === null">-</span>
+          </td>
+          <td class="actions-cell">
+            <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir acompte" (click)="edit(row)"></button>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <p-dialog [header]="editingId ? 'Modifier acompte' : 'Nouvel acompte'" [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '80rem', maxWidth: '96vw' }" (onHide)="resetForm()">
+    <form [formGroup]="form" class="form-grid" (ngSubmit)="submit()">
+      <div class="field">
+        <label>Projet</label>
+        <div class="value-box">{{ currentProjectName }}</div>
+      </div>
+      <div class="field">
+        <label>Appartement</label>
+        <p-dropdown
+          formControlName="apartmentId"
+          [options]="availableApartments"
+          optionLabel="apartmentNumber"
+          optionValue="id"
+          placeholder="Choisir appartement existant"
+        >
+          <ng-template let-apartment pTemplate="item">
+            <div class="apartment-option">
+              <strong>{{ apartment.apartmentNumber }}</strong>
+              <span>{{ apartment.acquirer?.fullName || 'Sans acquéreur' }} - {{ apartment.project?.name || 'Sans projet' }}</span>
+            </div>
+          </ng-template>
+          <ng-template let-apartment pTemplate="selectedItem">
+            <span>{{ getApartmentLabel(apartment) }}</span>
+          </ng-template>
+        </p-dropdown>
+      </div>
+      <div class="field">
+        <label>Référence</label>
+        <input pInputText formControlName="reference" placeholder="Auto-générée si vide" />
+      </div>
+      <div class="field">
+        <label>Date acompte</label>
+        <input pInputText type="date" formControlName="advanceDate" />
+      </div>
+      <div class="field">
+        <label>Montant</label>
+        <p-inputNumber formControlName="amount" mode="decimal"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Mode de paiement</label>
+        <p-dropdown formControlName="paymentMethod" [options]="paymentMethods" optionLabel="label" optionValue="value" placeholder="Choisir"></p-dropdown>
+      </div>
+      <div class="field info-field">
+        <label>Achat lié</label>
+        <div class="value-box">
+          <p-tag *ngIf="selectedApartmentPurchase; else noSelectedPurchase" [value]="getPurchaseStatusLabel(selectedApartmentPurchase.paymentStatus)" [severity]="getPurchaseStatusSeverity(selectedApartmentPurchase.paymentStatus)"></p-tag>
+          <ng-template #noSelectedPurchase>Aucun achat déclaré</ng-template>
+        </div>
+      </div>
+      <div class="summary-grid full-width">
+        <div class="field">
+          <label>Montant déclaré</label>
+          <div class="value-box">{{ selectedDeclaredAmount | number:'1.0-2' }} DT</div>
+        </div>
+        <div class="field">
+          <label>Payé direct</label>
+          <div class="value-box">{{ selectedDirectPaidAmount | number:'1.0-2' }} DT</div>
+        </div>
+        <div class="field">
+          <label>Acomptes existants</label>
+          <div class="value-box">{{ selectedExistingAdvancesAmount | number:'1.0-2' }} DT</div>
+        </div>
+        <div class="field">
+          <label>Reste actuel</label>
+          <div class="value-box">{{ selectedRemainingBeforeAmount | number:'1.0-2' }} DT</div>
+        </div>
+        <div class="field">
+          <label>Reste après saisie</label>
+          <div class="value-box" [class.value-danger]="isCurrentAdvanceOverLimit">{{ selectedProjectedRemainingAmount | number:'1.0-2' }} DT</div>
+        </div>
+        <div class="field">
+          <label>Avancement après</label>
+          <div class="value-box" [class.value-danger]="isCurrentAdvanceOverLimit">{{ selectedProjectedPercentage | number:'1.0-1' }}%</div>
+        </div>
+      </div>
+      <div class="inline-warning full-width" *ngIf="!selectedApartmentPurchase && selectedApartment">
+        Aucun achat n’est encore déclaré pour cet appartement. Ajoute l’achat client pour suivre le reste automatiquement.
+      </div>
+      <div class="inline-warning full-width" *ngIf="isCurrentAdvanceOverLimit">
+        Cet acompte dépasse le reste à encaisser. Vérifie le montant ou modifie l’achat lié.
+      </div>
+      <div class="field">
+        <label>Nom justificatif</label>
+        <input pInputText formControlName="attachmentName" />
+      </div>
+      <div class="field">
+        <label>Lien justificatif</label>
+        <input pInputText formControlName="attachmentUrl" placeholder="https://..." />
+      </div>
+      <div class="field info-field">
+        <label>Client lié</label>
+        <div class="value-box">{{ selectedApartment?.acquirer?.fullName || '-' }}</div>
+      </div>
+      <div class="field info-field">
+        <label>Projet lié</label>
+        <div class="value-box">{{ selectedApartment?.project?.name || currentProjectName }}</div>
+      </div>
+      <div class="field full-width">
+        <label>Notes</label>
+        <input pInputText formControlName="notes" />
+      </div>
+      <div class="form-actions">
+        <button pButton type="submit" [disabled]="isCurrentAdvanceOverLimit" [label]="editingId ? 'Mettre à jour' : 'Enregistrer'"></button>
+        <button pButton type="button" severity="secondary" label="Annuler" (click)="resetForm()"></button>
+      </div>
+    </form>
+  </p-dialog>
+</section>

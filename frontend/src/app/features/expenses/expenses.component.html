@@ -1,0 +1,132 @@
+<section class="page-grid">
+  <div class="section-header">
+    <div>
+      <h2 class="page-title">Dépenses</h2>
+      <p class="page-subtitle">Saisie propre par projet avec TVA calculée automatiquement.</p>
+    </div>
+    <button pButton type="button" label="Nouvelle dépense" icon="pi pi-plus" (click)="openCreateDialog()"></button>
+  </div>
+
+  <p-card header="Liste des dépenses">
+    <p-table #dt [value]="filteredExpenses" responsiveLayout="scroll" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
+      <ng-template pTemplate="caption">
+        <div class="filter-grid">
+          <input pInputText type="text" placeholder="Recherche..." [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" />
+          <p-dropdown [(ngModel)]="filters.categoryId" [ngModelOptions]="{ standalone: true }" [options]="categories" optionLabel="name" optionValue="id" placeholder="Catégorie"></p-dropdown>
+          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" [options]="projects" optionLabel="name" optionValue="id" placeholder="Projet"></p-dropdown>
+          <p-dropdown [(ngModel)]="filters.supplierId" [ngModelOptions]="{ standalone: true }" [options]="suppliers" optionLabel="name" optionValue="id" placeholder="Fournisseur"></p-dropdown>
+          <input pInputText type="date" [(ngModel)]="filters.dateFrom" [ngModelOptions]="{ standalone: true }" />
+          <input pInputText type="date" [(ngModel)]="filters.dateTo" [ngModelOptions]="{ standalone: true }" />
+        </div>
+      </ng-template>
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Dépense</th>
+          <th>Catégorie</th>
+          <th>Fournisseur</th>
+          <th>Projet</th>
+          <th>TTC</th>
+          <th>Paiement</th>
+          <th>Actions</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>
+            <div class="table-main">{{ row.reference || row.documentNumber || '-' }}</div>
+            <div class="table-meta">{{ row.description }} · {{ row.expenseDate || '-' }}</div>
+          </td>
+          <td>{{ getCategoryName(row) }}</td>
+          <td>{{ getSupplierName(row) }}</td>
+          <td>{{ getProjectName(row) }}</td>
+          <td>{{ row.amountTtc | number:'1.0-2' }} DT</td>
+          <td>{{ getPaymentMethodLabel(row.paymentMethod) }}</td>
+          <td class="actions-cell">
+            <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir dépense" (click)="edit(row)"></button>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <p-dialog [header]="editingId ? 'Modifier dépense' : 'Nouvelle dépense'" [(visible)]="expenseDialogVisible" [modal]="true" [style]="{ width: '68rem', maxWidth: '96vw' }" (onHide)="resetForm()">
+    <form [formGroup]="form" class="form-grid" (ngSubmit)="submit()">
+      <div class="field">
+        <label>Projet</label>
+        <div class="value-box">{{ currentProjectName }}</div>
+      </div>
+      <div class="field">
+        <label>Référence</label>
+        <input pInputText formControlName="reference" placeholder="Auto-générée si vide" />
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <input pInputText formControlName="description" />
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input pInputText type="date" formControlName="expenseDate" />
+      </div>
+      <div class="field">
+        <label>Montant HT</label>
+        <p-inputNumber formControlName="amountHt" mode="decimal"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>TVA ({{ vatRate * 100 }}%)</label>
+        <p-inputNumber formControlName="vatAmount" mode="decimal"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Montant TTC</label>
+        <p-inputNumber formControlName="amountTtc" mode="decimal"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Catégorie</label>
+        <div class="inline-select">
+          <p-dropdown formControlName="categoryId" [options]="categories" optionLabel="name" optionValue="id" placeholder="Choisir"></p-dropdown>
+          <button pButton type="button" icon="pi pi-plus" severity="secondary" (click)="openCategoryDialog()"></button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Mode de paiement</label>
+        <p-dropdown formControlName="paymentMethod" [options]="paymentMethods" optionLabel="label" optionValue="value" placeholder="Choisir"></p-dropdown>
+      </div>
+      <div class="field">
+        <label>Numéro document</label>
+        <input pInputText formControlName="documentNumber" />
+      </div>
+      <div class="field">
+        <label>Nom justificatif</label>
+        <input pInputText formControlName="attachmentName" placeholder="Facture avril.pdf" />
+      </div>
+      <div class="field">
+        <label>Lien justificatif</label>
+        <input pInputText formControlName="attachmentUrl" placeholder="https://..." />
+      </div>
+      <div class="field">
+        <label>Fournisseur</label>
+        <p-dropdown formControlName="supplierId" [options]="suppliers" optionLabel="name" optionValue="id" placeholder="Choisir fournisseur"></p-dropdown>
+      </div>
+      <div class="field full-width">
+        <label>Notes</label>
+        <input pInputText formControlName="notes" />
+      </div>
+      <div class="form-actions">
+        <button pButton type="submit" [label]="editingId ? 'Mettre à jour' : 'Enregistrer'"></button>
+        <button pButton type="button" severity="secondary" label="Annuler" (click)="resetForm()"></button>
+      </div>
+    </form>
+  </p-dialog>
+
+  <p-dialog header="Nouvelle catégorie dépense" [(visible)]="categoryDialogVisible" [modal]="true" [style]="{ width: '32rem', maxWidth: '95vw' }" (onHide)="closeCategoryDialog()">
+    <form [formGroup]="categoryForm" class="form-grid single-column" (ngSubmit)="submitCategory()">
+      <div class="field">
+        <label>Nom</label>
+        <input pInputText formControlName="name" />
+      </div>
+      <div class="form-actions">
+        <button pButton type="submit" label="Enregistrer"></button>
+        <button pButton type="button" severity="secondary" label="Annuler" (click)="closeCategoryDialog()"></button>
+      </div>
+    </form>
+  </p-dialog>
+</section>

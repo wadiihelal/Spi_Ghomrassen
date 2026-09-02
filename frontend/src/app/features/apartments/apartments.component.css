@@ -1,0 +1,20 @@
+.page-grid { display: grid; gap: 1.5rem; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.field { display: flex; flex-direction: column; gap: .35rem; }
+.full-width { grid-column: 1 / -1; }
+.form-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+.filter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; padding-bottom: .75rem; }
+.actions-cell { display: flex; gap: .5rem; }
+.section-header { display: flex; justify-content: space-between; gap: 1rem; align-items: center; flex-wrap: wrap; }
+.generator-preview {
+  grid-column: 1 / -1;
+  padding: .85rem 1rem;
+  border-radius: 14px;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  font-size: .92rem;
+}
+.value-box { min-height: 2.75rem; padding: .7rem .85rem; border: 1px solid var(--surface-border, #d8dee9); border-radius: .75rem; background: var(--surface-ground, #f8fafc); display: flex; align-items: center; }
+@media (max-width: 900px) {
+  .filter-grid { grid-template-columns: 1fr; }
+}

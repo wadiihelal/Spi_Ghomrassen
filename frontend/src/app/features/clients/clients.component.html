@@ -1,0 +1,87 @@
+<section class="page-grid">
+  <div class="section-header">
+    <div>
+      <h2 class="page-title">Clients</h2>
+      <p class="page-subtitle">Base clients filtrée automatiquement par projet actif.</p>
+    </div>
+    <button pButton type="button" label="Nouveau client" icon="pi pi-plus" (click)="openCreateDialog()"></button>
+  </div>
+
+  <p-card header="Liste des clients">
+    <p-table #dt [value]="filteredClients" responsiveLayout="scroll" [globalFilterFields]="['fullName', 'phone', 'email']" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
+      <ng-template pTemplate="caption">
+        <div class="table-toolbar">
+          <input pInputText type="text" placeholder="Rechercher un client..." (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
+        </div>
+      </ng-template>
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Client</th>
+          <th>Contact</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>
+            <div class="table-main">{{ row.fullName }}</div>
+            <div class="table-meta">{{ row.cinOrFiscalId || 'CIN non renseigné' }}</div>
+          </td>
+          <td>
+            <div class="table-main">{{ row.phone || '-' }}</div>
+            <div class="table-meta">{{ row.email || '-' }}</div>
+          </td>
+          <td>{{ row.active ? 'Actif' : 'Inactif' }}</td>
+          <td class="actions-cell">
+            <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir client" (click)="edit(row)"></button>
+            <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <p-dialog [header]="editingId ? 'Modifier client' : 'Nouveau client'" [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '60rem', maxWidth: '96vw' }" (onHide)="resetForm()">
+    <form [formGroup]="form" class="form-grid" (ngSubmit)="submit()">
+      <div class="field">
+        <label>Projet</label>
+        <div class="value-box">{{ currentProjectName }}</div>
+      </div>
+      <div class="field">
+        <label>Nom complet</label>
+        <input pInputText formControlName="fullName" />
+      </div>
+      <div class="field">
+        <label>Téléphone</label>
+        <input pInputText formControlName="phone" />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input pInputText formControlName="email" />
+      </div>
+      <div class="field field-full">
+        <label>Adresse</label>
+        <input pInputText formControlName="address" />
+      </div>
+      <div class="field">
+        <label>CIN / Matricule fiscal</label>
+        <input pInputText formControlName="cinOrFiscalId" />
+      </div>
+      <div class="field field-checkbox">
+        <label>
+          <input type="checkbox" formControlName="active" />
+          Client actif
+        </label>
+      </div>
+      <div class="field field-full">
+        <label>Notes</label>
+        <input pInputText formControlName="notes" />
+      </div>
+      <div class="form-actions">
+        <button pButton type="submit" [label]="editingId ? 'Mettre à jour' : 'Enregistrer'"></button>
+        <button pButton type="button" severity="secondary" label="Annuler" (click)="resetForm()"></button>
+      </div>
+    </form>
+  </p-dialog>
+</section>

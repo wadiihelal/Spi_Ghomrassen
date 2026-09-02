@@ -1,0 +1,8 @@
+.page-grid { display: grid; gap: 1.5rem; align-content: start; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.field { display: flex; flex-direction: column; gap: 0.35rem; }
+.field-full { grid-column: 1 / -1; }
+.form-actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; padding-bottom: .75rem; }
+.actions-cell { display: flex; gap: 0.5rem; justify-content: flex-start; }
+@media (max-width: 900px) { .filter-grid { grid-template-columns: 1fr; } }

@@ -1,0 +1,165 @@
+package com.promoteur.app.service.impl;
+
+import com.promoteur.app.dto.ClientAdvanceRequest;
+import com.promoteur.app.entity.Apartment;
+import com.promoteur.app.entity.Client;
+import com.promoteur.app.entity.ClientAdvance;
+import com.promoteur.app.entity.ClientPurchase;
+import com.promoteur.app.entity.Project;
+import com.promoteur.app.exception.ResourceNotFoundException;
+import com.promoteur.app.repository.ApartmentRepository;
+import com.promoteur.app.repository.ClientAdvanceRepository;
+import com.promoteur.app.repository.ClientPurchaseRepository;
+import com.promoteur.app.service.AuditLogService;
+import com.promoteur.app.service.ClientAdvanceService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class ClientAdvanceServiceImpl implements ClientAdvanceService {
+
+    private final ClientAdvanceRepository clientAdvanceRepository;
+    private final ClientPurchaseRepository clientPurchaseRepository;
+    private final ApartmentRepository apartmentRepository;
+    private final AuditLogService auditLogService;
+
+    @Override
+    public Page<ClientAdvance> findAll(final Pageable pageable) {
+        return this.clientAdvanceRepository.findAll(pageable);
+    }
+
+    @Override
+    public ClientAdvance findById(final Long id) {
+        return this.clientAdvanceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Client advance not found with id " + id));
+    }
+
+    @Override
+    public ClientAdvance create(final ClientAdvanceRequest request) {
+        final ClientAdvance advance = new ClientAdvance();
+        this.map(advance, request);
+
+        ClientAdvance saved = this.clientAdvanceRepository.save(advance);
+        saved = this.finalizeGeneratedReference(saved, request.getReference());
+
+        this.auditLogService.create("ADVANCE", saved.getId(), "CREATE", "Acompte " + saved.getReference() + " enregistre.");
+        return saved;
+    }
+
+    @Override
+    public ClientAdvance update(final Long id, final ClientAdvanceRequest request) {
+        final ClientAdvance advance = this.findById(id);
+        this.map(advance, request);
+        final ClientAdvance saved = this.clientAdvanceRepository.save(advance);
+        this.auditLogService.create("ADVANCE", saved.getId(), "UPDATE", "Acompte " + saved.getReference() + " modifie.");
+        return saved;
+    }
+
+    @Override
+    public void delete(final Long id) {
+        final ClientAdvance advance = this.findById(id);
+        this.clientAdvanceRepository.delete(advance);
+        this.auditLogService.create("ADVANCE", id, "DELETE", "Acompte " + advance.getReference() + " supprime.");
+    }
+
+    @Override
+    public Page<ClientAdvance> findByClient(final Long clientId, final Pageable pageable) {
+        return this.clientAdvanceRepository.findByClientId(clientId, pageable);
+    }
+
+    @Override
+    public Page<ClientAdvance> findByProject(final Long projectId, final Pageable pageable) {
+        return this.clientAdvanceRepository.findByProjectId(projectId, pageable);
+    }
+
+    private void map(final ClientAdvance clientAdvance, final ClientAdvanceRequest request) {
+        final Apartment apartment = this.apartmentRepository.findById(request.getApartmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Apartment not found with id " + request.getApartmentId()));
+        final Client client = apartment.getAcquirer();
+        if (client == null) {
+            throw new ResourceNotFoundException("Apartment has no assigned client/acquirer");
+        }
+        final Project project = apartment.getProject();
+        if (project == null) {
+            throw new ResourceNotFoundException("Apartment has no assigned project");
+        }
+
+        this.validateAdvanceAmount(clientAdvance, apartment, request.getAmount());
+
+        clientAdvance.setReference(this.resolveReference(clientAdvance, request.getReference()));
+        clientAdvance.setAdvanceDate(request.getAdvanceDate());
+        clientAdvance.setAmount(request.getAmount());
+        clientAdvance.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : com.promoteur.app.enums.PaymentMethod.OTHER);
+        clientAdvance.setAttachmentName(request.getAttachmentName());
+        clientAdvance.setAttachmentUrl(request.getAttachmentUrl());
+        clientAdvance.setNotes(request.getNotes());
+        clientAdvance.setClient(client);
+        clientAdvance.setProject(project);
+        clientAdvance.setApartment(apartment);
+    }
+
+    private void validateAdvanceAmount(final ClientAdvance clientAdvance, final Apartment apartment, final BigDecimal requestedAmount) {
+        final ClientPurchase purchase = this.clientPurchaseRepository.findByApartmentId(apartment.getId()).orElse(null);
+        if (purchase == null) {
+            return;
+        }
+
+        final BigDecimal otherAdvancesAmount = this.clientAdvanceRepository.findByApartmentId(apartment.getId()).stream()
+                .filter(advance -> clientAdvance.getId() == null || !advance.getId().equals(clientAdvance.getId()))
+                .map(ClientAdvance::getAmount)
+                .map(this::normalize)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        final BigDecimal totalCollectedAmount = this.normalize(purchase.getPaidAmount())
+                .add(otherAdvancesAmount)
+                .add(this.normalize(requestedAmount));
+
+        if (totalCollectedAmount.compareTo(this.normalize(purchase.getTotalAmount())) > 0) {
+            throw new IllegalArgumentException("Collected amount exceeds declared amount for apartment " + apartment.getApartmentNumber());
+        }
+    }
+
+    private String resolveReference(final ClientAdvance clientAdvance, final String requestedReference) {
+        if (StringUtils.hasText(requestedReference)) {
+            return requestedReference.trim();
+        }
+        if (StringUtils.hasText(clientAdvance.getReference())) {
+            return clientAdvance.getReference();
+        }
+        if (clientAdvance.getId() != null) {
+            return this.formatReference(clientAdvance.getId());
+        }
+        return "ACC-TMP-" + UUID.randomUUID();
+    }
+
+    private ClientAdvance finalizeGeneratedReference(final ClientAdvance clientAdvance, final String requestedReference) {
+        if (StringUtils.hasText(requestedReference)) {
+            return clientAdvance;
+        }
+
+        final String finalReference = this.formatReference(clientAdvance.getId());
+        if (finalReference.equals(clientAdvance.getReference())) {
+            return clientAdvance;
+        }
+
+        clientAdvance.setReference(finalReference);
+        return this.clientAdvanceRepository.save(clientAdvance);
+    }
+
+    private String formatReference(final Long id) {
+        return String.format("ACC-%05d", id);
+    }
+
+    private BigDecimal normalize(final BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+}

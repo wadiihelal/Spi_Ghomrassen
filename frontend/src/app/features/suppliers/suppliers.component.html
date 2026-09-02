@@ -1,0 +1,99 @@
+<section class="page-grid">
+  <div class="section-header">
+    <div>
+      <h2 class="page-title">Fournisseurs</h2>
+      <p class="page-subtitle">Gestion des fournisseurs, prestataires et intervenants externes.</p>
+    </div>
+    <button pButton type="button" label="Nouveau fournisseur" icon="pi pi-plus" (click)="openCreateDialog()"></button>
+  </div>
+
+  <p-card header="Liste des fournisseurs">
+    <p-table #dt [value]="suppliers" responsiveLayout="scroll" [globalFilterFields]="['name', 'phone', 'email', 'type']" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
+      <ng-template pTemplate="caption">
+        <div class="table-toolbar">
+          <input pInputText type="text" placeholder="Rechercher un fournisseur..." (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
+        </div>
+      </ng-template>
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Fournisseur</th>
+          <th>Type</th>
+          <th>Contact</th>
+          <th>Actions</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>
+            <div class="table-main">{{ row.name }}</div>
+            <div class="table-meta">{{ row.fiscalId || 'MF non renseigné' }}</div>
+          </td>
+          <td>{{ getSupplierTypeLabel(row.type) }}</td>
+          <td>
+            <div class="table-main">{{ row.phone || '-' }}</div>
+            <div class="table-meta">{{ row.email || '-' }}</div>
+          </td>
+          <td class="actions-cell">
+            <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir fournisseur" (click)="edit(row)"></button>
+            <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <p-dialog [header]="editingId ? 'Modifier fournisseur' : 'Nouveau fournisseur'" [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '60rem', maxWidth: '96vw' }" (onHide)="resetForm()">
+    <form [formGroup]="form" class="form-grid" (ngSubmit)="submit()">
+      <div class="field">
+        <label>Nom</label>
+        <input pInputText formControlName="name" />
+      </div>
+      <div class="field">
+        <label>Matricule fiscal</label>
+        <input pInputText formControlName="fiscalId" />
+      </div>
+      <div class="field">
+        <label>Téléphone</label>
+        <input pInputText formControlName="phone" />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input pInputText formControlName="email" />
+      </div>
+      <div class="field">
+        <label>Type</label>
+        <div class="inline-select">
+          <p-dropdown formControlName="typeId" [options]="supplierTypes" optionLabel="label" optionValue="id" placeholder="Choisir"></p-dropdown>
+          <button pButton type="button" icon="pi pi-plus" severity="secondary" (click)="openSupplierTypeDialog()"></button>
+        </div>
+      </div>
+      <div class="field field-full">
+        <label>Adresse</label>
+        <input pInputText formControlName="address" />
+      </div>
+      <div class="field field-checkbox">
+        <label>
+          <input type="checkbox" formControlName="active" />
+          Fournisseur actif
+        </label>
+      </div>
+      <div class="form-actions">
+        <button pButton type="submit" [label]="editingId ? 'Mettre à jour' : 'Enregistrer'"></button>
+        <button pButton type="button" severity="secondary" label="Annuler" (click)="resetForm()"></button>
+      </div>
+    </form>
+  </p-dialog>
+
+  <p-dialog header="Nouveau type fournisseur" [(visible)]="supplierTypeDialogVisible" [modal]="true" [style]="{ width: '30rem', maxWidth: '95vw' }" (onHide)="closeSupplierTypeDialog()">
+    <form [formGroup]="supplierTypeForm" class="form-grid single-column" (ngSubmit)="submitSupplierType()">
+      <div class="field">
+        <label>Libellé</label>
+        <input pInputText formControlName="label" />
+      </div>
+      <div class="form-actions">
+        <button pButton type="submit" label="Enregistrer"></button>
+        <button pButton type="button" severity="secondary" label="Annuler" (click)="closeSupplierTypeDialog()"></button>
+      </div>
+    </form>
+  </p-dialog>
+</section>

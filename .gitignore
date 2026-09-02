@@ -1,0 +1,19 @@
+# Build output
+backend/target/
+frontend/dist/
+frontend/.angular/
+
+# Dependencies
+frontend/node_modules/
+
+# IDE metadata
+.idea/
+backend/.idea/
+.cursorj/
+*.iml
+
+# OS
+.DS_Store
+
+# Local environment overrides
+frontend/src/environments/environment.local.ts

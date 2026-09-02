@@ -1,0 +1,261 @@
+@if (loading) {
+  <div class="centered"><p-progressSpinner ariaLabel="loading"></p-progressSpinner></div>
+} @else {
+  <section class="hero-card">
+    <div class="hero-copy">
+      <div class="hero-eyebrow">Mode simple</div>
+      <h2>Stock, factures, dépenses et paiements au même endroit</h2>
+      <p>Le flow principal: créer le stock appartements, saisir les factures ou dépenses, puis rattacher ventes et paiements au bon appartement.</p>
+    </div>
+    <div class="hero-balance" [class.positive]="balance >= 0" [class.negative]="balance < 0">
+      <span>Solde net</span>
+      <strong>{{ balance | number:'1.0-2' }} DT</strong>
+      <small>{{ totalCashIn | number:'1.0-2' }} DT encaissés • {{ totalCashOut | number:'1.0-2' }} DT décaissés</small>
+    </div>
+  </section>
+
+  <section class="workflow-grid">
+    <p-card styleClass="workflow-card">
+      <div class="workflow-icon"><i class="pi pi-building"></i></div>
+      <div>
+        <span class="workflow-step">1. Stock</span>
+        <h3>Entrer les appartements</h3>
+        <p>Créer les blocs, étages, appartements, surfaces, prix et acquéreur.</p>
+      </div>
+      <a pButton routerLink="/apartments" label="Ouvrir stock" icon="pi pi-arrow-right" iconPos="right"></a>
+    </p-card>
+
+    <p-card styleClass="workflow-card">
+      <div class="workflow-icon"><i class="pi pi-receipt"></i></div>
+      <div>
+        <span class="workflow-step">2. Charges</span>
+        <h3>Factures et dépenses</h3>
+        <p>Saisir les factures fournisseurs avec retenue, ou une dépense simple du projet.</p>
+      </div>
+      <div class="workflow-actions">
+        <a pButton routerLink="/supplier-invoices" label="Facture" icon="pi pi-receipt"></a>
+        <a pButton routerLink="/expenses" label="Dépense" severity="secondary" icon="pi pi-wallet"></a>
+      </div>
+    </p-card>
+
+    <p-card styleClass="workflow-card">
+      <div class="workflow-icon"><i class="pi pi-link"></i></div>
+      <div>
+        <span class="workflow-step">3. Liaison</span>
+        <h3>Vente et paiement</h3>
+        <p>Lier client + appartement, puis enregistrer les paiements et acomptes.</p>
+      </div>
+      <div class="workflow-actions">
+        <a pButton routerLink="/purchases" label="Vente" icon="pi pi-shopping-cart"></a>
+        <a pButton routerLink="/advances" label="Paiement" severity="secondary" icon="pi pi-credit-card"></a>
+      </div>
+    </p-card>
+
+    <p-card styleClass="workflow-card soft">
+      <div class="workflow-icon"><i class="pi pi-file"></i></div>
+      <div>
+        <span class="workflow-step">4. Contrôle</span>
+        <h3>Voir la situation</h3>
+        <p>Suivre le reste à encaisser, les charges, la marge et les exports.</p>
+      </div>
+      <a pButton routerLink="/reports" label="Rapports" severity="secondary" icon="pi pi-arrow-right" iconPos="right"></a>
+    </p-card>
+  </section>
+
+  <section class="kpi-grid">
+    <p-card styleClass="metric-card primary">
+      <div class="metric-head">
+        <span class="kpi-label">Total dépenses</span>
+        <i class="pi pi-wallet"></i>
+      </div>
+      <div class="kpi-value">{{ summary?.totalExpenses ?? 0 | number:'1.0-2' }} DT</div>
+      <div class="kpi-foot">Sorties financières globales</div>
+    </p-card>
+
+    <p-card styleClass="metric-card success">
+      <div class="metric-head">
+        <span class="kpi-label">Total encaissé</span>
+        <i class="pi pi-credit-card"></i>
+      </div>
+      <div class="kpi-value">{{ summary?.totalAdvances ?? 0 | number:'1.0-2' }} DT</div>
+      <div class="kpi-foot">Encaissements reçus des clients</div>
+    </p-card>
+
+    <p-card styleClass="metric-card accent">
+      <div class="metric-head">
+        <span class="kpi-label">Total achats</span>
+        <i class="pi pi-shopping-cart"></i>
+      </div>
+      <div class="kpi-value">{{ summary?.totalPurchases ?? 0 | number:'1.0-2' }} DT</div>
+      <div class="kpi-foot">Ventes et achats enregistrés</div>
+    </p-card>
+
+  </section>
+
+  <section class="mini-grid">
+    <p-card>
+      <div class="mini-stat-title">Projets</div>
+      <div class="mini-stat-value">{{ projectsCount }}</div>
+      <div class="mini-stat-meta">{{ activeProjectsCount }} en cours • {{ completedProjectsCount }} terminés</div>
+    </p-card>
+
+    <p-card>
+      <div class="mini-stat-title">Taux d'encaissement</div>
+      <div class="mini-stat-value">{{ collectionRate }}%</div>
+      <div class="progress-shell">
+        <div class="progress-fill" [style.width.%]="collectionRate"></div>
+      </div>
+    </p-card>
+
+    <p-card>
+      <div class="mini-stat-title">Transactions</div>
+      <div class="mini-stat-value">{{ expenses.length + purchases.length + advances.length }}</div>
+      <div class="mini-stat-meta">{{ expenses.length }} dépenses • {{ purchases.length }} achats • {{ advances.length }} avances</div>
+    </p-card>
+
+    <p-card>
+      <div class="mini-stat-title">Reste à encaisser</div>
+      <div class="mini-stat-value">{{ totalReceivables | number:'1.0-2' }} DT</div>
+      <div class="mini-stat-meta">Montant encore attendu des clients</div>
+    </p-card>
+
+    <p-card>
+      <div class="mini-stat-title">Marge estimée</div>
+      <div class="mini-stat-value">{{ estimatedMargin | number:'1.0-2' }} DT</div>
+      <div class="mini-stat-meta">Achats moins dépenses engagées</div>
+    </p-card>
+
+    <p-card>
+      <div class="mini-stat-title">Budget consommé</div>
+      <div class="mini-stat-value">{{ budgetConsumptionRate }}%</div>
+      <div class="progress-shell">
+        <div class="progress-fill" [style.width.%]="budgetConsumptionRate"></div>
+      </div>
+    </p-card>
+  </section>
+
+  <section class="dashboard-grid">
+    <p-card header="Suivi des dépenses récentes" class="span-7">
+      <p-table [value]="recentExpenses" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Montant TTC</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>{{ row.expenseDate | date:'dd/MM/yyyy' }}</td>
+            <td>{{ row.description }}</td>
+            <td>{{ row.amountTtc | number:'1.0-2' }} DT</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+
+    <p-card header="Tendance des dépenses" class="span-5">
+      <div class="bar-list">
+        @for (item of expenseTrend; track item.label) {
+          <div class="bar-item">
+            <div class="bar-top">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.amount | number:'1.0-2' }} DT</strong>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" [style.width.%]="item.width"></div>
+            </div>
+          </div>
+        }
+        @if (!expenseTrend.length) {
+          <div class="empty-state">Aucune dépense disponible pour afficher la tendance.</div>
+        }
+      </div>
+    </p-card>
+
+    <p-card header="Projets" class="span-7">
+      <div class="project-list">
+        @for (project of projects.slice(0, 6); track project.id ?? project.name) {
+          <div class="project-row">
+            <div class="project-main">
+              <div class="project-title-row">
+                <strong>{{ project.name }}</strong>
+                <p-tag [value]="getProjectStatusLabel(project.status)" [severity]="getProjectSeverity(project.status)"></p-tag>
+              </div>
+              <div class="project-meta">{{ project.location || 'Localisation non renseignée' }}</div>
+            </div>
+            <div class="project-side">
+              <div class="project-amount">{{ getProjectExpenseAmount(project) | number:'1.0-2' }} DT</div>
+              <div class="project-budget-line">
+                <span>Budget consommé</span>
+                <strong>{{ getProjectBudgetUsage(project) }}%</strong>
+              </div>
+              <div class="progress-shell slim">
+                <div class="progress-fill" [style.width.%]="getProjectBudgetUsage(project)"></div>
+              </div>
+              <div class="project-finance-row">
+                <span>Budget {{ getProjectBudget(project) | number:'1.0-2' }} DT</span>
+                <span>Reste {{ getProjectBudgetRemaining(project) | number:'1.0-2' }} DT</span>
+              </div>
+            </div>
+          </div>
+        }
+        @if (!projects.length) {
+          <div class="empty-state">Aucun projet enregistré.</div>
+        }
+      </div>
+    </p-card>
+
+    <p-card header="Top clients à relancer" class="span-5">
+      <div class="debtor-list">
+        @for (client of topDebtors; track client.clientId) {
+          <div class="debtor-row">
+            <div>
+              <strong>{{ client.clientName }}</strong>
+              <div class="debtor-meta">Achats {{ client.totalPurchases | number:'1.0-2' }} DT • Paiements {{ client.totalAdvances | number:'1.0-2' }} DT</div>
+            </div>
+            <div class="debtor-amount">{{ client.remainingToPay | number:'1.0-2' }} DT</div>
+          </div>
+        }
+        @if (!topDebtors.length) {
+          <div class="empty-state">Aucune situation client disponible.</div>
+        }
+      </div>
+    </p-card>
+
+    <p-card header="Projets les plus rentables" class="span-5">
+      <div class="debtor-list">
+        @for (project of bestProjects; track project.name) {
+          <div class="debtor-row">
+            <strong>{{ project.name }}</strong>
+            <div class="debtor-amount">{{ project.margin | number:'1.0-2' }} DT</div>
+          </div>
+        }
+        @if (!bestProjects.length) {
+          <div class="empty-state">Aucun indicateur disponible.</div>
+        }
+      </div>
+    </p-card>
+  </section>
+
+  <p-card header="Situation clients">
+    <p-table [value]="statements" [tableStyle]="{ 'min-width': '50rem' }" responsiveLayout="scroll">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Client</th>
+          <th>Achats</th>
+          <th>Paiements</th>
+          <th>Reste</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>{{ row.clientName }}</td>
+          <td>{{ row.totalPurchases | number:'1.0-2' }} DT</td>
+          <td>{{ row.totalAdvances | number:'1.0-2' }} DT</td>
+          <td [class.negative-cell]="row.remainingToPay > 0">{{ row.remainingToPay | number:'1.0-2' }} DT</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+}
