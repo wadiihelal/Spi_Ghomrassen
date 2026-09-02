@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: spi-ghomrassen-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spi_ghomrassen
+      POSTGRES_USER: spi
+      POSTGRES_PASSWORD: spi
+    ports:
+      - "5432:5432"
+    volumes:
+      - spi-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spi -d spi_ghomrassen"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  spi-postgres-data:

@@ -33,6 +33,8 @@ public class Project extends BaseEntity {
 
     private LocalDate startDate;
     private LocalDate expectedEndDate;
+
+    @Column(precision = 19, scale = 3)
     private BigDecimal budget;
 
     @Enumerated(EnumType.STRING)

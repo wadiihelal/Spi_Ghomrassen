@@ -20,32 +20,60 @@ Backend Spring Boot pour une application de gestion de dépenses et achats clien
 - Spring Web
 - Spring Data JPA
 - Validation
-- H2 Database
+- PostgreSQL 16 + Flyway
+- H2 (tests uniquement)
 - Lombok
 
-## Lancement
+## Base de données
+
+Le backend s'appuie sur PostgreSQL 16. Le schéma est géré exclusivement par Flyway
+(`src/main/resources/db/migration`) ; Hibernate est en `ddl-auto=validate` et ne crée ni ne
+modifie jamais une table. Les données survivent donc aux redémarrages.
+
+### Démarrer la base
+
+Depuis la racine du projet :
+
+```bash
+docker compose up -d
+```
+
+Le service `postgres` expose `localhost:5432`, base `spi_ghomrassen`, utilisateur `spi`,
+mot de passe `spi`, avec un volume nommé `spi-postgres-data` pour la persistance.
+
+### Lancement du backend
+
 ```bash
 mvn spring-boot:run
 ```
 
-## Données de démonstration au démarrage
-Au lancement, si la base est vide, le backend charge automatiquement des données cohérentes de démonstration :
-- 3 projets
-- 4 clients
-- 5 fournisseurs
-- catégories de dépense
-- dépenses liées aux projets et fournisseurs
-- acomptes clients
-- achats clients
-- retenues à la source générées automatiquement selon les fournisseurs soumis à retenue
+Au premier démarrage, Flyway applique `V1__baseline.sql` et crée les 11 tables.
 
-Comme la base H2 est en mémoire (`jdbc:h2:mem:promoteurdb`), ces données sont rechargées à chaque démarrage du backend.
+## Profils
 
-## H2 Console
-- URL: `/h2-console`
-- JDBC URL: `jdbc:h2:mem:promoteurdb`
-- User: `sa`
-- Password: vide
+| Profil | Base | Usage |
+|---|---|---|
+| `dev` (défaut) | PostgreSQL `localhost:5432/spi_ghomrassen` | développement local, `show-sql=true` |
+| `prod` | PostgreSQL via `${DATABASE_URL}` | production, aucune valeur par défaut |
+| `test` | H2 en mémoire, mêmes migrations Flyway | suite de tests |
+
+### Variables d'environnement
+
+| Variable | Profils | Défaut |
+|---|---|---|
+| `DB_USER` | dev, prod | `spi` en dev, obligatoire en prod |
+| `DB_PASSWORD` | dev, prod | `spi` en dev, obligatoire en prod |
+| `DATABASE_URL` | prod | obligatoire |
+| `APP_CORS_ALLOWED_ORIGINS` | prod | obligatoire |
+
+## Données de démonstration
+
+Les données fictives ne sont plus chargées automatiquement. Voir la section « Profil demo »
+plus bas.
+
+## Console H2
+
+Désactivée dans tous les profils (`spring.h2.console.enabled=false`).
 
 ## Endpoints principaux
 ### CRUD de base
