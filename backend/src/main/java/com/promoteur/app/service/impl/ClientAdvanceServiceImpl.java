@@ -1,5 +1,6 @@
 package com.promoteur.app.service.impl;
 
+import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.ClientAdvanceRequest;
 import com.promoteur.app.dto.response.ClientAdvanceResponse;
 import com.promoteur.app.entity.Apartment;
@@ -11,6 +12,7 @@ import com.promoteur.app.exception.ResourceNotFoundException;
 import com.promoteur.app.mapper.ClientAdvanceMapper;
 import com.promoteur.app.repository.ApartmentRepository;
 import com.promoteur.app.repository.ClientAdvanceRepository;
+import com.promoteur.app.repository.specification.ClientAdvanceSpecifications;
 import com.promoteur.app.repository.ClientPurchaseRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.ClientAdvanceService;
@@ -40,8 +42,9 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ClientAdvanceResponse> findAll(final Pageable pageable) {
-        return this.clientAdvanceRepository.findAll(pageable).map(this.clientAdvanceMapper::toResponse);
+    public Page<ClientAdvanceResponse> findAll(final ListFilter filter, final Pageable pageable) {
+        return this.clientAdvanceRepository.findAll(ClientAdvanceSpecifications.matching(filter), pageable)
+                .map(this.clientAdvanceMapper::toResponse);
     }
 
     @Override

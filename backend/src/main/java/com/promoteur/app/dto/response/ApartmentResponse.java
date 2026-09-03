@@ -15,6 +15,15 @@ public record ApartmentResponse(
         Long projectId,
         String projectName,
         Long acquirerId,
-        String acquirerName
+        String acquirerName,
+        /**
+         * Figures derived from the apartment's sale contract and the advances collected on it.
+         * Carried here so the apartments table can be paginated server-side instead of
+         * recomputing them from full expense, purchase and advance lists (PERF-02).
+         */
+        BigDecimal totalPurchases,
+        BigDecimal totalAdvances,
+        BigDecimal totalCollected,
+        BigDecimal remainingToCollect
 ) {
 }

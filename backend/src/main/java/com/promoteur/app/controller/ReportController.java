@@ -15,16 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-/**
- * Reports and exports.
- *
- * <p>Every endpoint accepts the same optional scope parameters: {@code projectId} (a project
- * identifier, or {@code ALL} to aggregate across projects; absent means the active project
- * context), {@code year} and {@code month}.</p>
- */
-@RestController
+import org.springframework.web.bind.annotation.RestController;@RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
 public class ReportController {
@@ -47,6 +38,33 @@ public class ReportController {
             @RequestParam(required = false) Integer month,
             Pageable pageable) {
         return reportService.expensesByProject(ReportFilter.of(projectId, year, month), pageable);
+    }
+
+    @GetMapping("/expenses/by-month")
+    public Page<AmountByLabelDto> expensesByMonth(
+            @RequestParam(required = false) String projectId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            Pageable pageable) {
+        return reportService.expensesByMonth(ReportFilter.of(projectId, year, month), pageable);
+    }
+
+    @GetMapping("/purchases/by-project")
+    public Page<AmountByLabelDto> purchasesByProject(
+            @RequestParam(required = false) String projectId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            Pageable pageable) {
+        return reportService.purchasesByProject(ReportFilter.of(projectId, year, month), pageable);
+    }
+
+    @GetMapping("/advances/by-payment-method")
+    public Page<AmountByLabelDto> advancesByPaymentMethod(
+            @RequestParam(required = false) String projectId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            Pageable pageable) {
+        return reportService.advancesByPaymentMethod(ReportFilter.of(projectId, year, month), pageable);
     }
 
     @GetMapping("/clients/statements")

@@ -1,5 +1,6 @@
 package com.promoteur.app.service.impl;
 
+import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.SupplierInvoiceRequest;
 import com.promoteur.app.dto.VatAmounts;
 import com.promoteur.app.dto.response.SupplierInvoiceResponse;
@@ -10,6 +11,7 @@ import com.promoteur.app.exception.ResourceNotFoundException;
 import com.promoteur.app.mapper.SupplierInvoiceMapper;
 import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.repository.SupplierInvoiceRepository;
+import com.promoteur.app.repository.specification.SupplierInvoiceSpecifications;
 import com.promoteur.app.repository.SupplierRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.MessageService;
@@ -37,8 +39,9 @@ public class SupplierInvoiceServiceImpl implements SupplierInvoiceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<SupplierInvoiceResponse> findAll(final Pageable pageable) {
-        return this.supplierInvoiceRepository.findAll(pageable).map(this.supplierInvoiceMapper::toResponse);
+    public Page<SupplierInvoiceResponse> findAll(final ListFilter filter, final Pageable pageable) {
+        return this.supplierInvoiceRepository.findAll(SupplierInvoiceSpecifications.matching(filter), pageable)
+                .map(this.supplierInvoiceMapper::toResponse);
     }
 
     @Override

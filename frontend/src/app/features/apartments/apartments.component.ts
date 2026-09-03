@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -8,10 +8,11 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DropdownModule } from 'primeng/dropdown';
 import { DialogModule } from 'primeng/dialog';
-import { Apartment, Client, ClientAdvance, ClientPurchase, Project } from '../../shared/models/models';
+import { Apartment, Client, ListFilter, Project } from '../../shared/models/models';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
+import { LazyTable } from '../../core/services/lazy-table';
 import { forkJoin } from 'rxjs';
 
 @Component({
@@ -26,12 +27,15 @@ export class ApartmentsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  apartments: Apartment[] = [];
+  /** One page of apartments, filtered and counted by the server (PERF-02). */
+  readonly table = new LazyTable<Apartment>(
+    (query) => this.api.getApartments(this.serverFilter, query),
+    this.destroyRef
+  );
   projects: Project[] = [];
   clients: Client[] = [];
-  purchases: ClientPurchase[] = [];
-  advances: ClientAdvance[] = [];
   editingId: number | null = null;
   dialogVisible = false;
   bulkMode = true;
@@ -104,24 +108,17 @@ export class ApartmentsComponent implements OnInit {
     this.loadData();
   }
 
-  loadData(): void {
-    this.api.getApartments().subscribe({ next: (data) => (this.apartments = data) });
-    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
-    this.api.getClients().subscribe({ next: (data) => (this.clients = data) });
-    this.api.getPurchases().subscribe({ next: (data) => (this.purchases = data) });
-    this.api.getAdvances().subscribe({ next: (data) => (this.advances = data) });
+  /** Filters sent to the server; the header's project always narrows the list. */
+  private get serverFilter(): ListFilter {
+    return {
+      projectId: this.selectedProjectId ?? this.filters.projectId,
+      search: this.filters.search
+    };
   }
 
-  get filteredApartments(): Apartment[] {
-    return this.apartments.filter((row) => {
-      const term = this.filters.search.trim().toLowerCase();
-      const matchSearch = !term || [row.apartmentNumber, row.apartmentType, row.detail, row.acquirerName, row.projectName]
-        .some((value) => (value ?? '').toString().toLowerCase().includes(term));
-      const projectId = row.projectId;
-      const matchProject = !this.filters.projectId || projectId === this.filters.projectId;
-      const matchSelectedProject = !this.selectedProjectId || projectId === this.selectedProjectId;
-      return matchSearch && matchProject && matchSelectedProject;
-    });
+  loadData(): void {
+    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
+    this.api.getClients().subscribe({ next: (data) => (this.clients = data) });
   }
 
   getProjectName(row: Apartment): string {
@@ -139,36 +136,24 @@ export class ApartmentsComponent implements OnInit {
     return Math.round((price / surface) * 1000) / 1000;
   }
 
+  /**
+   * The four figures below are derived by the backend and carried on the row (PERF-02). They
+   * used to be reduced from the full purchase and advance lists held in the browser.
+   */
   getTotalPurchases(row: Apartment): number {
-    const apartmentId = row.id;
-    if (!apartmentId) return 0;
-    return this.purchases
-      .filter((item) => item.apartmentId === apartmentId)
-      .reduce((sum, item) => sum + (item.totalAmount ?? 0), 0);
+    return row.totalPurchases ?? 0;
   }
 
   getTotalAdvances(row: Apartment): number {
-    const apartmentId = row.id;
-    if (!apartmentId) return 0;
-    return this.advances
-      .filter((item) => item.apartmentId === apartmentId)
-      .reduce((sum, item) => sum + (item.amount ?? 0), 0);
+    return row.totalAdvances ?? 0;
   }
 
   getTotalCollected(row: Apartment): number {
-    const apartmentId = row.id;
-    if (!apartmentId) return 0;
-    return this.purchases
-      .filter((item) => item.apartmentId === apartmentId)
-      .reduce((sum, item) => sum + (item.collectedAmount ?? ((item.paidAmount ?? 0) + (item.advanceAmount ?? 0))), 0);
+    return row.totalCollected ?? 0;
   }
 
   getRemainingToCollect(row: Apartment): number {
-    const apartmentId = row.id;
-    if (!apartmentId) return 0;
-    return this.purchases
-      .filter((item) => item.apartmentId === apartmentId)
-      .reduce((sum, item) => sum + (item.remainingAmount ?? Math.max(0, (item.totalAmount ?? 0) - ((item.paidAmount ?? 0) + (item.advanceAmount ?? 0)))), 0);
+    return row.remainingToCollect ?? 0;
   }
 
   submit(): void {
@@ -184,7 +169,7 @@ export class ApartmentsComponent implements OnInit {
       next: () => {
         this.ui.success(this.editingId ? 'Appartement modifié' : 'Appartement ajouté', 'L’inventaire a été mis à jour.');
         this.resetForm();
-        this.loadData();
+        this.table.reload();
       }
     });
   }
@@ -231,7 +216,7 @@ export class ApartmentsComponent implements OnInit {
       next: (created) => {
         this.ui.success('Bloc généré', `${created.length} appartements ont été créés pour le bloc ${blockCode}.`);
         this.resetBulkForm();
-        this.loadData();
+        this.table.reload();
       }
     });
   }
@@ -259,7 +244,7 @@ export class ApartmentsComponent implements OnInit {
       this.api.deleteApartment(row.id!).subscribe({
         next: () => {
           this.ui.success('Appartement supprimé', 'L’appartement a été supprimé.');
-          this.loadData();
+          this.table.reload();
           if (this.editingId === row.id) this.resetForm();
         }
       });

@@ -1,5 +1,6 @@
 package com.promoteur.app.service;
 
+import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.ApartmentRequest;
 import com.promoteur.app.dto.response.ApartmentResponse;
 import org.springframework.data.domain.Page;
@@ -13,7 +14,7 @@ public interface ApartmentService {
     /**
      * Returns apartments using the requested pagination.
      */
-    Page<ApartmentResponse> findAll(Pageable pageable);
+    Page<ApartmentResponse> findAll(ListFilter filter, Pageable pageable);
 
     /**
      * Returns a single apartment by identifier.

@@ -9,7 +9,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
-import { Apartment, Client, ClientAdvance, ClientPurchase, Project } from '../../shared/models/models';
+import { Client, Project } from '../../shared/models/models';
 
 @Component({
   selector: 'app-clients',
@@ -25,9 +25,6 @@ export class ClientsComponent implements OnInit {
   private readonly projectContext = inject(ProjectContextService);
 
   clients: Client[] = [];
-  purchases: ClientPurchase[] = [];
-  advances: ClientAdvance[] = [];
-  apartments: Apartment[] = [];
   projects: Project[] = [];
   editingId: number | null = null;
   dialogVisible = false;
@@ -63,9 +60,6 @@ export class ClientsComponent implements OnInit {
     this.api.getClients().subscribe({
       next: (data) => (this.clients = data)
     });
-    this.api.getPurchases().subscribe({ next: (data) => (this.purchases = data) });
-    this.api.getAdvances().subscribe({ next: (data) => (this.advances = data) });
-    this.api.getApartments().subscribe({ next: (data) => (this.apartments = data) });
     this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
   }
 

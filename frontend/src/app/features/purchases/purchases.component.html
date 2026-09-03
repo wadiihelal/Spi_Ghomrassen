@@ -31,15 +31,18 @@
   </div>
 
   <p-card header="Liste des ventes clients">
-    <p-table #dt [value]="filteredPurchases" responsiveLayout="scroll" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
+    <p-table #dt [value]="table.rows" [lazy]="true" (onLazyLoad)="table.onLazyLoad($event)" [loading]="table.loading"
+             [totalRecords]="table.totalRecords" responsiveLayout="scroll" [paginator]="true" [rows]="table.pageSize"
+             [rowsPerPageOptions]="[25, 50, 100]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}"
+             [showCurrentPageReport]="true">
       <ng-template pTemplate="caption">
         <div class="filter-grid">
-          <input pInputText type="text" placeholder="Recherche..." [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" />
-          <p-dropdown [(ngModel)]="filters.clientId" [ngModelOptions]="{ standalone: true }" [options]="projectClients" optionLabel="fullName" optionValue="id" placeholder="Client"></p-dropdown>
-          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" [options]="projects" optionLabel="name" optionValue="id" placeholder="Projet"></p-dropdown>
-          <p-dropdown [(ngModel)]="filters.paymentStatus" [ngModelOptions]="{ standalone: true }" [options]="paymentStatusOptions" optionLabel="label" optionValue="value" placeholder="Statut"></p-dropdown>
-          <input pInputText type="date" [(ngModel)]="filters.dateFrom" [ngModelOptions]="{ standalone: true }" />
-          <input pInputText type="date" [(ngModel)]="filters.dateTo" [ngModelOptions]="{ standalone: true }" />
+          <input pInputText type="text" placeholder="Recherche..." [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" />
+          <p-dropdown [(ngModel)]="filters.clientId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="projectClients" optionLabel="fullName" optionValue="id" placeholder="Client"></p-dropdown>
+          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="projects" optionLabel="name" optionValue="id" placeholder="Projet"></p-dropdown>
+          <p-dropdown [(ngModel)]="filters.paymentStatus" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="paymentStatusOptions" optionLabel="label" optionValue="value" placeholder="Statut"></p-dropdown>
+          <input pInputText type="date" [(ngModel)]="filters.dateFrom" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" />
+          <input pInputText type="date" [(ngModel)]="filters.dateTo" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" />
           <button pButton type="button" severity="secondary" icon="pi pi-filter-slash" label="Réinitialiser" (click)="resetFilters()"></button>
         </div>
       </ng-template>

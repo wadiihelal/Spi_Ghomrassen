@@ -4,6 +4,7 @@ import com.promoteur.app.dto.ApartmentRequest;
 import com.promoteur.app.dto.ClientAdvanceRequest;
 import com.promoteur.app.dto.ClientPurchaseRequest;
 import com.promoteur.app.dto.ExpenseRequest;
+import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.response.ApartmentResponse;
 import com.promoteur.app.entity.Apartment;
 import com.promoteur.app.entity.Client;
@@ -567,8 +568,8 @@ public class DemoDataInitializer implements CommandLineRunner {
      * @throws IllegalStateException when no matching seeded apartment exists
      */
     private Long findApartmentIdForSeed(Long clientId, Long projectId) {
-        return apartmentService.findAll(Pageable.unpaged()).stream()
-                .filter(apartment -> projectId.equals(apartment.projectId()) && clientId.equals(apartment.acquirerId()))
+        return apartmentService.findAll(ListFilter.ofProject(projectId), Pageable.unpaged()).stream()
+                .filter(apartment -> clientId.equals(apartment.acquirerId()))
                 .map(ApartmentResponse::id)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No apartment seed found for client " + clientId + " and project " + projectId));

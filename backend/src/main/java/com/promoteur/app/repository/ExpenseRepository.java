@@ -5,8 +5,10 @@ import com.promoteur.app.dto.report.CountAndTotal;
 import com.promoteur.app.entity.Expense;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -14,7 +16,15 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface ExpenseRepository extends JpaRepository<Expense, Long> {
+public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpecificationExecutor<Expense> {
+    /**
+     * Filtered list endpoint (PERF-02). Redeclared from {@link JpaSpecificationExecutor} so the
+     * entity graph applies here as well: filtering must not reintroduce the N+1.
+     */
+    @EntityGraph(attributePaths = {"category", "project", "supplier"})
+    @Override
+    Page<Expense> findAll(Specification<Expense> specification, Pageable pageable);
+
     /** One query for the list endpoint: the associations the response needs are joined. */
     @EntityGraph(attributePaths = {"category", "project", "supplier"})
     @Override
@@ -104,5 +114,33 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     CountAndTotal countAndTotal(@Param("projectId") Long projectId,
                                 @Param("from") LocalDate from,
                                 @Param("to") LocalDate to);
+
+    /**
+     * Expense totals per calendar month, for the dashboard's trend bars. Grouped by the database
+     * so the browser never needs the underlying rows (PERF-02).
+     */
+    @Query(value = """
+            select new com.promoteur.app.dto.report.AmountByLabelDto(
+                concat(cast(year(e.expenseDate) as string), '-',
+                       lpad(cast(month(e.expenseDate) as string), 2, '0')),
+                sum(e.amountTtc))
+            from Expense e
+            where (:projectId is null or e.project.id = :projectId)
+              and (:from is null or e.expenseDate >= :from)
+              and (:to is null or e.expenseDate <= :to)
+            group by year(e.expenseDate), month(e.expenseDate)
+            order by year(e.expenseDate), month(e.expenseDate)
+            """,
+            countQuery = """
+            select count(distinct concat(year(e.expenseDate), month(e.expenseDate)))
+            from Expense e
+            where (:projectId is null or e.project.id = :projectId)
+              and (:from is null or e.expenseDate >= :from)
+              and (:to is null or e.expenseDate <= :to)
+            """)
+    Page<AmountByLabelDto> sumByMonth(@Param("projectId") Long projectId,
+                                      @Param("from") LocalDate from,
+                                      @Param("to") LocalDate to,
+                                      Pageable pageable);
 
 }

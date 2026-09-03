@@ -1,5 +1,6 @@
 package com.promoteur.app.service.impl;
 
+import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.ExpenseRequest;
 import com.promoteur.app.dto.VatAmounts;
 import com.promoteur.app.dto.response.ExpenseResponse;
@@ -11,6 +12,7 @@ import com.promoteur.app.exception.ResourceNotFoundException;
 import com.promoteur.app.mapper.ExpenseMapper;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
 import com.promoteur.app.repository.ExpenseRepository;
+import com.promoteur.app.repository.specification.ExpenseSpecifications;
 import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.repository.SupplierRepository;
 import com.promoteur.app.service.AuditLogService;
@@ -43,8 +45,9 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ExpenseResponse> findAll(final Pageable pageable) {
-        return this.expenseRepository.findAll(pageable).map(this.expenseMapper::toResponse);
+    public Page<ExpenseResponse> findAll(final ListFilter filter, final Pageable pageable) {
+        return this.expenseRepository.findAll(ExpenseSpecifications.matching(filter), pageable)
+                .map(this.expenseMapper::toResponse);
     }
 
     @Override

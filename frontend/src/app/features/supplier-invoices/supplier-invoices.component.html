@@ -8,12 +8,15 @@
   </div>
 
   <p-card header="Liste des factures fournisseurs">
-    <p-table [value]="filteredInvoices" responsiveLayout="scroll" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 20, 30]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
+    <p-table [value]="table.rows" [lazy]="true" (onLazyLoad)="table.onLazyLoad($event)" [loading]="table.loading"
+             [totalRecords]="table.totalRecords" responsiveLayout="scroll" [paginator]="true" [rows]="table.pageSize"
+             [rowsPerPageOptions]="[25, 50, 100]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}"
+             [showCurrentPageReport]="true">
       <ng-template pTemplate="caption">
         <div class="filter-grid">
-          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" [options]="projects" optionLabel="name" optionValue="id" placeholder="Filtrer par projet"></p-dropdown>
-          <p-dropdown [(ngModel)]="filters.supplierId" [ngModelOptions]="{ standalone: true }" [options]="suppliers" optionLabel="name" optionValue="id" placeholder="Filtrer par fournisseur"></p-dropdown>
-          <input pInputText [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" placeholder="Recherche facture..." />
+          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="projects" optionLabel="name" optionValue="id" placeholder="Filtrer par projet"></p-dropdown>
+          <p-dropdown [(ngModel)]="filters.supplierId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="suppliers" optionLabel="name" optionValue="id" placeholder="Filtrer par fournisseur"></p-dropdown>
+          <input pInputText [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" placeholder="Recherche facture..." />
         </div>
       </ng-template>
       <ng-template pTemplate="header">

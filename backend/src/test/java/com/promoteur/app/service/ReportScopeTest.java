@@ -107,6 +107,24 @@ class ReportScopeTest {
     }
 
     @Test
+    @DisplayName("expenses per month are labelled by year and month, oldest first")
+    void expensesPerMonthAreLabelledByYearAndMonth() {
+        List<AmountByLabelDto> rows = this.reportService.expensesByMonth(
+                ReportFilter.of(String.valueOf(this.projectA.id()), null, null), PageRequest.of(0, 50)).getContent();
+
+        assertThat(rows).extracting(AmountByLabelDto::getLabel).containsExactly("2026-08", "2026-09");
+        assertThat(rows).extracting(AmountByLabelDto::getAmount)
+                .containsExactly(new BigDecimal("100.000"), new BigDecimal("200.000"));
+    }
+
+    @Test
+    @DisplayName("contracted totals group by project")
+    void contractedTotalsGroupByProject() {
+        assertThat(this.reportService.purchasesByProject(ReportFilter.unrestricted(), PageRequest.of(0, 50))
+                .getContent()).isNotNull();
+    }
+
+    @Test
     @DisplayName("the dashboard summary is scoped like every other report")
     void theDashboardSummaryIsScopedLikeEveryOtherReport() {
         Map<String, Object> summary = this.reportService.globalSummary(this.filterFor(this.projectA.id(), 2026, 9));

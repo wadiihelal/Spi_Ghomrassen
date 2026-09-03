@@ -3,6 +3,12 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+
+/**
+ * Reference lists (projects, clients, categories, VAT rates) are small and bounded, so one
+ * request is fine. Business tables must never rely on this.
+ */
+const REFERENCE_LIST_SIZE = 500;
 import {
   AmountByLabel,
   Client,
@@ -14,6 +20,8 @@ import {
   DashboardSummary,
   Expense,
   ExpenseCategory,
+  ListFilter,
+  PageQuery,
   PagedResponse,
   Project,
   ReportScopeParams,
@@ -27,22 +35,41 @@ import {
 export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiUrl;
-  private readonly defaultPageSize = 1000;
 
-  private getPaged<T>(path: string, params?: Record<string, string | number | boolean | null | undefined>): Observable<T[]> {
-    let httpParams = new HttpParams()
-      .set('page', 0)
-      .set('size', this.defaultPageSize);
-
-    Object.entries(params ?? {}).forEach(([key, value]) => {
+  /**
+   * A reference list small enough to hold in a dropdown: projects, clients, categories,
+   * supplier types, VAT rates. Business tables never use this — they page server-side
+   * through {@link page} (PERF-02).
+   */
+  private getReferenceList<T>(
+    path: string,
+    extra?: Record<string, string | number | null | undefined>
+  ): Observable<T[]> {
+    let params = new HttpParams().set('page', 0).set('size', REFERENCE_LIST_SIZE);
+    Object.entries(extra ?? {}).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
-        httpParams = httpParams.set(key, String(value));
+        params = params.set(key, String(value));
       }
     });
-
-    return this.http.get<PagedResponse<T>>(`${this.baseUrl}${path}`, { params: httpParams }).pipe(
+    return this.http.get<PagedResponse<T>>(`${this.baseUrl}${path}`, { params }).pipe(
       map((response) => response.content ?? [])
     );
+  }
+
+  /** One page of a filtered list, with the true totals the caller needs for the pager. */
+  private page<T>(path: string, filter: ListFilter, query: PageQuery): Observable<PagedResponse<T>> {
+    let params = new HttpParams()
+      .set('page', query.page)
+      .set('size', query.size);
+    if (query.sort) {
+      params = params.set('sort', query.sort);
+    }
+    Object.entries(filter).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        params = params.set(key, String(value));
+      }
+    });
+    return this.http.get<PagedResponse<T>>(`${this.baseUrl}${path}`, { params });
   }
 
   getDashboardSummary(scope?: ReportScopeParams): Observable<DashboardSummary> {
@@ -51,8 +78,8 @@ export class ApiService {
     });
   }
 
-  getExpenses(): Observable<Expense[]> {
-    return this.getPaged<Expense>('/expenses');
+  getExpenses(filter: ListFilter, query: PageQuery): Observable<PagedResponse<Expense>> {
+    return this.page<Expense>('/expenses', filter, query);
   }
 
   createExpense(payload: Expense): Observable<Expense> {
@@ -68,7 +95,7 @@ export class ApiService {
   }
 
   getExpenseCategories(): Observable<ExpenseCategory[]> {
-    return this.getPaged<ExpenseCategory>('/expense-categories');
+    return this.getReferenceList<ExpenseCategory>('/expense-categories');
   }
 
   createExpenseCategory(payload: ExpenseCategory): Observable<ExpenseCategory> {
@@ -76,7 +103,7 @@ export class ApiService {
   }
 
   getProjects(): Observable<Project[]> {
-    return this.getPaged<Project>('/projects');
+    return this.getReferenceList<Project>('/projects');
   }
 
   getProject(id: number): Observable<Project> {
@@ -108,7 +135,7 @@ export class ApiService {
   }
 
   getClients(): Observable<Client[]> {
-    return this.getPaged<Client>('/clients');
+    return this.getReferenceList<Client>('/clients');
   }
 
   createClient(payload: Client): Observable<Client> {
@@ -124,11 +151,17 @@ export class ApiService {
   }
 
   getSuppliers(): Observable<Supplier[]> {
-    return this.getPaged<Supplier>('/suppliers');
+    return this.getReferenceList<Supplier>('/suppliers');
   }
 
-  getApartments(): Observable<Apartment[]> {
-    return this.getPaged<Apartment>('/apartments');
+  getApartments(filter: ListFilter, query: PageQuery): Observable<PagedResponse<Apartment>> {
+    return this.page<Apartment>('/apartments', filter, query);
+  }
+
+  /** Apartments as a dropdown source; only ever used for a single project. */
+  getApartmentOptions(projectId?: number | null): Observable<Apartment[]> {
+    return this.page<Apartment>('/apartments', { projectId }, { page: 0, size: REFERENCE_LIST_SIZE })
+      .pipe(map((response) => response.content ?? []));
   }
 
   createApartment(payload: Apartment): Observable<Apartment> {
@@ -143,8 +176,8 @@ export class ApiService {
     return this.http.delete<void>(`${this.baseUrl}/apartments/${id}`);
   }
 
-  getSupplierInvoices(): Observable<SupplierInvoice[]> {
-    return this.getPaged<SupplierInvoice>('/supplier-invoices');
+  getSupplierInvoices(filter: ListFilter, query: PageQuery): Observable<PagedResponse<SupplierInvoice>> {
+    return this.page<SupplierInvoice>('/supplier-invoices', filter, query);
   }
 
   createSupplierInvoice(payload: SupplierInvoice): Observable<SupplierInvoice> {
@@ -160,11 +193,11 @@ export class ApiService {
   }
 
   getSupplierTypes(): Observable<SupplierTypeOption[]> {
-    return this.getPaged<SupplierTypeOption>('/supplier-types');
+    return this.getReferenceList<SupplierTypeOption>('/supplier-types');
   }
 
   getVatRates(): Observable<VatRateOption[]> {
-    return this.getPaged<VatRateOption>('/vat-rates');
+    return this.getReferenceList<VatRateOption>('/vat-rates');
   }
 
   createSupplierType(payload: SupplierTypeOption): Observable<SupplierTypeOption> {
@@ -183,8 +216,14 @@ export class ApiService {
     return this.http.delete<void>(`${this.baseUrl}/suppliers/${id}`);
   }
 
-  getPurchases(): Observable<ClientPurchase[]> {
-    return this.getPaged<ClientPurchase>('/client-purchases');
+  getPurchases(filter: ListFilter, query: PageQuery): Observable<PagedResponse<ClientPurchase>> {
+    return this.page<ClientPurchase>('/client-purchases', filter, query);
+  }
+
+  /** Contracts for one project, used to look up an apartment's contract in a form. */
+  getPurchaseOptions(projectId?: number | null): Observable<ClientPurchase[]> {
+    return this.page<ClientPurchase>('/client-purchases', { projectId }, { page: 0, size: REFERENCE_LIST_SIZE })
+      .pipe(map((response) => response.content ?? []));
   }
 
   createPurchase(payload: ClientPurchase): Observable<ClientPurchase> {
@@ -199,8 +238,14 @@ export class ApiService {
     return this.http.delete<void>(`${this.baseUrl}/client-purchases/${id}`);
   }
 
-  getAdvances(): Observable<ClientAdvance[]> {
-    return this.getPaged<ClientAdvance>('/client-advances');
+  getAdvances(filter: ListFilter, query: PageQuery): Observable<PagedResponse<ClientAdvance>> {
+    return this.page<ClientAdvance>('/client-advances', filter, query);
+  }
+
+  /** Advances for one apartment, used by the advance form's ceiling hint. */
+  getAdvancesForApartment(apartmentId: number): Observable<ClientAdvance[]> {
+    return this.page<ClientAdvance>('/client-advances', { apartmentId }, { page: 0, size: REFERENCE_LIST_SIZE })
+      .pipe(map((response) => response.content ?? []));
   }
 
   createAdvance(payload: ClientAdvance): Observable<ClientAdvance> {
@@ -216,19 +261,34 @@ export class ApiService {
   }
 
   getClientStatements(scope?: ReportScopeParams): Observable<ClientStatement[]> {
-    return this.getPaged<ClientStatement>('/reports/clients/statements', this.scopeRecord(scope));
+    return this.getReferenceList<ClientStatement>('/reports/clients/statements', this.scopeRecord(scope));
   }
 
   getAuditLogs(entityType: string, entityId: number): Observable<AuditLog[]> {
-    return this.getPaged<AuditLog>(`/audit-logs/by-entity/${entityType}/${entityId}`);
+    return this.getReferenceList<AuditLog>(`/audit-logs/by-entity/${entityType}/${entityId}`);
   }
 
   getExpensesByCategory(scope?: ReportScopeParams): Observable<AmountByLabel[]> {
-    return this.getPaged<AmountByLabel>('/reports/expenses/by-category', this.scopeRecord(scope));
+    return this.getReferenceList<AmountByLabel>('/reports/expenses/by-category', this.scopeRecord(scope));
   }
 
   getExpensesByProject(scope?: ReportScopeParams): Observable<AmountByLabel[]> {
-    return this.getPaged<AmountByLabel>('/reports/expenses/by-project', this.scopeRecord(scope));
+    return this.getReferenceList<AmountByLabel>('/reports/expenses/by-project', this.scopeRecord(scope));
+  }
+
+  /** Expense totals per calendar month, for the dashboard's trend. */
+  getExpensesByMonth(scope?: ReportScopeParams): Observable<AmountByLabel[]> {
+    return this.getReferenceList<AmountByLabel>('/reports/expenses/by-month', this.scopeRecord(scope));
+  }
+
+  /** Advance totals grouped by payment method, for the advances screen's KPI strip. */
+  getAdvancesByPaymentMethod(scope?: ReportScopeParams): Observable<AmountByLabel[]> {
+    return this.getReferenceList<AmountByLabel>('/reports/advances/by-payment-method', this.scopeRecord(scope));
+  }
+
+  /** Contracted totals grouped by project, for the dashboard's margin per project. */
+  getPurchasesByProject(scope?: ReportScopeParams): Observable<AmountByLabel[]> {
+    return this.getReferenceList<AmountByLabel>('/reports/purchases/by-project', this.scopeRecord(scope));
   }
 
   downloadReportsExcel(scope: ReportScopeParams): Observable<Blob> {

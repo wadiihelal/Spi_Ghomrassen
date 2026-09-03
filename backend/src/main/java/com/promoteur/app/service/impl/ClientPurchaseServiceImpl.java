@@ -2,6 +2,7 @@ package com.promoteur.app.service.impl;
 
 import com.promoteur.app.dto.ApartmentAdvanceTotal;
 import com.promoteur.app.dto.ClientPurchaseRequest;
+import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.PurchaseTotals;
 import com.promoteur.app.dto.response.ClientPurchaseResponse;
 import com.promoteur.app.entity.Apartment;
@@ -14,6 +15,7 @@ import com.promoteur.app.mapper.ClientPurchaseMapper;
 import com.promoteur.app.repository.ApartmentRepository;
 import com.promoteur.app.repository.ClientAdvanceRepository;
 import com.promoteur.app.repository.ClientPurchaseRepository;
+import com.promoteur.app.repository.specification.ClientPurchaseSpecifications;
 import com.promoteur.app.repository.ClientRepository;
 import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.service.AuditLogService;
@@ -49,8 +51,9 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ClientPurchaseResponse> findAll(final Pageable pageable) {
-        return this.toResponsePage(this.clientPurchaseRepository.findAll(pageable));
+    public Page<ClientPurchaseResponse> findAll(final ListFilter filter, final Pageable pageable) {
+        return this.toResponsePage(
+                this.clientPurchaseRepository.findAll(ClientPurchaseSpecifications.matching(filter), pageable));
     }
 
     @Override

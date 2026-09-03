@@ -6,7 +6,10 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
 import { ApiService } from '../../core/services/api.service';
-import { AuditLog, ClientAdvance, ClientPurchase, Expense, Project } from '../../shared/models/models';
+import { AuditLog, ClientAdvance, ClientPurchase, DashboardSummary, Expense, Project } from '../../shared/models/models';
+
+/** Rows shown in each of the detail tables; this screen is a summary, not a register. */
+const DETAIL_ROWS = 25;
 
 @Component({
   selector: 'app-project-detail',
@@ -24,6 +27,7 @@ export class ProjectDetailComponent implements OnInit {
   purchases: ClientPurchase[] = [];
   advances: ClientAdvance[] = [];
   auditLogs: AuditLog[] = [];
+  summary?: DashboardSummary;
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -31,29 +35,33 @@ export class ProjectDetailComponent implements OnInit {
       return;
     }
 
+    const page = { page: 0, size: DETAIL_ROWS };
+
     this.api.getProject(id).subscribe({ next: (data) => (this.project = data) });
-    this.api.getExpenses().subscribe({ next: (data) => (this.expenses = data.filter((item) => item.projectId === id)) });
-    this.api.getPurchases().subscribe({ next: (data) => (this.purchases = data.filter((item) => item.projectId === id)) });
-    this.api.getAdvances().subscribe({ next: (data) => (this.advances = data.filter((item) => item.projectId === id)) });
+    // The detail tables show the most recent rows; the totals below come from the backend's
+    // own aggregate rather than from summing whatever happened to be loaded (PERF-02).
+    this.api.getExpenses({ projectId: id }, page).subscribe({ next: (data) => (this.expenses = data.content) });
+    this.api.getPurchases({ projectId: id }, page).subscribe({ next: (data) => (this.purchases = data.content) });
+    this.api.getAdvances({ projectId: id }, page).subscribe({ next: (data) => (this.advances = data.content) });
+    this.api.getDashboardSummary({ projectId: id }).subscribe({ next: (data) => (this.summary = data) });
     this.api.getAuditLogs('PROJECT', id).subscribe({ next: (data) => (this.auditLogs = data) });
   }
 
   get totalExpenses(): number {
-    return this.expenses.reduce((sum, item) => sum + (item.amountTtc ?? 0), 0);
+    return this.summary?.totalExpenses ?? 0;
   }
 
   get totalPurchases(): number {
-    return this.purchases.reduce((sum, item) => sum + (item.totalAmount ?? 0), 0);
+    return this.summary?.totalPurchases ?? 0;
   }
 
+  /** Everything collected: advances plus payments made directly on the contracts. */
   get totalAdvances(): number {
-    const advancesAmount = this.advances.reduce((sum, item) => sum + (item.amount ?? 0), 0);
-    const directPaymentsAmount = this.purchases.reduce((sum, item) => sum + (item.paidAmount ?? 0), 0);
-    return advancesAmount + directPaymentsAmount;
+    return this.summary?.totalAdvances ?? 0;
   }
 
   get remainingToCollect(): number {
-    return this.totalPurchases - this.totalAdvances;
+    return this.summary?.totalRemainingFromClients ?? 0;
   }
 
   get budgetUsage(): number {

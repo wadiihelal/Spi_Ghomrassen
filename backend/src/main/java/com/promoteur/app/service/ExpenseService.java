@@ -1,5 +1,6 @@
 package com.promoteur.app.service;
 
+import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.ExpenseRequest;
 import com.promoteur.app.dto.response.ExpenseResponse;
 import org.springframework.data.domain.Page;
@@ -13,7 +14,7 @@ public interface ExpenseService {
     /**
      * Returns expenses using the requested pagination.
      */
-    Page<ExpenseResponse> findAll(Pageable pageable);
+    Page<ExpenseResponse> findAll(ListFilter filter, Pageable pageable);
 
     /**
      * Returns a single expense by identifier.

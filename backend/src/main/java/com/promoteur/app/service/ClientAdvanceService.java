@@ -1,5 +1,6 @@
 package com.promoteur.app.service;
 
+import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.ClientAdvanceRequest;
 import com.promoteur.app.dto.response.ClientAdvanceResponse;
 import org.springframework.data.domain.Page;
@@ -13,7 +14,7 @@ public interface ClientAdvanceService {
     /**
      * Returns client advances using the requested pagination.
      */
-    Page<ClientAdvanceResponse> findAll(Pageable pageable);
+    Page<ClientAdvanceResponse> findAll(ListFilter filter, Pageable pageable);
 
     /**
      * Returns a single client advance by identifier.

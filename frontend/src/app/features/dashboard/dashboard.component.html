@@ -109,8 +109,8 @@
 
     <p-card>
       <div class="mini-stat-title">Transactions</div>
-      <div class="mini-stat-value">{{ expenses.length + purchases.length + advances.length }}</div>
-      <div class="mini-stat-meta">{{ expenses.length }} dépenses • {{ purchases.length }} achats • {{ advances.length }} avances</div>
+      <div class="mini-stat-value">{{ documentCount | number }}</div>
+      <div class="mini-stat-meta">{{ summary?.expenses ?? 0 }} dépenses • {{ summary?.clientPurchases ?? 0 }} achats • {{ summary?.clientAdvances ?? 0 }} acomptes</div>
     </p-card>
 
     <p-card>

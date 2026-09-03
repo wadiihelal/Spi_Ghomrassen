@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -11,7 +11,8 @@ import { DialogModule } from 'primeng/dialog';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
-import { Expense, ExpenseCategory, Project, Supplier, VatRateOption } from '../../shared/models/models';
+import { LazyTable } from '../../core/services/lazy-table';
+import { Expense, ExpenseCategory, ListFilter, Project, Supplier, VatRateOption } from '../../shared/models/models';
 
 /** Rate proposed when the supplier has none of its own. */
 const FALLBACK_VAT_RATE = 0.19;
@@ -28,8 +29,14 @@ export class ExpensesComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  expenses: Expense[] = [];
+  /** One page of expenses, filtered and counted by the server (PERF-02). */
+  readonly table = new LazyTable<Expense>(
+    (query) => this.api.getExpenses(this.serverFilter, query),
+    this.destroyRef
+  );
+
   categories: ExpenseCategory[] = [];
   projects: Project[] = [];
   suppliers: Supplier[] = [];
@@ -83,11 +90,22 @@ export class ExpensesComponent implements OnInit {
         this.form.patchValue({ projectId });
       }
     });
-    this.loadData();
+    this.loadReferenceData();
   }
 
-  loadData(): void {
-    this.api.getExpenses().subscribe({ next: (data) => (this.expenses = data) });
+  /** Filters sent to the server; the header's project always narrows the list. */
+  private get serverFilter(): ListFilter {
+    return {
+      search: this.filters.search,
+      categoryId: this.filters.categoryId,
+      projectId: this.selectedProjectId ?? this.filters.projectId,
+      supplierId: this.filters.supplierId,
+      dateFrom: this.filters.dateFrom,
+      dateTo: this.filters.dateTo
+    };
+  }
+
+  loadReferenceData(): void {
     this.api.getExpenseCategories().subscribe({ next: (data) => (this.categories = data) });
     this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
     this.api.getSuppliers().subscribe({ next: (data) => (this.suppliers = data) });
@@ -122,23 +140,6 @@ export class ExpensesComponent implements OnInit {
     return this.paymentMethods.find((item) => item.value === value)?.label ?? (value || '-');
   }
 
-  get filteredExpenses(): Expense[] {
-    return this.expenses.filter((row) => {
-      const term = this.filters.search.trim().toLowerCase();
-      const rowDate = row.expenseDate ?? '';
-      const matchSearch = !term || [row.reference, row.description, row.documentNumber, row.notes, this.getCategoryName(row), this.getProjectName(row), this.getSupplierName(row)]
-        .some((value) => (value ?? '').toString().toLowerCase().includes(term));
-      const projectId = row.projectId;
-      const matchCategory = !this.filters.categoryId || row.categoryId === this.filters.categoryId;
-      const matchProject = !this.filters.projectId || projectId === this.filters.projectId;
-      const matchSelectedProject = !this.selectedProjectId || projectId === this.selectedProjectId;
-      const matchSupplier = !this.filters.supplierId || row.supplierId === this.filters.supplierId;
-      const matchFrom = !this.filters.dateFrom || rowDate >= this.filters.dateFrom;
-      const matchTo = !this.filters.dateTo || rowDate <= this.filters.dateTo;
-      return matchSearch && matchCategory && matchProject && matchSelectedProject && matchSupplier && matchFrom && matchTo;
-    });
-  }
-
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -155,7 +156,7 @@ export class ExpensesComponent implements OnInit {
       next: () => {
         this.ui.success(this.editingId ? 'Dépense modifiée' : 'Dépense ajoutée', 'La dépense a été enregistrée avec succès.');
         this.resetForm();
-        this.loadData();
+        this.table.reload();
       }
     });
   }
@@ -189,7 +190,7 @@ export class ExpensesComponent implements OnInit {
       this.api.deleteExpense(row.id!).subscribe({
         next: () => {
           this.ui.success('Dépense supprimée', 'La dépense a été supprimée.');
-          this.loadData();
+          this.table.reload();
           if (this.editingId === row.id) this.resetForm();
         }
       });
@@ -263,7 +264,7 @@ export class ExpensesComponent implements OnInit {
     this.api.createExpenseCategory(this.categoryForm.getRawValue() as ExpenseCategory).subscribe({
       next: (created) => {
         this.ui.success('Catégorie ajoutée', 'La catégorie de dépense a été enregistrée.');
-        this.loadData();
+        this.table.reload();
         this.form.patchValue({ categoryId: created.id });
         this.closeCategoryDialog();
       }

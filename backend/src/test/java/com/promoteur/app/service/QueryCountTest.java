@@ -4,6 +4,7 @@ import com.promoteur.app.dto.ApartmentRequest;
 import com.promoteur.app.dto.ClientAdvanceRequest;
 import com.promoteur.app.dto.ClientPurchaseRequest;
 import com.promoteur.app.dto.ClientRequest;
+import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.ProjectRequest;
 import com.promoteur.app.dto.report.ReportFilter;
 import com.promoteur.app.dto.response.ApartmentResponse;
@@ -82,7 +83,7 @@ class QueryCountTest {
     void listingAPageOfContractsStaysUnderFiveQueries() {
         long before = this.statementCount();
 
-        assertThat(this.clientPurchaseService.findAll(PageRequest.of(0, 100)).getContent())
+        assertThat(this.clientPurchaseService.findAll(ListFilter.none(), PageRequest.of(0, 100)).getContent())
                 .hasSize(CONTRACTS);
 
         long issued = this.statementCount() - before;
@@ -111,13 +112,29 @@ class QueryCountTest {
     }
 
     @Test
-    @DisplayName("listing apartments is one query despite two lazy associations")
-    void listingApartmentsIsOneQuery() {
+    @DisplayName("listing apartments costs the same whether the page holds 5 rows or 20")
+    void listingApartmentsCostsTheSameWhateverThePageSize() {
+        long forFiveRows = this.queriesFor(() -> this.apartmentService.findAll(ListFilter.none(), PageRequest.of(0, 5)));
+        long forTwentyRows = this.queriesFor(() -> this.apartmentService.findAll(ListFilter.none(), PageRequest.of(0, 20)));
+
+        // The apartment page joins its associations and resolves contracts and advance totals in
+        // two further grouped queries: bounded, and independent of the number of rows.
+        assertThat(forTwentyRows).as("queries for a page of apartments").isEqualTo(forFiveRows).isLessThanOrEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("listing sale contracts costs the same whether the page holds 5 rows or 20")
+    void listingContractsCostsTheSameWhateverThePageSize() {
+        long forFiveRows = this.queriesFor(() -> this.clientPurchaseService.findAll(ListFilter.none(), PageRequest.of(0, 5)));
+        long forTwentyRows = this.queriesFor(() -> this.clientPurchaseService.findAll(ListFilter.none(), PageRequest.of(0, 20)));
+
+        assertThat(forTwentyRows).as("queries for a page of contracts").isEqualTo(forFiveRows);
+    }
+
+    private long queriesFor(final Runnable work) {
         long before = this.statementCount();
-
-        assertThat(this.apartmentService.findAll(PageRequest.of(0, 100)).getContent()).hasSize(CONTRACTS);
-
-        assertThat(this.statementCount() - before).as("queries for a page of apartments").isEqualTo(1);
+        work.run();
+        return this.statementCount() - before;
     }
 
     private long statementCount() {

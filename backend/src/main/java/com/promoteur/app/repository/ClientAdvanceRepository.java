@@ -1,12 +1,15 @@
 package com.promoteur.app.repository;
 
+import com.promoteur.app.dto.report.AmountByLabelDto;
 import com.promoteur.app.dto.report.CountAndTotal;
 import com.promoteur.app.dto.ApartmentAdvanceTotal;
 import com.promoteur.app.entity.ClientAdvance;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -15,7 +18,15 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface ClientAdvanceRepository extends JpaRepository<ClientAdvance, Long> {
+public interface ClientAdvanceRepository extends JpaRepository<ClientAdvance, Long>, JpaSpecificationExecutor<ClientAdvance> {
+    /**
+     * Filtered list endpoint (PERF-02). Redeclared from {@link JpaSpecificationExecutor} so the
+     * entity graph applies here as well: filtering must not reintroduce the N+1.
+     */
+    @EntityGraph(attributePaths = {"client", "project", "apartment"})
+    @Override
+    Page<ClientAdvance> findAll(Specification<ClientAdvance> specification, Pageable pageable);
+
     /** One query for the list endpoint: the associations the response needs are joined. */
     @EntityGraph(attributePaths = {"client", "project", "apartment"})
     @Override
@@ -78,4 +89,26 @@ public interface ClientAdvanceRepository extends JpaRepository<ClientAdvance, Lo
                                 @Param("from") LocalDate from,
                                 @Param("to") LocalDate to);
 
+    /** Advance totals grouped by payment method, for the advances screen's KPI strip. */
+    @Query(value = """
+            select new com.promoteur.app.dto.report.AmountByLabelDto(
+                cast(a.paymentMethod as string), sum(a.amount))
+            from ClientAdvance a
+            where (:projectId is null or a.project.id = :projectId)
+              and (:from is null or a.advanceDate >= :from)
+              and (:to is null or a.advanceDate <= :to)
+            group by a.paymentMethod
+            order by sum(a.amount) desc
+            """,
+            countQuery = """
+            select count(distinct a.paymentMethod)
+            from ClientAdvance a
+            where (:projectId is null or a.project.id = :projectId)
+              and (:from is null or a.advanceDate >= :from)
+              and (:to is null or a.advanceDate <= :to)
+            """)
+    Page<AmountByLabelDto> sumByPaymentMethod(@Param("projectId") Long projectId,
+                                              @Param("from") LocalDate from,
+                                              @Param("to") LocalDate to,
+                                              Pageable pageable);
 }

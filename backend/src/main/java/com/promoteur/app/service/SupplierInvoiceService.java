@@ -1,5 +1,6 @@
 package com.promoteur.app.service;
 
+import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.SupplierInvoiceRequest;
 import com.promoteur.app.dto.response.SupplierInvoiceResponse;
 import org.springframework.data.domain.Page;
@@ -13,7 +14,7 @@ public interface SupplierInvoiceService {
     /**
      * Returns supplier invoices using the requested pagination.
      */
-    Page<SupplierInvoiceResponse> findAll(Pageable pageable);
+    Page<SupplierInvoiceResponse> findAll(ListFilter filter, Pageable pageable);
 
     /**
      * Returns a single supplier invoice by identifier.

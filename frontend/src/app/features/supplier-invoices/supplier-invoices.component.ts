@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -8,13 +8,14 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DropdownModule } from 'primeng/dropdown';
 import { DialogModule } from 'primeng/dialog';
-import { Project, Supplier, SupplierInvoice, VatRateOption } from '../../shared/models/models';
+import { ListFilter, Project, Supplier, SupplierInvoice, VatRateOption } from '../../shared/models/models';
 
 /** Rate proposed when the supplier has none of its own. */
 const FALLBACK_VAT_RATE = 0.19;
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
+import { LazyTable } from '../../core/services/lazy-table';
 
 @Component({
   selector: 'app-supplier-invoices',
@@ -28,8 +29,14 @@ export class SupplierInvoicesComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  invoices: SupplierInvoice[] = [];
+  /** One page of invoices, filtered and counted by the server (PERF-02). */
+  readonly table = new LazyTable<SupplierInvoice>(
+    (query) => this.api.getSupplierInvoices(this.serverFilter, query),
+    this.destroyRef
+  );
+
   suppliers: Supplier[] = [];
   vatRates: VatRateOption[] = [];
   projects: Project[] = [];
@@ -70,24 +77,19 @@ export class SupplierInvoicesComponent implements OnInit {
     this.loadData();
   }
 
+  /** Filters sent to the server; the header's project always narrows the list. */
+  private get serverFilter(): ListFilter {
+    return {
+      projectId: this.selectedProjectId ?? this.filters.projectId,
+      supplierId: this.filters.supplierId,
+      search: this.filters.search
+    };
+  }
+
   loadData(): void {
-    this.api.getSupplierInvoices().subscribe({ next: (data) => (this.invoices = data) });
     this.api.getSuppliers().subscribe({ next: (data) => (this.suppliers = data) });
     this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
     this.api.getVatRates().subscribe({ next: (data) => (this.vatRates = data) });
-  }
-
-  get filteredInvoices(): SupplierInvoice[] {
-    return this.invoices.filter((row) => {
-      const term = this.filters.search.trim().toLowerCase();
-      const matchSearch = !term || [row.invoiceNumber, row.detail, row.supplierName, row.projectName]
-        .some((value) => (value ?? '').toString().toLowerCase().includes(term));
-      const projectId = row.projectId;
-      const matchProject = !this.filters.projectId || projectId === this.filters.projectId;
-      const matchSelectedProject = !this.selectedProjectId || projectId === this.selectedProjectId;
-      const matchSupplier = !this.filters.supplierId || row.supplierId === this.filters.supplierId;
-      return matchSearch && matchProject && matchSelectedProject && matchSupplier;
-    });
   }
 
   submit(): void {
@@ -103,7 +105,7 @@ export class SupplierInvoicesComponent implements OnInit {
       next: () => {
         this.ui.success(this.editingId ? 'Facture modifiée' : 'Facture ajoutée', 'La facture fournisseur a été enregistrée.');
         this.resetForm();
-        this.loadData();
+        this.table.reload();
       }
     });
   }
@@ -130,7 +132,7 @@ export class SupplierInvoicesComponent implements OnInit {
       this.api.deleteSupplierInvoice(row.id!).subscribe({
         next: () => {
           this.ui.success('Facture supprimée', 'La facture fournisseur a été supprimée.');
-          this.loadData();
+          this.table.reload();
           if (this.editingId === row.id) this.resetForm();
         }
       });

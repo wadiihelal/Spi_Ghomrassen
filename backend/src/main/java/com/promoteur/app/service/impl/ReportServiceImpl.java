@@ -146,6 +146,24 @@ public class ReportServiceImpl implements ReportService {
         return expenseRepository.sumByProject(scope.projectId(), scope.dateFrom(), scope.dateTo(), pageable);
     }
 
+    @Override
+    public Page<AmountByLabelDto> expensesByMonth(ReportFilter filter, Pageable pageable) {
+        ReportScope scope = resolveScope(filter);
+        return expenseRepository.sumByMonth(scope.projectId(), scope.dateFrom(), scope.dateTo(), pageable);
+    }
+
+    @Override
+    public Page<AmountByLabelDto> purchasesByProject(ReportFilter filter, Pageable pageable) {
+        ReportScope scope = resolveScope(filter);
+        return clientPurchaseRepository.sumByProject(scope.projectId(), scope.dateFrom(), scope.dateTo(), pageable);
+    }
+
+    @Override
+    public Page<AmountByLabelDto> advancesByPaymentMethod(ReportFilter filter, Pageable pageable) {
+        ReportScope scope = resolveScope(filter);
+        return clientAdvanceRepository.sumByPaymentMethod(scope.projectId(), scope.dateFrom(), scope.dateTo(), pageable);
+    }
+
     /**
      * Statements for the clients in scope, aggregated and paginated by the database. When a
      * project is resolved, only the clients attached to that project are listed, and their

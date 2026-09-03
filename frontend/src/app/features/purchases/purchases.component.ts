@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -12,7 +12,17 @@ import { TagModule } from 'primeng/tag';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
-import { Apartment, ClientAdvance, ClientPurchase, Client, Project, PurchasePaymentStatus } from '../../shared/models/models';
+import { LazyTable } from '../../core/services/lazy-table';
+import {
+  Apartment,
+  Client,
+  ClientAdvance,
+  ClientPurchase,
+  DashboardSummary,
+  ListFilter,
+  Project,
+  PurchasePaymentStatus
+} from '../../shared/models/models';
 
 @Component({
   selector: 'app-purchases',
@@ -26,10 +36,23 @@ export class PurchasesComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  purchases: ClientPurchase[] = [];
+  /** One page of contracts, filtered and counted by the server (PERF-02). */
+  readonly table = new LazyTable<ClientPurchase>(
+    (query) => this.api.getPurchases(this.serverFilter, query),
+    this.destroyRef
+  );
+
+  /** Contracts of the selected project, used to tell which apartments are still free. */
+  projectPurchases: ClientPurchase[] = [];
   apartments: Apartment[] = [];
-  advances: ClientAdvance[] = [];
+  /** Advances on the apartment currently chosen in the form, loaded on demand. */
+  selectedApartmentAdvances: ClientAdvance[] = [];
+  /** Scope-wide aggregate behind the KPI strip. */
+  summary?: DashboardSummary;
+  /** Contracts fully collected in scope, counted by the server. */
+  paidCount = 0;
   clients: Client[] = [];
   projects: Project[] = [];
   editingId: number | null = null;
@@ -89,7 +112,7 @@ export class PurchasesComponent implements OnInit {
         return false;
       }
 
-      const apartmentPurchase = this.purchases.find(
+      const apartmentPurchase = this.projectPurchases.find(
         (purchase) => purchase.apartmentId === apartment.id && purchase.id !== this.editingId
       );
       if (apartmentPurchase) {
@@ -114,9 +137,7 @@ export class PurchasesComponent implements OnInit {
       return 0;
     }
 
-    return this.advances
-      .filter((advance) => advance.apartmentId === this.selectedApartmentId)
-      .reduce((sum, advance) => sum + (advance.amount ?? 0), 0);
+    return this.selectedApartmentAdvances.reduce((sum, advance) => sum + (advance.amount ?? 0), 0);
   }
 
   get currentDirectPaidAmount(): number {
@@ -157,24 +178,28 @@ export class PurchasesComponent implements OnInit {
     return this.currentDeclaredAmount > 0 && this.currentCollectedAmount > this.currentDeclaredAmount;
   }
 
+  /**
+   * The KPI strip describes every contract in scope, not just the page on screen, so the
+   * figures come from the backend's aggregate rather than from the loaded rows (PERF-02).
+   */
   get filteredPurchaseCount(): number {
-    return this.filteredPurchases.length;
+    return this.table.totalRecords;
   }
 
   get filteredDeclaredTotal(): number {
-    return this.filteredPurchases.reduce((sum, purchase) => sum + (purchase.totalAmount ?? 0), 0);
+    return this.summary?.totalPurchases ?? 0;
   }
 
   get filteredCollectedTotal(): number {
-    return this.filteredPurchases.reduce((sum, purchase) => sum + this.getPurchaseCollectedAmount(purchase), 0);
+    return this.summary?.totalAdvances ?? 0;
   }
 
   get filteredRemainingTotal(): number {
-    return this.filteredPurchases.reduce((sum, purchase) => sum + this.getPurchaseRemainingAmount(purchase), 0);
+    return this.summary?.totalRemainingFromClients ?? 0;
   }
 
   get filteredPaidCount(): number {
-    return this.filteredPurchases.filter((purchase) => purchase.completed || purchase.paymentStatus === 'PAID').length;
+    return this.paidCount;
   }
 
   form = this.fb.group({
@@ -209,37 +234,32 @@ export class PurchasesComponent implements OnInit {
     this.loadData();
   }
 
-  loadData(): void {
-    this.api.getPurchases().subscribe({ next: (data) => (this.purchases = data) });
-    this.api.getApartments().subscribe({ next: (data) => (this.apartments = data) });
-    this.api.getAdvances().subscribe({ next: (data) => (this.advances = data) });
-    this.api.getClients().subscribe({ next: (data) => (this.clients = data) });
-    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
+  /** Filters sent to the server; the header's project always narrows the list. */
+  private get serverFilter(): ListFilter {
+    return {
+      projectId: this.selectedProjectId ?? this.filters.projectId,
+      clientId: this.filters.clientId,
+      paymentStatus: this.filters.paymentStatus || null,
+      dateFrom: this.filters.dateFrom,
+      dateTo: this.filters.dateTo,
+      search: this.filters.search
+    };
   }
 
-  get filteredPurchases(): ClientPurchase[] {
-    return this.purchases.filter((row) => {
-      const term = this.filters.search.trim().toLowerCase();
-      const rowDate = row.purchaseDate ?? '';
-      const matchSearch = !term || [
-        row.reference,
-        row.assetDescription,
-        row.notes,
-        this.getClientName(row.clientId),
-        this.getProjectName(row.projectId),
-        this.getApartmentName(row.apartmentId),
-        this.getPaymentStatusLabel(row.paymentStatus)
-      ]
-        .some((value) => (value ?? '').toString().toLowerCase().includes(term));
-      const projectId = row.projectId;
-      const matchClient = !this.filters.clientId || row.clientId === this.filters.clientId;
-      const matchProject = !this.filters.projectId || projectId === this.filters.projectId;
-      const matchSelectedProject = !this.selectedProjectId || projectId === this.selectedProjectId;
-      const matchStatus = !this.filters.paymentStatus || row.paymentStatus === this.filters.paymentStatus;
-      const matchFrom = !this.filters.dateFrom || rowDate >= this.filters.dateFrom;
-      const matchTo = !this.filters.dateTo || rowDate <= this.filters.dateTo;
-      return matchSearch && matchClient && matchProject && matchSelectedProject && matchStatus && matchFrom && matchTo;
-    });
+  loadData(): void {
+    // Form lookups, scoped to the selected project and bounded: the apartment dropdown and the
+    // "already sold" check. Never the table's own rows, which page server-side.
+    this.api.getApartmentOptions(this.selectedProjectId)
+      .subscribe({ next: (data) => (this.apartments = data) });
+    this.api.getPurchaseOptions(this.selectedProjectId)
+      .subscribe({ next: (data) => (this.projectPurchases = data) });
+    this.api.getDashboardSummary({ projectId: this.selectedProjectId })
+      .subscribe({ next: (data) => (this.summary = data) });
+    // One page of size 1 is enough: only the total is read.
+    this.api.getPurchases({ projectId: this.selectedProjectId, paymentStatus: 'PAID' }, { page: 0, size: 1 })
+      .subscribe({ next: (data) => (this.paidCount = data.totalElements) });
+    this.api.getClients().subscribe({ next: (data) => (this.clients = data) });
+    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
   }
 
   submit(): void {
@@ -264,6 +284,7 @@ export class PurchasesComponent implements OnInit {
       next: () => {
         this.ui.success(this.editingId ? 'Achat modifié' : 'Achat ajouté', 'L’achat client a été enregistré avec succès.');
         this.resetForm();
+        this.table.reload();
         this.loadData();
       }
     });
@@ -294,7 +315,8 @@ export class PurchasesComponent implements OnInit {
       this.api.deletePurchase(row.id!).subscribe({
         next: () => {
           this.ui.success('Achat supprimé', 'L’achat client a été supprimé.');
-          this.loadData();
+          this.table.reload();
+        this.loadData();
           if (this.editingId === row.id) this.resetForm();
         }
       });

@@ -37,6 +37,21 @@ public interface ReportService {
     Page<AmountByLabelDto> expensesByProject(ReportFilter filter, Pageable pageable);
 
     /**
+     * Returns expense totals per calendar month, inside the filter's scope, oldest first.
+     */
+    Page<AmountByLabelDto> expensesByMonth(ReportFilter filter, Pageable pageable);
+
+    /**
+     * Returns contracted totals grouped by project, inside the filter's scope.
+     */
+    Page<AmountByLabelDto> purchasesByProject(ReportFilter filter, Pageable pageable);
+
+    /**
+     * Returns advance totals grouped by payment method, inside the filter's scope.
+     */
+    Page<AmountByLabelDto> advancesByPaymentMethod(ReportFilter filter, Pageable pageable);
+
+    /**
      * Returns paginated client financial statements, inside the filter's scope.
      */
     Page<ClientStatementDto> clientStatements(ReportFilter filter, Pageable pageable);

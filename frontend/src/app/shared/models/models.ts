@@ -25,6 +25,30 @@ export interface ReportScopeParams {
   month?: number | null;
 }
 
+/**
+ * Filters accepted by the list endpoints. Every field is optional; the backend applies the
+ * subset that makes sense for the resource (PERF-02).
+ */
+export interface ListFilter {
+  projectId?: number | null;
+  clientId?: number | null;
+  supplierId?: number | null;
+  categoryId?: number | null;
+  apartmentId?: number | null;
+  paymentStatus?: string | null;
+  paymentMethod?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  search?: string | null;
+}
+
+/** A page request: zero-based page index, page size, and an optional `field,dir` sort. */
+export interface PageQuery {
+  page: number;
+  size: number;
+  sort?: string;
+}
+
 export interface PagedResponse<T> {
   content: T[];
   totalElements: number;
@@ -198,6 +222,11 @@ export interface Apartment {
   projectName?: string;
   acquirerId?: number | null;
   acquirerName?: string;
+  /** Derived by the backend from the apartment's sale contract and its advances. */
+  totalPurchases?: number;
+  totalAdvances?: number;
+  totalCollected?: number;
+  remainingToCollect?: number;
 }
 
 export interface SupplierInvoice {

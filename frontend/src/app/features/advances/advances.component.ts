@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -12,7 +12,17 @@ import { TagModule } from 'primeng/tag';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
-import { Apartment, ClientAdvance, ClientPurchase, Client, Project, PurchasePaymentStatus } from '../../shared/models/models';
+import { LazyTable } from '../../core/services/lazy-table';
+import {
+  AmountByLabel,
+  Apartment,
+  Client,
+  ClientAdvance,
+  ClientPurchase,
+  ListFilter,
+  Project,
+  PurchasePaymentStatus
+} from '../../shared/models/models';
 
 @Component({
   selector: 'app-advances',
@@ -26,8 +36,18 @@ export class AdvancesComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  advances: ClientAdvance[] = [];
+  /** One page of advances, filtered and counted by the server (PERF-02). */
+  readonly table = new LazyTable<ClientAdvance>(
+    (query) => this.api.getAdvances(this.serverFilter, query),
+    this.destroyRef
+  );
+
+  /** Advances on the apartment currently chosen in the form, loaded on demand. */
+  selectedApartmentAdvances: ClientAdvance[] = [];
+  /** Advance totals per payment method for the selected project, aggregated by the backend. */
+  advanceTotalsByMethod: AmountByLabel[] = [];
   apartments: Apartment[] = [];
   purchases: ClientPurchase[] = [];
   clients: Client[] = [];
@@ -126,7 +146,9 @@ export class AdvancesComponent implements OnInit {
   }
 
   get selectedExistingAdvancesAmount(): number {
-    return this.getAdvancesAmountForApartment(this.selectedApartmentId, this.editingId);
+    return this.selectedApartmentAdvances
+      .filter((advance) => advance.id !== this.editingId)
+      .reduce((sum, advance) => sum + (advance.amount ?? 0), 0);
   }
 
   get currentAdvanceAmount(): number {
@@ -161,18 +183,21 @@ export class AdvancesComponent implements OnInit {
     return !!this.selectedApartmentPurchase && this.selectedProjectedCollectedAmount > this.selectedDeclaredAmount;
   }
 
+  /**
+   * The KPI strip describes every advance of the selected project, not just the page on screen.
+   * The count comes from the page's own total, the amounts from the backend's aggregate — the
+   * browser no longer holds the rows to reduce (PERF-02).
+   */
   get filteredAdvanceCount(): number {
-    return this.filteredAdvances.length;
+    return this.table.totalRecords;
   }
 
   get filteredAdvanceTotal(): number {
-    return this.filteredAdvances.reduce((sum, advance) => sum + (advance.amount ?? 0), 0);
+    return this.advanceTotalsByMethod.reduce((sum, row) => sum + (row.amount ?? 0), 0);
   }
 
   get filteredBankTransferTotal(): number {
-    return this.filteredAdvances
-      .filter((advance) => advance.paymentMethod === 'BANK_TRANSFER')
-      .reduce((sum, advance) => sum + (advance.amount ?? 0), 0);
+    return this.advanceTotalsByMethod.find((row) => row.label === 'BANK_TRANSFER')?.amount ?? 0;
   }
 
   form = this.fb.group({
@@ -204,30 +229,29 @@ export class AdvancesComponent implements OnInit {
     this.loadData();
   }
 
-  loadData(): void {
-    this.api.getAdvances().subscribe({ next: (data) => (this.advances = data) });
-    this.api.getApartments().subscribe({ next: (data) => (this.apartments = data) });
-    this.api.getPurchases().subscribe({ next: (data) => (this.purchases = data) });
-    this.api.getClients().subscribe({ next: (data) => (this.clients = data) });
-    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
+  /** Filters sent to the server; the header's project always narrows the list. */
+  private get serverFilter(): ListFilter {
+    return {
+      projectId: this.selectedProjectId ?? this.filters.projectId,
+      clientId: this.filters.clientId,
+      paymentMethod: this.filters.paymentMethod || null,
+      dateFrom: this.filters.dateFrom,
+      dateTo: this.filters.dateTo,
+      search: this.filters.search
+    };
   }
 
-  get filteredAdvances(): ClientAdvance[] {
-    return this.advances.filter((row) => {
-      const term = this.filters.search.trim().toLowerCase();
-      const rowDate = row.advanceDate ?? '';
-      const matchSearch = !term || [row.reference, row.notes, this.getClientName(row), this.getProjectName(row), this.getApartmentName(row), this.getPaymentMethodLabel(row.paymentMethod)]
-        .some((value) => (value ?? '').toString().toLowerCase().includes(term));
-      const projectId = row.projectId;
-      const clientId = row.clientId;
-      const matchClient = !this.filters.clientId || clientId === this.filters.clientId;
-      const matchProject = !this.filters.projectId || projectId === this.filters.projectId;
-      const matchSelectedProject = !this.selectedProjectId || projectId === this.selectedProjectId;
-      const matchPayment = !this.filters.paymentMethod || row.paymentMethod === this.filters.paymentMethod;
-      const matchFrom = !this.filters.dateFrom || rowDate >= this.filters.dateFrom;
-      const matchTo = !this.filters.dateTo || rowDate <= this.filters.dateTo;
-      return matchSearch && matchClient && matchProject && matchSelectedProject && matchPayment && matchFrom && matchTo;
-    });
+  loadData(): void {
+    // Form lookups, scoped to the selected project and bounded: the apartment dropdown and the
+    // contract behind each advance. Never the table's own rows, which page server-side.
+    this.api.getApartmentOptions(this.selectedProjectId)
+      .subscribe({ next: (data) => (this.apartments = data) });
+    this.api.getPurchaseOptions(this.selectedProjectId)
+      .subscribe({ next: (data) => (this.purchases = data) });
+    this.api.getAdvancesByPaymentMethod({ projectId: this.selectedProjectId })
+      .subscribe({ next: (data) => (this.advanceTotalsByMethod = data) });
+    this.api.getClients().subscribe({ next: (data) => (this.clients = data) });
+    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
   }
 
   submit(): void {
@@ -249,6 +273,7 @@ export class AdvancesComponent implements OnInit {
       next: () => {
         this.ui.success(this.editingId ? 'Acompte modifié' : 'Acompte ajouté', 'L’acompte a été enregistré avec succès.');
         this.resetForm();
+        this.table.reload();
         this.loadData();
       }
     });
@@ -276,7 +301,8 @@ export class AdvancesComponent implements OnInit {
       this.api.deleteAdvance(row.id!).subscribe({
         next: () => {
           this.ui.success('Acompte supprimé', 'L’acompte a été supprimé.');
-          this.loadData();
+          this.table.reload();
+        this.loadData();
           if (this.editingId === row.id) this.resetForm();
         }
       });
@@ -357,16 +383,17 @@ export class AdvancesComponent implements OnInit {
       return null;
     }
 
-    return Math.max(0, (purchase.totalAmount ?? 0) - (purchase.paidAmount ?? 0) - this.getAdvancesAmountForApartment(apartmentId));
+    // The contract already carries what is left to collect, derived server-side (PERF-02).
+    return purchase.remainingAmount ?? Math.max(0, (purchase.totalAmount ?? 0) - (purchase.collectedAmount ?? 0));
   }
 
-  private getAdvancesAmountForApartment(apartmentId?: number | null, excludedAdvanceId?: number | null): number {
+  /** Advances already recorded on the apartment chosen in the form, fetched when it changes. */
+  private loadSelectedApartmentAdvances(apartmentId: number | null): void {
     if (!apartmentId) {
-      return 0;
+      this.selectedApartmentAdvances = [];
+      return;
     }
-
-    return this.advances
-      .filter((advance) => advance.apartmentId === apartmentId && advance.id !== excludedAdvanceId)
-      .reduce((sum, advance) => sum + (advance.amount ?? 0), 0);
+    this.api.getAdvancesForApartment(apartmentId)
+      .subscribe({ next: (data) => (this.selectedApartmentAdvances = data) });
   }
 }

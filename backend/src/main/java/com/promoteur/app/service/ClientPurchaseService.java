@@ -1,6 +1,7 @@
 package com.promoteur.app.service;
 
 import com.promoteur.app.dto.ClientPurchaseRequest;
+import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.response.ClientPurchaseResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,7 +14,7 @@ public interface ClientPurchaseService {
     /**
      * Returns client purchases using the requested pagination.
      */
-    Page<ClientPurchaseResponse> findAll(Pageable pageable);
+    Page<ClientPurchaseResponse> findAll(ListFilter filter, Pageable pageable);
 
     /**
      * Returns a single client purchase by identifier.
