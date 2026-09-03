@@ -95,13 +95,13 @@ export class ExpensesComponent implements OnInit {
   }
 
   getCategoryName(row: Expense): string {
-    if (row.category?.name) return row.category.name;
+    if (row.categoryName) return row.categoryName;
     const categoryId = row.categoryId;
     return this.categories.find((item) => item.id === categoryId)?.name ?? '-';
   }
 
   getProjectName(row: Expense): string {
-    if (row.project?.name) return row.project.name;
+    if (row.projectName) return row.projectName;
     const projectId = row.projectId;
     return this.projects.find((item) => item.id === projectId)?.name ?? '-';
   }
@@ -112,7 +112,7 @@ export class ExpensesComponent implements OnInit {
   }
 
   getSupplierName(row: Expense): string {
-    if (row.supplier?.name) return row.supplier.name;
+    if (row.supplierName) return row.supplierName;
     const supplierId = row.supplierId;
     if (!supplierId) return '-';
     return this.suppliers.find((item) => item.id === supplierId)?.name ?? '-';
@@ -128,11 +128,11 @@ export class ExpensesComponent implements OnInit {
       const rowDate = row.expenseDate ?? '';
       const matchSearch = !term || [row.reference, row.description, row.documentNumber, row.notes, this.getCategoryName(row), this.getProjectName(row), this.getSupplierName(row)]
         .some((value) => (value ?? '').toString().toLowerCase().includes(term));
-      const projectId = row.project?.id ?? row.projectId;
-      const matchCategory = !this.filters.categoryId || (row.category?.id ?? row.categoryId) === this.filters.categoryId;
+      const projectId = row.projectId;
+      const matchCategory = !this.filters.categoryId || row.categoryId === this.filters.categoryId;
       const matchProject = !this.filters.projectId || projectId === this.filters.projectId;
       const matchSelectedProject = !this.selectedProjectId || projectId === this.selectedProjectId;
-      const matchSupplier = !this.filters.supplierId || (row.supplier?.id ?? row.supplierId) === this.filters.supplierId;
+      const matchSupplier = !this.filters.supplierId || row.supplierId === this.filters.supplierId;
       const matchFrom = !this.filters.dateFrom || rowDate >= this.filters.dateFrom;
       const matchTo = !this.filters.dateTo || rowDate <= this.filters.dateTo;
       return matchSearch && matchCategory && matchProject && matchSelectedProject && matchSupplier && matchFrom && matchTo;
@@ -174,9 +174,9 @@ export class ExpensesComponent implements OnInit {
       attachmentName: expense.attachmentName ?? '',
       attachmentUrl: expense.attachmentUrl ?? '',
       notes: expense.notes ?? '',
-      categoryId: expense.category?.id ?? expense.categoryId ?? null,
-      projectId: expense.project?.id ?? expense.projectId ?? null,
-      supplierId: expense.supplier?.id ?? expense.supplierId ?? null
+      categoryId: expense.categoryId ?? null,
+      projectId: expense.projectId ?? null,
+      supplierId: expense.supplierId ?? null
     });
     if (this.selectedProjectId) {
       this.form.patchValue({ projectId: this.selectedProjectId });

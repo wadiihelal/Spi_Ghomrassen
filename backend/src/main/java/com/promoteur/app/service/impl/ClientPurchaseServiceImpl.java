@@ -1,19 +1,22 @@
 package com.promoteur.app.service.impl;
 
 import com.promoteur.app.dto.ClientPurchaseRequest;
+import com.promoteur.app.dto.PurchaseTotals;
+import com.promoteur.app.dto.response.ClientPurchaseResponse;
 import com.promoteur.app.entity.Apartment;
 import com.promoteur.app.entity.Client;
 import com.promoteur.app.entity.ClientAdvance;
 import com.promoteur.app.entity.ClientPurchase;
 import com.promoteur.app.entity.Project;
-import com.promoteur.app.enums.PurchasePaymentStatus;
 import com.promoteur.app.exception.ResourceNotFoundException;
+import com.promoteur.app.mapper.ClientPurchaseMapper;
 import com.promoteur.app.repository.ApartmentRepository;
 import com.promoteur.app.repository.ClientAdvanceRepository;
 import com.promoteur.app.repository.ClientPurchaseRepository;
 import com.promoteur.app.repository.ClientRepository;
 import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.service.AuditLogService;
+import com.promoteur.app.service.ClientPurchaseCalculationService;
 import com.promoteur.app.service.ClientPurchaseService;
 import com.promoteur.app.service.MessageService;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 
 @Service
@@ -38,45 +40,49 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
     private final ApartmentRepository apartmentRepository;
     private final AuditLogService auditLogService;
     private final MessageService messageService;
+    private final ClientPurchaseCalculationService clientPurchaseCalculationService;
+    private final ClientPurchaseMapper clientPurchaseMapper;
 
     @Override
-    public Page<ClientPurchase> findAll(final Pageable pageable) {
-        return this.clientPurchaseRepository.findAll(pageable).map(this::enrichPurchase);
+    public Page<ClientPurchaseResponse> findAll(final Pageable pageable) {
+        return this.clientPurchaseRepository.findAll(pageable).map(this::toResponse);
     }
 
     @Override
-    public ClientPurchase findById(final Long id) {
-        final ClientPurchase purchase = this.clientPurchaseRepository.findById(id)
+    public ClientPurchaseResponse findById(final Long id) {
+        return this.toResponse(this.entity(id));
+    }
+
+    /** Loads the persisted contract, for the write paths that need the entity itself. */
+    private ClientPurchase entity(final Long id) {
+        return this.clientPurchaseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         this.messageService.get("error.notFound.purchase", String.valueOf(id))));
-        return this.enrichPurchase(purchase);
     }
 
     @Override
-    public ClientPurchase create(final ClientPurchaseRequest request) {
+    public ClientPurchaseResponse create(final ClientPurchaseRequest request) {
         final ClientPurchase purchase = new ClientPurchase();
         this.map(purchase, request);
         final ClientPurchase saved = this.clientPurchaseRepository.save(purchase);
-        final ClientPurchase enrichedPurchase = this.enrichPurchase(saved);
         this.auditLogService.create("PURCHASE", saved.getId(), "CREATE",
                 this.messageService.get("audit.purchase.created", saved.getReference(), saved.getApartment().getApartmentNumber()));
-        return enrichedPurchase;
+        return this.toResponse(saved);
     }
 
     @Override
-    public ClientPurchase update(final Long id, final ClientPurchaseRequest request) {
-        final ClientPurchase purchase = this.findById(id);
+    public ClientPurchaseResponse update(final Long id, final ClientPurchaseRequest request) {
+        final ClientPurchase purchase = this.entity(id);
         this.map(purchase, request);
         final ClientPurchase saved = this.clientPurchaseRepository.save(purchase);
-        final ClientPurchase enrichedPurchase = this.enrichPurchase(saved);
         this.auditLogService.create("PURCHASE", saved.getId(), "UPDATE",
                 this.messageService.get("audit.purchase.updated", saved.getReference(), saved.getApartment().getApartmentNumber()));
-        return enrichedPurchase;
+        return this.toResponse(saved);
     }
 
     @Override
     public void delete(final Long id) {
-        final ClientPurchase purchase = this.findById(id);
+        final ClientPurchase purchase = this.entity(id);
         final String reference = purchase.getReference();
         this.clientPurchaseRepository.delete(purchase);
         this.auditLogService.create("PURCHASE", id, "DELETE",
@@ -84,13 +90,13 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
     }
 
     @Override
-    public Page<ClientPurchase> findByClient(final Long clientId, final Pageable pageable) {
-        return this.clientPurchaseRepository.findByClientId(clientId, pageable).map(this::enrichPurchase);
+    public Page<ClientPurchaseResponse> findByClient(final Long clientId, final Pageable pageable) {
+        return this.clientPurchaseRepository.findByClientId(clientId, pageable).map(this::toResponse);
     }
 
     @Override
-    public Page<ClientPurchase> findByProject(final Long projectId, final Pageable pageable) {
-        return this.clientPurchaseRepository.findByProjectId(projectId, pageable).map(this::enrichPurchase);
+    public Page<ClientPurchaseResponse> findByProject(final Long projectId, final Pageable pageable) {
+        return this.clientPurchaseRepository.findByProjectId(projectId, pageable).map(this::toResponse);
     }
 
     private void map(final ClientPurchase purchase, final ClientPurchaseRequest request) {
@@ -148,38 +154,17 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
         }
     }
 
-    private ClientPurchase enrichPurchase(final ClientPurchase purchase) {
+    /**
+     * Maps a contract to its response, deriving the collected/remaining/percentage figures. Read
+     * only: nothing is written back to the entity, so a GET no longer flushes an UPDATE
+     * (ARCH-01, ARCH-03).
+     */
+    private ClientPurchaseResponse toResponse(final ClientPurchase purchase) {
         final Long apartmentId = purchase.getApartment() != null ? purchase.getApartment().getId() : null;
         final BigDecimal advanceAmount = apartmentId == null ? BigDecimal.ZERO : this.sumAdvanceAmount(apartmentId);
-        final BigDecimal directPaidAmount = this.normalize(purchase.getPaidAmount());
-        final BigDecimal totalAmount = this.normalize(purchase.getTotalAmount());
-        final BigDecimal collectedAmount = directPaidAmount.add(advanceAmount);
-        final BigDecimal remainingAmount = totalAmount.subtract(collectedAmount).max(BigDecimal.ZERO);
-        final BigDecimal completionPercentage = totalAmount.signum() <= 0
-                ? BigDecimal.ZERO
-                : collectedAmount.multiply(BigDecimal.valueOf(100))
-                  .divide(totalAmount, 3, RoundingMode.HALF_UP)
-                  .min(BigDecimal.valueOf(100));
-        final PurchasePaymentStatus paymentStatus = this.resolvePaymentStatus(collectedAmount, totalAmount);
-
-        purchase.setPaidAmount(directPaidAmount);
-        purchase.setAdvanceAmount(advanceAmount);
-        purchase.setCollectedAmount(collectedAmount);
-        purchase.setRemainingAmount(remainingAmount);
-        purchase.setCompletionPercentage(completionPercentage);
-        purchase.setPaymentStatus(paymentStatus);
-        purchase.setCompleted(paymentStatus == PurchasePaymentStatus.PAID);
-        return purchase;
-    }
-
-    private PurchasePaymentStatus resolvePaymentStatus(final BigDecimal collectedAmount, final BigDecimal totalAmount) {
-        if (collectedAmount.signum() <= 0) {
-            return PurchasePaymentStatus.UNPAID;
-        }
-        if (collectedAmount.compareTo(totalAmount) >= 0) {
-            return PurchasePaymentStatus.PAID;
-        }
-        return PurchasePaymentStatus.PARTIALLY_PAID;
+        final PurchaseTotals totals = this.clientPurchaseCalculationService.totals(
+                purchase.getTotalAmount(), purchase.getPaidAmount(), advanceAmount);
+        return this.clientPurchaseMapper.toResponse(purchase, totals);
     }
 
     private BigDecimal sumAdvanceAmount(final Long apartmentId) {

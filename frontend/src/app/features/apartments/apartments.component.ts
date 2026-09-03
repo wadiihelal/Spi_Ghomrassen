@@ -58,7 +58,7 @@ export class ApartmentsComponent implements OnInit {
     if (!this.selectedProjectId) {
       return this.clients;
     }
-    return this.clients.filter((client) => (client.project?.id ?? client.projectId) === this.selectedProjectId);
+    return this.clients.filter((client) => client.projectId === this.selectedProjectId);
   }
 
   form = this.fb.group({
@@ -115,9 +115,9 @@ export class ApartmentsComponent implements OnInit {
   get filteredApartments(): Apartment[] {
     return this.apartments.filter((row) => {
       const term = this.filters.search.trim().toLowerCase();
-      const matchSearch = !term || [row.apartmentNumber, row.apartmentType, row.detail, row.acquirer?.fullName, row.project?.name]
+      const matchSearch = !term || [row.apartmentNumber, row.apartmentType, row.detail, row.acquirerName, row.projectName]
         .some((value) => (value ?? '').toString().toLowerCase().includes(term));
-      const projectId = row.project?.id ?? row.projectId;
+      const projectId = row.projectId;
       const matchProject = !this.filters.projectId || projectId === this.filters.projectId;
       const matchSelectedProject = !this.selectedProjectId || projectId === this.selectedProjectId;
       return matchSearch && matchProject && matchSelectedProject;
@@ -125,11 +125,11 @@ export class ApartmentsComponent implements OnInit {
   }
 
   getProjectName(row: Apartment): string {
-    return row.project?.name ?? this.projects.find((item) => item.id === (row.projectId ?? row.project?.id))?.name ?? '-';
+    return row.projectName ?? this.projects.find((item) => item.id === row.projectId)?.name ?? '-';
   }
 
   getClientName(row: Apartment): string {
-    return row.acquirer?.fullName ?? this.clients.find((item) => item.id === (row.acquirerId ?? row.acquirer?.id))?.fullName ?? '-';
+    return row.acquirerName ?? this.clients.find((item) => item.id === row.acquirerId)?.fullName ?? '-';
   }
 
   getPricePerSquareMeter(row: Apartment): number {
@@ -143,7 +143,7 @@ export class ApartmentsComponent implements OnInit {
     const apartmentId = row.id;
     if (!apartmentId) return 0;
     return this.purchases
-      .filter((item) => (item.apartment?.id ?? item.apartmentId) === apartmentId)
+      .filter((item) => item.apartmentId === apartmentId)
       .reduce((sum, item) => sum + (item.totalAmount ?? 0), 0);
   }
 
@@ -151,7 +151,7 @@ export class ApartmentsComponent implements OnInit {
     const apartmentId = row.id;
     if (!apartmentId) return 0;
     return this.advances
-      .filter((item) => (item.apartment?.id ?? item.apartmentId) === apartmentId)
+      .filter((item) => item.apartmentId === apartmentId)
       .reduce((sum, item) => sum + (item.amount ?? 0), 0);
   }
 
@@ -159,7 +159,7 @@ export class ApartmentsComponent implements OnInit {
     const apartmentId = row.id;
     if (!apartmentId) return 0;
     return this.purchases
-      .filter((item) => (item.apartment?.id ?? item.apartmentId) === apartmentId)
+      .filter((item) => item.apartmentId === apartmentId)
       .reduce((sum, item) => sum + (item.collectedAmount ?? ((item.paidAmount ?? 0) + (item.advanceAmount ?? 0))), 0);
   }
 
@@ -167,7 +167,7 @@ export class ApartmentsComponent implements OnInit {
     const apartmentId = row.id;
     if (!apartmentId) return 0;
     return this.purchases
-      .filter((item) => (item.apartment?.id ?? item.apartmentId) === apartmentId)
+      .filter((item) => item.apartmentId === apartmentId)
       .reduce((sum, item) => sum + (item.remainingAmount ?? Math.max(0, (item.totalAmount ?? 0) - ((item.paidAmount ?? 0) + (item.advanceAmount ?? 0)))), 0);
   }
 
@@ -248,8 +248,8 @@ export class ApartmentsComponent implements OnInit {
       cellarCount: row.cellarCount ?? 0,
       totalSalePrice: row.totalSalePrice ?? 0,
       detail: row.detail ?? '',
-      projectId: this.selectedProjectId ?? row.project?.id ?? row.projectId ?? null,
-      acquirerId: row.acquirer?.id ?? row.acquirerId ?? null
+      projectId: this.selectedProjectId ?? row.projectId ?? null,
+      acquirerId: row.acquirerId ?? null
     });
   }
 

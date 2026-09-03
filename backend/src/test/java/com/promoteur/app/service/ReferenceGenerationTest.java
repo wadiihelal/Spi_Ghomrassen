@@ -5,10 +5,12 @@ import com.promoteur.app.dto.ClientAdvanceRequest;
 import com.promoteur.app.dto.ClientRequest;
 import com.promoteur.app.dto.ExpenseRequest;
 import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.entity.Apartment;
-import com.promoteur.app.entity.Client;
+import com.promoteur.app.dto.response.ApartmentResponse;
+import com.promoteur.app.dto.response.ClientResponse;
+import com.promoteur.app.dto.response.ExpenseResponse;
+import com.promoteur.app.dto.response.ClientAdvanceResponse;
 import com.promoteur.app.entity.Expense;
-import com.promoteur.app.entity.Project;
+import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.repository.ClientAdvanceRepository;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
@@ -60,8 +62,8 @@ class ReferenceGenerationTest {
     @Autowired
     private ExpenseCategoryRepository expenseCategoryRepository;
 
-    private Project project;
-    private Client client;
+    private ProjectResponse project;
+    private ClientResponse client;
 
     @BeforeAll
     void seedProjectAndClient() {
@@ -72,25 +74,25 @@ class ReferenceGenerationTest {
     @Test
     @DisplayName("an expense reference carries its year and a sequential number")
     void anExpenseReferenceCarriesItsYearAndASequentialNumber() {
-        Expense expense = this.createExpense(LocalDate.of(2026, 9, 1));
+        ExpenseResponse expense = this.createExpense(LocalDate.of(2026, 9, 1));
 
-        assertThat(expense.getReference()).matches("DEP-2026-\\d{5}");
+        assertThat(expense.reference()).matches("DEP-2026-\\d{5}");
     }
 
     @Test
     @DisplayName("an advance reference carries its year and a sequential number")
     void anAdvanceReferenceCarriesItsYearAndASequentialNumber() {
-        Apartment apartment = this.createApartment();
+        ApartmentResponse apartment = this.createApartment();
 
-        assertThat(this.createAdvance(apartment, LocalDate.of(2026, 9, 1)).getReference())
+        assertThat(this.createAdvance(apartment, LocalDate.of(2026, 9, 1)).reference())
                 .matches("ACC-2026-\\d{5}");
     }
 
     @Test
     @DisplayName("references from different years are distinguishable and do not collide")
     void referencesFromDifferentYearsAreDistinguishable() {
-        assertThat(this.createExpense(LocalDate.of(2027, 1, 5)).getReference()).startsWith("DEP-2027-");
-        assertThat(this.createExpense(LocalDate.of(2026, 12, 30)).getReference()).startsWith("DEP-2026-");
+        assertThat(this.createExpense(LocalDate.of(2027, 1, 5)).reference()).startsWith("DEP-2027-");
+        assertThat(this.createExpense(LocalDate.of(2026, 12, 30)).reference()).startsWith("DEP-2026-");
     }
 
     @Test
@@ -99,7 +101,7 @@ class ReferenceGenerationTest {
         ExpenseRequest request = this.expenseRequest(LocalDate.of(2026, 9, 1));
         request.setReference("  DEP-MANUEL-1  ");
 
-        assertThat(this.expenseService.create(request).getReference()).isEqualTo("DEP-MANUEL-1");
+        assertThat(this.expenseService.create(request).reference()).isEqualTo("DEP-MANUEL-1");
     }
 
     @Test
@@ -136,7 +138,7 @@ class ReferenceGenerationTest {
     @DisplayName("an advance refused by the payment ceiling leaves no reference behind")
     void anAdvanceRefusedByTheCeilingLeavesNoReferenceBehind() {
         long advancesBefore = this.clientAdvanceRepository.count();
-        Apartment apartment = this.createApartment();
+        ApartmentResponse apartment = this.createApartment();
 
         assertThatThrownBy(() -> this.createAdvance(apartment, LocalDate.of(2026, 9, 1), new BigDecimal("999999.000")))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -144,7 +146,7 @@ class ReferenceGenerationTest {
         assertThat(this.clientAdvanceRepository.count()).isEqualTo(advancesBefore);
     }
 
-    private Expense createExpense(LocalDate date) {
+    private ExpenseResponse createExpense(LocalDate date) {
         return this.expenseService.create(this.expenseRequest(date));
     }
 
@@ -155,34 +157,34 @@ class ReferenceGenerationTest {
         request.setAmountHt(new BigDecimal("100.000"));
         request.setVatRate(new BigDecimal("0.1900"));
         request.setCategoryId(this.expenseCategoryRepository.findAll().get(0).getId());
-        request.setProjectId(this.project.getId());
+        request.setProjectId(this.project.id());
         return request;
     }
 
-    private com.promoteur.app.entity.ClientAdvance createAdvance(Apartment apartment, LocalDate date) {
+    private ClientAdvanceResponse createAdvance(ApartmentResponse apartment, LocalDate date) {
         return this.createAdvance(apartment, date, new BigDecimal("1000.000"));
     }
 
-    private com.promoteur.app.entity.ClientAdvance createAdvance(Apartment apartment, LocalDate date, BigDecimal amount) {
+    private ClientAdvanceResponse createAdvance(ApartmentResponse apartment, LocalDate date, BigDecimal amount) {
         ClientAdvanceRequest request = new ClientAdvanceRequest();
         request.setAdvanceDate(date);
         request.setAmount(amount);
-        request.setApartmentId(apartment.getId());
+        request.setApartmentId(apartment.id());
         return this.clientAdvanceService.create(request);
     }
 
-    private Apartment createApartment() {
+    private ApartmentResponse createApartment() {
         ApartmentRequest request = new ApartmentRequest();
         request.setApartmentNumber("R-" + this.sequence.incrementAndGet());
         request.setApartmentType("S+2");
         request.setTotalSurface(new BigDecimal("90.000"));
         request.setTotalSalePrice(new BigDecimal("200000.000"));
-        request.setProjectId(this.project.getId());
-        request.setAcquirerId(this.client.getId());
+        request.setProjectId(this.project.id());
+        request.setAcquirerId(this.client.id());
         return this.apartmentService.create(request);
     }
 
-    private Project createProject() {
+    private ProjectResponse createProject() {
         ProjectRequest request = new ProjectRequest();
         request.setCode("REF-PRJ");
         request.setName("Projet références");
@@ -190,10 +192,10 @@ class ReferenceGenerationTest {
         return this.projectService.create(request);
     }
 
-    private Client createClient() {
+    private ClientResponse createClient() {
         ClientRequest request = new ClientRequest();
         request.setFullName("Acquéreur références");
-        request.setProjectId(this.project.getId());
+        request.setProjectId(this.project.id());
         return this.clientService.create(request);
     }
 }

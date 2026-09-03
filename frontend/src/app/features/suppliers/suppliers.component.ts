@@ -52,10 +52,6 @@ export class SuppliersComponent implements OnInit {
     this.api.getVatRates().subscribe({ next: (data) => (this.vatRates = data) });
   }
 
-  getSupplierTypeLabel(type?: SupplierTypeOption | null): string {
-    return type?.label ?? '-';
-  }
-
   loadSuppliers(): void {
     this.api.getSuppliers().subscribe({
       next: (data) => (this.suppliers = data)
@@ -99,7 +95,7 @@ export class SuppliersComponent implements OnInit {
       email: supplier.email ?? '',
       address: supplier.address ?? '',
       defaultVatRate: supplier.defaultVatRate ?? null,
-      typeId: supplier.type?.id ?? supplier.typeId ?? null,
+      typeId: supplier.typeId ?? null,
       active: supplier.active ?? true
     });
   }

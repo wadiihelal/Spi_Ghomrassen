@@ -95,7 +95,7 @@
           <ng-template let-apartment pTemplate="item">
             <div class="apartment-option">
               <strong>{{ apartment.apartmentNumber }}</strong>
-              <span>{{ apartment.acquirer?.fullName || 'Sans acquéreur' }} - {{ apartment.project?.name || 'Sans projet' }}</span>
+              <span>{{ apartment.acquirerName || 'Sans acquéreur' }} - {{ apartment.projectName || 'Sans projet' }}</span>
             </div>
           </ng-template>
           <ng-template let-apartment pTemplate="selectedItem">
@@ -168,11 +168,11 @@
       </div>
       <div class="field info-field">
         <label>Client lié</label>
-        <div class="value-box">{{ selectedApartment?.acquirer?.fullName || '-' }}</div>
+        <div class="value-box">{{ selectedApartment?.acquirerName || '-' }}</div>
       </div>
       <div class="field info-field">
         <label>Projet lié</label>
-        <div class="value-box">{{ selectedApartment?.project?.name || currentProjectName }}</div>
+        <div class="value-box">{{ selectedApartment?.projectName || currentProjectName }}</div>
       </div>
       <div class="field full-width">
         <label>Notes</label>

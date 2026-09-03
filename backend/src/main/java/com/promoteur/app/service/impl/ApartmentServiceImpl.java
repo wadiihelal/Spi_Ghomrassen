@@ -1,10 +1,12 @@
 package com.promoteur.app.service.impl;
 
 import com.promoteur.app.dto.ApartmentRequest;
+import com.promoteur.app.dto.response.ApartmentResponse;
 import com.promoteur.app.entity.Apartment;
 import com.promoteur.app.entity.Client;
 import com.promoteur.app.entity.Project;
 import com.promoteur.app.exception.ResourceNotFoundException;
+import com.promoteur.app.mapper.ApartmentMapper;
 import com.promoteur.app.repository.ApartmentRepository;
 import com.promoteur.app.repository.ClientRepository;
 import com.promoteur.app.repository.ProjectRepository;
@@ -27,41 +29,47 @@ public class ApartmentServiceImpl implements ApartmentService {
     private final ClientRepository clientRepository;
     private final AuditLogService auditLogService;
     private final MessageService messageService;
+    private final ApartmentMapper apartmentMapper;
 
     @Override
-    public Page<Apartment> findAll(final Pageable pageable) {
-        return this.apartmentRepository.findAll(pageable);
+    public Page<ApartmentResponse> findAll(final Pageable pageable) {
+        return this.apartmentRepository.findAll(pageable).map(this.apartmentMapper::toResponse);
     }
 
     @Override
-    public Apartment findById(final Long id) {
+    public ApartmentResponse findById(final Long id) {
+        return this.apartmentMapper.toResponse(this.entity(id));
+    }
+
+    /** Loads the persisted Apartment, for the write paths that need the entity itself. */
+    private Apartment entity(final Long id) {
         return this.apartmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Apartment not found with id " + id));
     }
 
     @Override
-    public Apartment create(final ApartmentRequest request) {
+    public ApartmentResponse create(final ApartmentRequest request) {
         final Apartment apartment = new Apartment();
         this.map(apartment, request);
         final Apartment saved = this.apartmentRepository.save(apartment);
         this.auditLogService.create("APARTMENT", saved.getId(), "CREATE",
                 this.messageService.get("audit.apartment.created", saved.getApartmentNumber()));
-        return saved;
+        return this.apartmentMapper.toResponse(saved);
     }
 
     @Override
-    public Apartment update(final Long id, final ApartmentRequest request) {
-        final Apartment apartment = this.findById(id);
+    public ApartmentResponse update(final Long id, final ApartmentRequest request) {
+        final Apartment apartment = this.entity(id);
         this.map(apartment, request);
         final Apartment saved = this.apartmentRepository.save(apartment);
         this.auditLogService.create("APARTMENT", saved.getId(), "UPDATE",
                 this.messageService.get("audit.apartment.updated", saved.getApartmentNumber()));
-        return saved;
+        return this.apartmentMapper.toResponse(saved);
     }
 
     @Override
     public void delete(final Long id) {
-        final Apartment apartment = this.findById(id);
+        final Apartment apartment = this.entity(id);
         final String apartmentNumber = apartment.getApartmentNumber();
         this.apartmentRepository.delete(apartment);
         this.auditLogService.create("APARTMENT", id, "DELETE",
@@ -69,8 +77,8 @@ public class ApartmentServiceImpl implements ApartmentService {
     }
 
     @Override
-    public Page<Apartment> findByProject(final Long projectId, final Pageable pageable) {
-        return this.apartmentRepository.findByProjectId(projectId, pageable);
+    public Page<ApartmentResponse> findByProject(final Long projectId, final Pageable pageable) {
+        return this.apartmentRepository.findByProjectId(projectId, pageable).map(this.apartmentMapper::toResponse);
     }
 
     private void map(final Apartment apartment, final ApartmentRequest request) {

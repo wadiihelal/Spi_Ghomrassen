@@ -1,8 +1,10 @@
 package com.promoteur.app.service.impl;
 
 import com.promoteur.app.dto.ProjectRequest;
+import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.entity.Project;
 import com.promoteur.app.exception.ResourceNotFoundException;
+import com.promoteur.app.mapper.ProjectMapper;
 import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.MessageService;
@@ -21,20 +23,26 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectRepository projectRepository;
     private final AuditLogService auditLogService;
     private final MessageService messageService;
+    private final ProjectMapper projectMapper;
 
     @Override
-    public Page<Project> findAll(final Pageable pageable) {
-        return this.projectRepository.findAll(pageable);
+    public Page<ProjectResponse> findAll(final Pageable pageable) {
+        return this.projectRepository.findAll(pageable).map(this.projectMapper::toResponse);
     }
 
     @Override
-    public Project findById(final Long id) {
+    public ProjectResponse findById(final Long id) {
+        return this.projectMapper.toResponse(this.entity(id));
+    }
+
+    /** Loads the persisted Project, for the write paths that need the entity itself. */
+    private Project entity(final Long id) {
         return this.projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id " + id));
     }
 
     @Override
-    public Project create(final ProjectRequest request) {
+    public ProjectResponse create(final ProjectRequest request) {
         final Project project = new Project();
         this.map(project, request);
         if (this.projectRepository.findFirstByActiveContextTrue().isEmpty()) {
@@ -43,22 +51,22 @@ public class ProjectServiceImpl implements ProjectService {
         final Project saved = this.projectRepository.save(project);
         this.auditLogService.create("PROJECT", saved.getId(), "CREATE",
                 this.messageService.get("audit.project.created", saved.getName()));
-        return saved;
+        return this.projectMapper.toResponse(saved);
     }
 
     @Override
-    public Project update(final Long id, final ProjectRequest request) {
-        final Project project = this.findById(id);
+    public ProjectResponse update(final Long id, final ProjectRequest request) {
+        final Project project = this.entity(id);
         this.map(project, request);
         final Project saved = this.projectRepository.save(project);
         this.auditLogService.create("PROJECT", saved.getId(), "UPDATE",
                 this.messageService.get("audit.project.updated", saved.getName()));
-        return saved;
+        return this.projectMapper.toResponse(saved);
     }
 
     @Override
     public void delete(final Long id) {
-        final Project project = this.findById(id);
+        final Project project = this.entity(id);
         final String name = project.getName();
         final boolean wasActive = Boolean.TRUE.equals(project.getActiveContext());
         this.projectRepository.delete(project);
@@ -73,14 +81,14 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public Project findActiveContext() {
-        return this.projectRepository.findFirstByActiveContextTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No active project context configured"));
+    public ProjectResponse findActiveContext() {
+        return this.projectMapper.toResponse(this.projectRepository.findFirstByActiveContextTrue()
+                .orElseThrow(() -> new ResourceNotFoundException("No active project context configured")));
     }
 
     @Override
-    public Project setActiveContext(final Long id) {
-        final Project selected = this.findById(id);
+    public ProjectResponse setActiveContext(final Long id) {
+        final Project selected = this.entity(id);
         this.projectRepository.findAll().forEach(project -> {
             final boolean shouldBeActive = project.getId().equals(selected.getId());
             if (!Boolean.valueOf(shouldBeActive).equals(project.getActiveContext())) {

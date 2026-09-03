@@ -1,7 +1,7 @@
 package com.promoteur.app.controller;
 
 import com.promoteur.app.dto.ClientRequest;
-import com.promoteur.app.entity.Client;
+import com.promoteur.app.dto.response.ClientResponse;
 import com.promoteur.app.service.ClientService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,22 +24,22 @@ public class ClientController {
     private final ClientService clientService;
 
     @GetMapping
-    public Page<Client> findAll(Pageable pageable) {
+    public Page<ClientResponse> findAll(Pageable pageable) {
         return clientService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
-    public Client findById(@PathVariable Long id) {
+    public ClientResponse findById(@PathVariable Long id) {
         return clientService.findById(id);
     }
 
     @PostMapping
-    public Client create(@Valid @RequestBody ClientRequest request) {
+    public ClientResponse create(@Valid @RequestBody ClientRequest request) {
         return clientService.create(request);
     }
 
     @PutMapping("/{id}")
-    public Client update(@PathVariable Long id, @Valid @RequestBody ClientRequest request) {
+    public ClientResponse update(@PathVariable Long id, @Valid @RequestBody ClientRequest request) {
         return clientService.update(id, request);
     }
 

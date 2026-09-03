@@ -1,7 +1,7 @@
 package com.promoteur.app.controller;
 
 import com.promoteur.app.dto.ExpenseCategoryRequest;
-import com.promoteur.app.entity.ExpenseCategory;
+import com.promoteur.app.dto.response.ExpenseCategoryResponse;
 import com.promoteur.app.service.ExpenseCategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,22 +24,22 @@ public class ExpenseCategoryController {
     private final ExpenseCategoryService expenseCategoryService;
 
     @GetMapping
-    public Page<ExpenseCategory> findAll(Pageable pageable) {
+    public Page<ExpenseCategoryResponse> findAll(Pageable pageable) {
         return expenseCategoryService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
-    public ExpenseCategory findById(@PathVariable Long id) {
+    public ExpenseCategoryResponse findById(@PathVariable Long id) {
         return expenseCategoryService.findById(id);
     }
 
     @PostMapping
-    public ExpenseCategory create(@Valid @RequestBody ExpenseCategoryRequest request) {
+    public ExpenseCategoryResponse create(@Valid @RequestBody ExpenseCategoryRequest request) {
         return expenseCategoryService.create(request);
     }
 
     @PutMapping("/{id}")
-    public ExpenseCategory update(@PathVariable Long id, @Valid @RequestBody ExpenseCategoryRequest request) {
+    public ExpenseCategoryResponse update(@PathVariable Long id, @Valid @RequestBody ExpenseCategoryRequest request) {
         return expenseCategoryService.update(id, request);
     }
 

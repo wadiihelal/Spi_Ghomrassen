@@ -1,7 +1,7 @@
 package com.promoteur.app.controller;
 
 import com.promoteur.app.dto.SupplierRequest;
-import com.promoteur.app.entity.Supplier;
+import com.promoteur.app.dto.response.SupplierResponse;
 import com.promoteur.app.service.SupplierService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,22 +24,22 @@ public class SupplierController {
     private final SupplierService supplierService;
 
     @GetMapping
-    public Page<Supplier> findAll(Pageable pageable) {
+    public Page<SupplierResponse> findAll(Pageable pageable) {
         return supplierService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
-    public Supplier findById(@PathVariable Long id) {
+    public SupplierResponse findById(@PathVariable Long id) {
         return supplierService.findById(id);
     }
 
     @PostMapping
-    public Supplier create(@Valid @RequestBody SupplierRequest request) {
+    public SupplierResponse create(@Valid @RequestBody SupplierRequest request) {
         return supplierService.create(request);
     }
 
     @PutMapping("/{id}")
-    public Supplier update(@PathVariable Long id, @Valid @RequestBody SupplierRequest request) {
+    public SupplierResponse update(@PathVariable Long id, @Valid @RequestBody SupplierRequest request) {
         return supplierService.update(id, request);
     }
 

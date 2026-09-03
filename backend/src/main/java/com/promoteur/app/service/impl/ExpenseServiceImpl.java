@@ -2,11 +2,13 @@ package com.promoteur.app.service.impl;
 
 import com.promoteur.app.dto.ExpenseRequest;
 import com.promoteur.app.dto.VatAmounts;
+import com.promoteur.app.dto.response.ExpenseResponse;
 import com.promoteur.app.entity.Expense;
 import com.promoteur.app.entity.ExpenseCategory;
 import com.promoteur.app.entity.Project;
 import com.promoteur.app.entity.Supplier;
 import com.promoteur.app.exception.ResourceNotFoundException;
+import com.promoteur.app.mapper.ExpenseMapper;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
 import com.promoteur.app.repository.ExpenseRepository;
 import com.promoteur.app.repository.ProjectRepository;
@@ -35,22 +37,28 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final SupplierRepository supplierRepository;
     private final AuditLogService auditLogService;
     private final MessageService messageService;
+    private final ExpenseMapper expenseMapper;
     private final VatCalculationService vatCalculationService;
     private final ReferenceGeneratorService referenceGeneratorService;
 
     @Override
-    public Page<Expense> findAll(final Pageable pageable) {
-        return this.expenseRepository.findAll(pageable);
+    public Page<ExpenseResponse> findAll(final Pageable pageable) {
+        return this.expenseRepository.findAll(pageable).map(this.expenseMapper::toResponse);
     }
 
     @Override
-    public Expense findById(final Long id) {
+    public ExpenseResponse findById(final Long id) {
+        return this.expenseMapper.toResponse(this.entity(id));
+    }
+
+    /** Loads the persisted Expense, for the write paths that need the entity itself. */
+    private Expense entity(final Long id) {
         return this.expenseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Expense not found with id " + id));
     }
 
     @Override
-    public Expense create(final ExpenseRequest request) {
+    public ExpenseResponse create(final ExpenseRequest request) {
         final Expense expense = new Expense();
         this.map(expense, request);
 
@@ -58,22 +66,22 @@ public class ExpenseServiceImpl implements ExpenseService {
 
         this.auditLogService.create("EXPENSE", saved.getId(), "CREATE",
                 this.messageService.get("audit.expense.created", saved.getDescription()));
-        return saved;
+        return this.expenseMapper.toResponse(saved);
     }
 
     @Override
-    public Expense update(final Long id, final ExpenseRequest request) {
-        final Expense expense = this.findById(id);
+    public ExpenseResponse update(final Long id, final ExpenseRequest request) {
+        final Expense expense = this.entity(id);
         this.map(expense, request);
         final Expense saved = this.expenseRepository.save(expense);
         this.auditLogService.create("EXPENSE", saved.getId(), "UPDATE",
                 this.messageService.get("audit.expense.updated", saved.getDescription()));
-        return saved;
+        return this.expenseMapper.toResponse(saved);
     }
 
     @Override
     public void delete(final Long id) {
-        final Expense expense = this.findById(id);
+        final Expense expense = this.entity(id);
         final String description = expense.getDescription();
         this.expenseRepository.delete(expense);
         this.auditLogService.create("EXPENSE", id, "DELETE",
@@ -81,13 +89,13 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
-    public Page<Expense> findByCategory(final Long categoryId, final Pageable pageable) {
-        return this.expenseRepository.findByCategoryId(categoryId, pageable);
+    public Page<ExpenseResponse> findByCategory(final Long categoryId, final Pageable pageable) {
+        return this.expenseRepository.findByCategoryId(categoryId, pageable).map(this.expenseMapper::toResponse);
     }
 
     @Override
-    public Page<Expense> findByProject(final Long projectId, final Pageable pageable) {
-        return this.expenseRepository.findByProjectId(projectId, pageable);
+    public Page<ExpenseResponse> findByProject(final Long projectId, final Pageable pageable) {
+        return this.expenseRepository.findByProjectId(projectId, pageable).map(this.expenseMapper::toResponse);
     }
 
     private void map(final Expense expense, final ExpenseRequest request) {

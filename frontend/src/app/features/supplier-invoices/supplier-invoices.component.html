@@ -33,8 +33,8 @@
             <div class="table-main">{{ row.invoiceNumber }}</div>
             <div class="table-meta">{{ row.invoiceDate || '-' }} · HT {{ row.amountHt | number:'1.0-2' }} DT</div>
           </td>
-          <td>{{ row.supplier?.name || '-' }}</td>
-          <td>{{ row.project?.name || '-' }}</td>
+          <td>{{ row.supplierName || '-' }}</td>
+          <td>{{ row.projectName || '-' }}</td>
           <td>{{ row.amountHt | number:'1.0-2' }} DT</td>
           <td>{{ row.vatAmount | number:'1.0-2' }} DT ({{ (row.vatRate ?? 0) * 100 | number:'1.0-2' }}%)</td>
           <td>{{ row.amountTtc | number:'1.0-2' }} DT</td>

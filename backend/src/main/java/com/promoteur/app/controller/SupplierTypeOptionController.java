@@ -1,7 +1,7 @@
 package com.promoteur.app.controller;
 
 import com.promoteur.app.dto.SupplierTypeOptionRequest;
-import com.promoteur.app.entity.SupplierTypeOption;
+import com.promoteur.app.dto.response.SupplierTypeOptionResponse;
 import com.promoteur.app.service.SupplierTypeOptionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,22 +24,22 @@ public class SupplierTypeOptionController {
     private final SupplierTypeOptionService supplierTypeOptionService;
 
     @GetMapping
-    public Page<SupplierTypeOption> findAll(Pageable pageable) {
+    public Page<SupplierTypeOptionResponse> findAll(Pageable pageable) {
         return supplierTypeOptionService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
-    public SupplierTypeOption findById(@PathVariable Long id) {
+    public SupplierTypeOptionResponse findById(@PathVariable Long id) {
         return supplierTypeOptionService.findById(id);
     }
 
     @PostMapping
-    public SupplierTypeOption create(@Valid @RequestBody SupplierTypeOptionRequest request) {
+    public SupplierTypeOptionResponse create(@Valid @RequestBody SupplierTypeOptionRequest request) {
         return supplierTypeOptionService.create(request);
     }
 
     @PutMapping("/{id}")
-    public SupplierTypeOption update(@PathVariable Long id, @Valid @RequestBody SupplierTypeOptionRequest request) {
+    public SupplierTypeOptionResponse update(@PathVariable Long id, @Valid @RequestBody SupplierTypeOptionRequest request) {
         return supplierTypeOptionService.update(id, request);
     }
 

@@ -1,12 +1,14 @@
 package com.promoteur.app.service.impl;
 
 import com.promoteur.app.dto.ClientAdvanceRequest;
+import com.promoteur.app.dto.response.ClientAdvanceResponse;
 import com.promoteur.app.entity.Apartment;
 import com.promoteur.app.entity.Client;
 import com.promoteur.app.entity.ClientAdvance;
 import com.promoteur.app.entity.ClientPurchase;
 import com.promoteur.app.entity.Project;
 import com.promoteur.app.exception.ResourceNotFoundException;
+import com.promoteur.app.mapper.ClientAdvanceMapper;
 import com.promoteur.app.repository.ApartmentRepository;
 import com.promoteur.app.repository.ClientAdvanceRepository;
 import com.promoteur.app.repository.ClientPurchaseRepository;
@@ -33,22 +35,28 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
     private final ApartmentRepository apartmentRepository;
     private final AuditLogService auditLogService;
     private final MessageService messageService;
+    private final ClientAdvanceMapper clientAdvanceMapper;
     private final ReferenceGeneratorService referenceGeneratorService;
 
     @Override
-    public Page<ClientAdvance> findAll(final Pageable pageable) {
-        return this.clientAdvanceRepository.findAll(pageable);
+    public Page<ClientAdvanceResponse> findAll(final Pageable pageable) {
+        return this.clientAdvanceRepository.findAll(pageable).map(this.clientAdvanceMapper::toResponse);
     }
 
     @Override
-    public ClientAdvance findById(final Long id) {
+    public ClientAdvanceResponse findById(final Long id) {
+        return this.clientAdvanceMapper.toResponse(this.entity(id));
+    }
+
+    /** Loads the persisted ClientAdvance, for the write paths that need the entity itself. */
+    private ClientAdvance entity(final Long id) {
         return this.clientAdvanceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         this.messageService.get("error.notFound.advance", String.valueOf(id))));
     }
 
     @Override
-    public ClientAdvance create(final ClientAdvanceRequest request) {
+    public ClientAdvanceResponse create(final ClientAdvanceRequest request) {
         final ClientAdvance advance = new ClientAdvance();
         this.map(advance, request);
 
@@ -56,22 +64,22 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
 
         this.auditLogService.create("ADVANCE", saved.getId(), "CREATE",
                 this.messageService.get("audit.advance.created", saved.getReference()));
-        return saved;
+        return this.clientAdvanceMapper.toResponse(saved);
     }
 
     @Override
-    public ClientAdvance update(final Long id, final ClientAdvanceRequest request) {
-        final ClientAdvance advance = this.findById(id);
+    public ClientAdvanceResponse update(final Long id, final ClientAdvanceRequest request) {
+        final ClientAdvance advance = this.entity(id);
         this.map(advance, request);
         final ClientAdvance saved = this.clientAdvanceRepository.save(advance);
         this.auditLogService.create("ADVANCE", saved.getId(), "UPDATE",
                 this.messageService.get("audit.advance.updated", saved.getReference()));
-        return saved;
+        return this.clientAdvanceMapper.toResponse(saved);
     }
 
     @Override
     public void delete(final Long id) {
-        final ClientAdvance advance = this.findById(id);
+        final ClientAdvance advance = this.entity(id);
         final String reference = advance.getReference();
         this.clientAdvanceRepository.delete(advance);
         this.auditLogService.create("ADVANCE", id, "DELETE",
@@ -79,13 +87,13 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
     }
 
     @Override
-    public Page<ClientAdvance> findByClient(final Long clientId, final Pageable pageable) {
-        return this.clientAdvanceRepository.findByClientId(clientId, pageable);
+    public Page<ClientAdvanceResponse> findByClient(final Long clientId, final Pageable pageable) {
+        return this.clientAdvanceRepository.findByClientId(clientId, pageable).map(this.clientAdvanceMapper::toResponse);
     }
 
     @Override
-    public Page<ClientAdvance> findByProject(final Long projectId, final Pageable pageable) {
-        return this.clientAdvanceRepository.findByProjectId(projectId, pageable);
+    public Page<ClientAdvanceResponse> findByProject(final Long projectId, final Pageable pageable) {
+        return this.clientAdvanceRepository.findByProjectId(projectId, pageable).map(this.clientAdvanceMapper::toResponse);
     }
 
     private void map(final ClientAdvance clientAdvance, final ClientAdvanceRequest request) {

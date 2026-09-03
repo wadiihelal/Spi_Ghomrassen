@@ -1,7 +1,7 @@
 package com.promoteur.app.controller;
 
 import com.promoteur.app.dto.ClientPurchaseRequest;
-import com.promoteur.app.entity.ClientPurchase;
+import com.promoteur.app.dto.response.ClientPurchaseResponse;
 import com.promoteur.app.service.ClientPurchaseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,22 +24,22 @@ public class ClientPurchaseController {
     private final ClientPurchaseService clientPurchaseService;
 
     @GetMapping
-    public Page<ClientPurchase> findAll(Pageable pageable) {
+    public Page<ClientPurchaseResponse> findAll(Pageable pageable) {
         return clientPurchaseService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
-    public ClientPurchase findById(@PathVariable Long id) {
+    public ClientPurchaseResponse findById(@PathVariable Long id) {
         return clientPurchaseService.findById(id);
     }
 
     @PostMapping
-    public ClientPurchase create(@Valid @RequestBody ClientPurchaseRequest request) {
+    public ClientPurchaseResponse create(@Valid @RequestBody ClientPurchaseRequest request) {
         return clientPurchaseService.create(request);
     }
 
     @PutMapping("/{id}")
-    public ClientPurchase update(@PathVariable Long id, @Valid @RequestBody ClientPurchaseRequest request) {
+    public ClientPurchaseResponse update(@PathVariable Long id, @Valid @RequestBody ClientPurchaseRequest request) {
         return clientPurchaseService.update(id, request);
     }
 
@@ -49,12 +49,12 @@ public class ClientPurchaseController {
     }
 
     @GetMapping("/by-client/{clientId}")
-    public Page<ClientPurchase> findByClient(@PathVariable Long clientId, Pageable pageable) {
+    public Page<ClientPurchaseResponse> findByClient(@PathVariable Long clientId, Pageable pageable) {
         return clientPurchaseService.findByClient(clientId, pageable);
     }
 
     @GetMapping("/by-project/{projectId}")
-    public Page<ClientPurchase> findByProject(@PathVariable Long projectId, Pageable pageable) {
+    public Page<ClientPurchaseResponse> findByProject(@PathVariable Long projectId, Pageable pageable) {
         return clientPurchaseService.findByProject(projectId, pageable);
     }
 }

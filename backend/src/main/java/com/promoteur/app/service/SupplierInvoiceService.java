@@ -1,7 +1,7 @@
 package com.promoteur.app.service;
 
 import com.promoteur.app.dto.SupplierInvoiceRequest;
-import com.promoteur.app.entity.SupplierInvoice;
+import com.promoteur.app.dto.response.SupplierInvoiceResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,22 +13,22 @@ public interface SupplierInvoiceService {
     /**
      * Returns supplier invoices using the requested pagination.
      */
-    Page<SupplierInvoice> findAll(Pageable pageable);
+    Page<SupplierInvoiceResponse> findAll(Pageable pageable);
 
     /**
      * Returns a single supplier invoice by identifier.
      */
-    SupplierInvoice findById(Long id);
+    SupplierInvoiceResponse findById(Long id);
 
     /**
      * Creates a new supplier invoice.
      */
-    SupplierInvoice create(SupplierInvoiceRequest request);
+    SupplierInvoiceResponse create(SupplierInvoiceRequest request);
 
     /**
      * Updates an existing supplier invoice.
      */
-    SupplierInvoice update(Long id, SupplierInvoiceRequest request);
+    SupplierInvoiceResponse update(Long id, SupplierInvoiceRequest request);
 
     /**
      * Deletes a supplier invoice by identifier.
@@ -38,10 +38,10 @@ public interface SupplierInvoiceService {
     /**
      * Returns invoices for a given project.
      */
-    Page<SupplierInvoice> findByProject(Long projectId, Pageable pageable);
+    Page<SupplierInvoiceResponse> findByProject(Long projectId, Pageable pageable);
 
     /**
      * Returns invoices for a given supplier.
      */
-    Page<SupplierInvoice> findBySupplier(Long supplierId, Pageable pageable);
+    Page<SupplierInvoiceResponse> findBySupplier(Long supplierId, Pageable pageable);
 }

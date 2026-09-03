@@ -73,7 +73,7 @@ export class ClientsComponent implements OnInit {
     if (!this.selectedProjectId) {
       return this.clients;
     }
-    return this.clients.filter((client) => (client.project?.id ?? client.projectId) === this.selectedProjectId);
+    return this.clients.filter((client) => client.projectId === this.selectedProjectId);
   }
 
   submit(): void {
@@ -108,7 +108,7 @@ export class ClientsComponent implements OnInit {
       cinOrFiscalId: client.cinOrFiscalId ?? '',
       notes: client.notes ?? '',
       active: client.active ?? true,
-      projectId: this.selectedProjectId ?? client.project?.id ?? client.projectId ?? null
+      projectId: this.selectedProjectId ?? client.projectId ?? null
     });
   }
 

@@ -105,17 +105,17 @@ export class DashboardComponent implements OnInit {
 
   get filteredExpensesSource(): Expense[] {
     if (!this.selectedProjectId) return this.expenses;
-    return this.expenses.filter((expense) => (expense.project?.id ?? expense.projectId) === this.selectedProjectId);
+    return this.expenses.filter((expense) => expense.projectId === this.selectedProjectId);
   }
 
   get filteredPurchasesSource(): ClientPurchase[] {
     if (!this.selectedProjectId) return this.purchases;
-    return this.purchases.filter((purchase) => (purchase.project?.id ?? purchase.projectId) === this.selectedProjectId);
+    return this.purchases.filter((purchase) => purchase.projectId === this.selectedProjectId);
   }
 
   get filteredAdvancesSource(): ClientAdvance[] {
     if (!this.selectedProjectId) return this.advances;
-    return this.advances.filter((advance) => (advance.project?.id ?? advance.projectId) === this.selectedProjectId);
+    return this.advances.filter((advance) => advance.projectId === this.selectedProjectId);
   }
 
   get totalCashIn(): number {
@@ -155,10 +155,10 @@ export class DashboardComponent implements OnInit {
       .map((project) => {
         const id = project.id;
         const purchases = this.purchases
-          .filter((item) => (item.project?.id ?? item.projectId) === id)
+          .filter((item) => item.projectId === id)
           .reduce((sum, item) => sum + (item.totalAmount ?? 0), 0);
         const expenses = this.expenses
-          .filter((item) => (item.project?.id ?? item.projectId) === id)
+          .filter((item) => item.projectId === id)
           .reduce((sum, item) => sum + (item.amountTtc ?? 0), 0);
         return { name: project.name, margin: purchases - expenses };
       })
@@ -175,7 +175,7 @@ export class DashboardComponent implements OnInit {
 
   get topDebtors(): ClientStatement[] {
     const allowedClientIds = new Set(
-      this.filteredPurchasesSource.map((item) => item.client?.id ?? item.clientId).filter((id): id is number => !!id)
+      this.filteredPurchasesSource.map((item) => item.clientId).filter((id): id is number => !!id)
     );
     return [...this.statements]
       .filter((item) => !this.selectedProjectId || allowedClientIds.has(item.clientId))
@@ -250,7 +250,7 @@ export class DashboardComponent implements OnInit {
   getProjectBudgetUsage(project: Project): number {
     if (!project.id || !project.budget || project.budget <= 0) return 0;
     const totalExpense = this.expenses
-      .filter((expense) => (expense.project?.id ?? expense.projectId) === project.id)
+      .filter((expense) => expense.projectId === project.id)
       .reduce((sum, expense) => sum + (expense.amountTtc ?? 0), 0);
     return Math.min(100, Math.round((totalExpense / project.budget) * 100));
   }
@@ -258,7 +258,7 @@ export class DashboardComponent implements OnInit {
   getProjectExpenseAmount(project: Project): number {
     if (!project.id) return 0;
     return this.expenses
-      .filter((expense) => (expense.project?.id ?? expense.projectId) === project.id)
+      .filter((expense) => expense.projectId === project.id)
       .reduce((sum, expense) => sum + (expense.amountTtc ?? 0), 0);
   }
 }

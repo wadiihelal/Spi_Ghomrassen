@@ -1,7 +1,7 @@
 package com.promoteur.app.service;
 
 import com.promoteur.app.dto.ExpenseCategoryRequest;
-import com.promoteur.app.entity.ExpenseCategory;
+import com.promoteur.app.dto.response.ExpenseCategoryResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,22 +13,22 @@ public interface ExpenseCategoryService {
     /**
      * Returns expense categories using the requested pagination.
      */
-    Page<ExpenseCategory> findAll(Pageable pageable);
+    Page<ExpenseCategoryResponse> findAll(Pageable pageable);
 
     /**
      * Returns a single expense category by identifier.
      */
-    ExpenseCategory findById(Long id);
+    ExpenseCategoryResponse findById(Long id);
 
     /**
      * Creates a new expense category.
      */
-    ExpenseCategory create(ExpenseCategoryRequest request);
+    ExpenseCategoryResponse create(ExpenseCategoryRequest request);
 
     /**
      * Updates an existing expense category.
      */
-    ExpenseCategory update(Long id, ExpenseCategoryRequest request);
+    ExpenseCategoryResponse update(Long id, ExpenseCategoryRequest request);
 
     /**
      * Deletes an expense category by identifier.

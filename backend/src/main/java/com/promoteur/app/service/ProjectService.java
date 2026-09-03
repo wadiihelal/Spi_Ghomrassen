@@ -1,7 +1,7 @@
 package com.promoteur.app.service;
 
 import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.entity.Project;
+import com.promoteur.app.dto.response.ProjectResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,22 +13,22 @@ public interface ProjectService {
     /**
      * Returns projects using the requested pagination.
      */
-    Page<Project> findAll(Pageable pageable);
+    Page<ProjectResponse> findAll(Pageable pageable);
 
     /**
      * Returns a single project by identifier.
      */
-    Project findById(Long id);
+    ProjectResponse findById(Long id);
 
     /**
      * Creates a new project.
      */
-    Project create(ProjectRequest request);
+    ProjectResponse create(ProjectRequest request);
 
     /**
      * Updates an existing project.
      */
-    Project update(Long id, ProjectRequest request);
+    ProjectResponse update(Long id, ProjectRequest request);
 
     /**
      * Deletes a project by identifier.
@@ -38,12 +38,12 @@ public interface ProjectService {
     /**
      * Returns the active project context.
      */
-    Project findActiveContext();
+    ProjectResponse findActiveContext();
 
     /**
      * Sets the active project context.
      */
-    Project setActiveContext(Long id);
+    ProjectResponse setActiveContext(Long id);
 
     /**
      * Clears any active project context.

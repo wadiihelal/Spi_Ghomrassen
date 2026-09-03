@@ -1,7 +1,7 @@
 package com.promoteur.app.service;
 
 import com.promoteur.app.dto.SupplierTypeOptionRequest;
-import com.promoteur.app.entity.SupplierTypeOption;
+import com.promoteur.app.dto.response.SupplierTypeOptionResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,22 +13,22 @@ public interface SupplierTypeOptionService {
     /**
      * Returns supplier type options using the requested pagination.
      */
-    Page<SupplierTypeOption> findAll(Pageable pageable);
+    Page<SupplierTypeOptionResponse> findAll(Pageable pageable);
 
     /**
      * Returns a single supplier type option by identifier.
      */
-    SupplierTypeOption findById(Long id);
+    SupplierTypeOptionResponse findById(Long id);
 
     /**
      * Creates a new supplier type option.
      */
-    SupplierTypeOption create(SupplierTypeOptionRequest request);
+    SupplierTypeOptionResponse create(SupplierTypeOptionRequest request);
 
     /**
      * Updates an existing supplier type option.
      */
-    SupplierTypeOption update(Long id, SupplierTypeOptionRequest request);
+    SupplierTypeOptionResponse update(Long id, SupplierTypeOptionRequest request);
 
     /**
      * Deletes a supplier type option by identifier.

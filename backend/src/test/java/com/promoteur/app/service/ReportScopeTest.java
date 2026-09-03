@@ -4,7 +4,7 @@ import com.promoteur.app.dto.ExpenseRequest;
 import com.promoteur.app.dto.ProjectRequest;
 import com.promoteur.app.dto.report.AmountByLabelDto;
 import com.promoteur.app.dto.report.ReportFilter;
-import com.promoteur.app.entity.Project;
+import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -53,8 +53,8 @@ class ReportScopeTest {
     @Autowired
     private ExpenseCategoryRepository expenseCategoryRepository;
 
-    private Project projectA;
-    private Project projectB;
+    private ProjectResponse projectA;
+    private ProjectResponse projectB;
 
     @BeforeAll
     void seedTwoProjectsAcrossTwoMonths() {
@@ -69,7 +69,7 @@ class ReportScopeTest {
     @Test
     @DisplayName("a report for one project and one month excludes other projects and other months")
     void aReportForOneProjectAndOneMonthExcludesOtherProjectsAndOtherMonths() {
-        List<AmountByLabelDto> rows = this.byCategory(this.filterFor(this.projectA.getId(), 2026, 9));
+        List<AmountByLabelDto> rows = this.byCategory(this.filterFor(this.projectA.id(), 2026, 9));
 
         assertThat(this.total(rows)).isEqualByComparingTo("200.000");
     }
@@ -77,7 +77,7 @@ class ReportScopeTest {
     @Test
     @DisplayName("dropping the month widens the report to the whole year for that project")
     void droppingTheMonthWidensTheReportToTheWholeYear() {
-        assertThat(this.total(this.byCategory(this.filterFor(this.projectA.getId(), 2026, null))))
+        assertThat(this.total(this.byCategory(this.filterFor(this.projectA.id(), 2026, null))))
                 .isEqualByComparingTo("300.000");
     }
 
@@ -95,7 +95,7 @@ class ReportScopeTest {
     @Test
     @DisplayName("an absent projectId falls back to the active project context")
     void anAbsentProjectIdFallsBackToTheActiveProjectContext() {
-        this.projectService.setActiveContext(this.projectB.getId());
+        this.projectService.setActiveContext(this.projectB.id());
 
         List<AmountByLabelDto> rows = this.byCategory(this.filterFor(null, 2026, 9));
 
@@ -109,7 +109,7 @@ class ReportScopeTest {
     @Test
     @DisplayName("the dashboard summary is scoped like every other report")
     void theDashboardSummaryIsScopedLikeEveryOtherReport() {
-        Map<String, Object> summary = this.reportService.globalSummary(this.filterFor(this.projectA.getId(), 2026, 9));
+        Map<String, Object> summary = this.reportService.globalSummary(this.filterFor(this.projectA.id(), 2026, 9));
 
         assertThat(summary.get("totalExpenses")).isEqualTo(new BigDecimal("200.000"));
         assertThat(summary.get("expenses")).isEqualTo(1L);
@@ -121,7 +121,7 @@ class ReportScopeTest {
     @Test
     @DisplayName("the exported workbook names the project and the period it covers")
     void theExportedWorkbookNamesTheProjectAndThePeriodItCovers() throws Exception {
-        byte[] xlsx = this.reportService.exportReportsExcel(this.filterFor(this.projectA.getId(), 2026, 9));
+        byte[] xlsx = this.reportService.exportReportsExcel(this.filterFor(this.projectA.id(), 2026, 9));
 
         try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(xlsx))) {
             Sheet sheet = workbook.getSheet("Dépenses par catégorie");
@@ -137,7 +137,7 @@ class ReportScopeTest {
     @Test
     @DisplayName("the exported PDF is produced for the requested scope")
     void theExportedPdfIsProducedForTheRequestedScope() {
-        assertThat(this.reportService.exportReportsPdf(this.filterFor(this.projectA.getId(), 2026, 9)))
+        assertThat(this.reportService.exportReportsPdf(this.filterFor(this.projectA.id(), 2026, 9)))
                 .isNotEmpty();
     }
 
@@ -153,7 +153,7 @@ class ReportScopeTest {
         return rows.stream().map(AmountByLabelDto::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private Project createProject(String code, String name) {
+    private ProjectResponse createProject(String code, String name) {
         ProjectRequest request = new ProjectRequest();
         request.setCode(code);
         request.setName(name);
@@ -161,14 +161,14 @@ class ReportScopeTest {
         return this.projectService.create(request);
     }
 
-    private void createExpense(Project project, LocalDate date, String description, String amountTtc) {
+    private void createExpense(ProjectResponse project, LocalDate date, String description, String amountTtc) {
         ExpenseRequest request = new ExpenseRequest();
         request.setExpenseDate(date);
         request.setDescription(description);
         request.setAmountHt(new BigDecimal(amountTtc));
         request.setVatRate(BigDecimal.ZERO);
         request.setCategoryId(this.expenseCategoryRepository.findAll().get(0).getId());
-        request.setProjectId(project.getId());
+        request.setProjectId(project.id());
         this.expenseService.create(request);
     }
 }

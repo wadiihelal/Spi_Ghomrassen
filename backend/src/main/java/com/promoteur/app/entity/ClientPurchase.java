@@ -1,12 +1,10 @@
 package com.promoteur.app.entity;
 
-import com.promoteur.app.enums.PurchasePaymentStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -56,22 +54,4 @@ public class ClientPurchase extends BaseEntity {
     @ManyToOne(optional = false)
     @JoinColumn(name = "apartment_id", unique = true)
     private Apartment apartment;
-
-    @Transient
-    private BigDecimal advanceAmount = BigDecimal.ZERO;
-
-    @Transient
-    private BigDecimal collectedAmount = BigDecimal.ZERO;
-
-    @Transient
-    private BigDecimal remainingAmount = BigDecimal.ZERO;
-
-    @Transient
-    private BigDecimal completionPercentage = BigDecimal.ZERO;
-
-    @Transient
-    private PurchasePaymentStatus paymentStatus = PurchasePaymentStatus.UNPAID;
-
-    @Transient
-    private Boolean completed = Boolean.FALSE;
 }

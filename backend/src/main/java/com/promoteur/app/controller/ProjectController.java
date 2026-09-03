@@ -1,7 +1,7 @@
 package com.promoteur.app.controller;
 
 import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.entity.Project;
+import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,22 +24,22 @@ public class ProjectController {
     private final ProjectService projectService;
 
     @GetMapping
-    public Page<Project> findAll(Pageable pageable) {
+    public Page<ProjectResponse> findAll(Pageable pageable) {
         return projectService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
-    public Project findById(@PathVariable Long id) {
+    public ProjectResponse findById(@PathVariable Long id) {
         return projectService.findById(id);
     }
 
     @PostMapping
-    public Project create(@Valid @RequestBody ProjectRequest request) {
+    public ProjectResponse create(@Valid @RequestBody ProjectRequest request) {
         return projectService.create(request);
     }
 
     @PutMapping("/{id}")
-    public Project update(@PathVariable Long id, @Valid @RequestBody ProjectRequest request) {
+    public ProjectResponse update(@PathVariable Long id, @Valid @RequestBody ProjectRequest request) {
         return projectService.update(id, request);
     }
 
@@ -49,12 +49,12 @@ public class ProjectController {
     }
 
     @GetMapping("/active-context")
-    public Project findActiveContext() {
+    public ProjectResponse findActiveContext() {
         return projectService.findActiveContext();
     }
 
     @PutMapping("/active-context/{id}")
-    public Project setActiveContext(@PathVariable Long id) {
+    public ProjectResponse setActiveContext(@PathVariable Long id) {
         return projectService.setActiveContext(id);
     }
 

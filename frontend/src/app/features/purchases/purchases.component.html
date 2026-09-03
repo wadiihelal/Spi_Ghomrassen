@@ -62,10 +62,10 @@
             <div class="table-meta">{{ row.purchaseDate || '-' }}</div>
           </td>
           <td>
-            <div class="table-main">{{ getApartmentName(row.apartment?.id ?? row.apartmentId) }}</div>
+            <div class="table-main">{{ getApartmentName(row.apartmentId) }}</div>
             <div class="table-meta">{{ row.assetDescription || '-' }}</div>
           </td>
-          <td>{{ getClientName(row.client?.id ?? row.clientId) }}</td>
+          <td>{{ getClientName(row.clientId) }}</td>
           <td>{{ row.totalAmount | number:'1.0-2' }} DT</td>
           <td>{{ getPurchaseCollectedAmount(row) | number:'1.0-2' }} DT</td>
           <td>{{ getPurchaseRemainingAmount(row) | number:'1.0-2' }} DT</td>

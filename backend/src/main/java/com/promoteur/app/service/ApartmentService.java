@@ -1,7 +1,7 @@
 package com.promoteur.app.service;
 
 import com.promoteur.app.dto.ApartmentRequest;
-import com.promoteur.app.entity.Apartment;
+import com.promoteur.app.dto.response.ApartmentResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,22 +13,22 @@ public interface ApartmentService {
     /**
      * Returns apartments using the requested pagination.
      */
-    Page<Apartment> findAll(Pageable pageable);
+    Page<ApartmentResponse> findAll(Pageable pageable);
 
     /**
      * Returns a single apartment by identifier.
      */
-    Apartment findById(Long id);
+    ApartmentResponse findById(Long id);
 
     /**
      * Creates a new apartment.
      */
-    Apartment create(ApartmentRequest request);
+    ApartmentResponse create(ApartmentRequest request);
 
     /**
      * Updates an existing apartment.
      */
-    Apartment update(Long id, ApartmentRequest request);
+    ApartmentResponse update(Long id, ApartmentRequest request);
 
     /**
      * Deletes an apartment by identifier.
@@ -38,5 +38,5 @@ public interface ApartmentService {
     /**
      * Returns apartments for a given project.
      */
-    Page<Apartment> findByProject(Long projectId, Pageable pageable);
+    Page<ApartmentResponse> findByProject(Long projectId, Pageable pageable);
 }

@@ -5,10 +5,11 @@ import com.promoteur.app.dto.ClientAdvanceRequest;
 import com.promoteur.app.dto.ClientPurchaseRequest;
 import com.promoteur.app.dto.ClientRequest;
 import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.entity.Apartment;
-import com.promoteur.app.entity.Client;
+import com.promoteur.app.dto.response.ApartmentResponse;
+import com.promoteur.app.dto.response.ClientResponse;
+import com.promoteur.app.dto.response.ClientPurchaseResponse;
 import com.promoteur.app.entity.ClientPurchase;
-import com.promoteur.app.entity.Project;
+import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.enums.PurchasePaymentStatus;
 import com.promoteur.app.repository.ClientPurchaseRepository;
@@ -54,8 +55,8 @@ class ClientPurchaseCalculationTest {
     @Autowired
     private ClientPurchaseRepository clientPurchaseRepository;
 
-    private Project project;
-    private Client client;
+    private ProjectResponse project;
+    private ClientResponse client;
 
     @BeforeAll
     void seedProjectAndClient() {
@@ -66,86 +67,86 @@ class ClientPurchaseCalculationTest {
     @Test
     @DisplayName("a contract with nothing collected is UNPAID")
     void aContractWithNothingCollectedIsUnpaid() {
-        ClientPurchase purchase = this.createPurchase(new BigDecimal("100000.000"), BigDecimal.ZERO);
+        ClientPurchaseResponse purchase = this.createPurchase(new BigDecimal("100000.000"), BigDecimal.ZERO);
 
-        assertThat(purchase.getPaymentStatus()).isEqualTo(PurchasePaymentStatus.UNPAID);
-        assertThat(purchase.getCompleted()).isFalse();
-        assertThat(purchase.getCompletionPercentage()).isEqualByComparingTo("0.000");
+        assertThat(purchase.paymentStatus()).isEqualTo(PurchasePaymentStatus.UNPAID);
+        assertThat(purchase.completed()).isFalse();
+        assertThat(purchase.completionPercentage()).isEqualByComparingTo("0.000");
     }
 
     @Test
     @DisplayName("a contract collected in part is PARTIALLY_PAID")
     void aContractCollectedInPartIsPartiallyPaid() {
-        ClientPurchase purchase = this.createPurchase(new BigDecimal("100000.000"), new BigDecimal("30000.000"));
+        ClientPurchaseResponse purchase = this.createPurchase(new BigDecimal("100000.000"), new BigDecimal("30000.000"));
 
-        assertThat(purchase.getPaymentStatus()).isEqualTo(PurchasePaymentStatus.PARTIALLY_PAID);
-        assertThat(purchase.getCompleted()).isFalse();
+        assertThat(purchase.paymentStatus()).isEqualTo(PurchasePaymentStatus.PARTIALLY_PAID);
+        assertThat(purchase.completed()).isFalse();
     }
 
     @Test
     @DisplayName("a contract collected to exactly its total is PAID")
     void aContractCollectedToExactlyItsTotalIsPaid() {
-        ClientPurchase purchase = this.createPurchase(new BigDecimal("100000.000"), new BigDecimal("100000.000"));
+        ClientPurchaseResponse purchase = this.createPurchase(new BigDecimal("100000.000"), new BigDecimal("100000.000"));
 
-        assertThat(purchase.getPaymentStatus()).isEqualTo(PurchasePaymentStatus.PAID);
-        assertThat(purchase.getCompleted()).isTrue();
-        assertThat(purchase.getRemainingAmount()).isEqualByComparingTo("0.000");
-        assertThat(purchase.getCompletionPercentage()).isEqualByComparingTo("100.000");
+        assertThat(purchase.paymentStatus()).isEqualTo(PurchasePaymentStatus.PAID);
+        assertThat(purchase.completed()).isTrue();
+        assertThat(purchase.remainingAmount()).isEqualByComparingTo("0.000");
+        assertThat(purchase.completionPercentage()).isEqualByComparingTo("100.000");
     }
 
     @Test
     @DisplayName("a legacy contract collected beyond its total is PAID, never negative, capped at 100%")
     void aLegacyContractCollectedBeyondItsTotalIsPaidAndCapped() {
-        ClientPurchase created = this.createPurchase(new BigDecimal("100000.000"), new BigDecimal("100000.000"));
+        ClientPurchaseResponse created = this.createPurchase(new BigDecimal("100000.000"), new BigDecimal("100000.000"));
 
         // The service refuses to collect more than the total, so an over-collected row can only
         // come from data written before that rule existed. Forced here to prove the read path
         // copes with it.
-        ClientPurchase stored = this.clientPurchaseRepository.findById(created.getId()).orElseThrow();
+        ClientPurchase stored = this.clientPurchaseRepository.findById(created.id()).orElseThrow();
         stored.setPaidAmount(new BigDecimal("120000.000"));
         this.clientPurchaseRepository.saveAndFlush(stored);
 
-        ClientPurchase purchase = this.clientPurchaseService.findById(created.getId());
+        ClientPurchaseResponse purchase = this.clientPurchaseService.findById(created.id());
 
-        assertThat(purchase.getPaymentStatus()).isEqualTo(PurchasePaymentStatus.PAID);
-        assertThat(purchase.getRemainingAmount()).isEqualByComparingTo("0.000");
-        assertThat(purchase.getCompletionPercentage()).isEqualByComparingTo("100.000");
+        assertThat(purchase.paymentStatus()).isEqualTo(PurchasePaymentStatus.PAID);
+        assertThat(purchase.remainingAmount()).isEqualByComparingTo("0.000");
+        assertThat(purchase.completionPercentage()).isEqualByComparingTo("100.000");
     }
 
     @Test
     @DisplayName("the collected amount is the direct payment plus every advance on the apartment")
     void theCollectedAmountIsTheDirectPaymentPlusEveryAdvance() {
-        Apartment apartment = this.createApartment();
+        ApartmentResponse apartment = this.createApartment();
         this.createPurchaseFor(apartment, new BigDecimal("100000.000"), new BigDecimal("30000.000"));
         this.createAdvance(apartment, new BigDecimal("15000.000"));
         this.createAdvance(apartment, new BigDecimal("5000.000"));
 
-        ClientPurchase purchase = this.clientPurchaseService.findById(
-                this.clientPurchaseRepository.findByApartmentId(apartment.getId()).orElseThrow().getId());
+        ClientPurchaseResponse purchase = this.clientPurchaseService.findById(
+                this.clientPurchaseRepository.findByApartmentId(apartment.id()).orElseThrow().getId());
 
-        assertThat(purchase.getAdvanceAmount()).isEqualByComparingTo("20000.000");
-        assertThat(purchase.getCollectedAmount()).isEqualByComparingTo("50000.000");
-        assertThat(purchase.getRemainingAmount()).isEqualByComparingTo("50000.000");
-        assertThat(purchase.getCompletionPercentage()).isEqualByComparingTo("50.000");
-        assertThat(purchase.getPaymentStatus()).isEqualTo(PurchasePaymentStatus.PARTIALLY_PAID);
+        assertThat(purchase.advanceAmount()).isEqualByComparingTo("20000.000");
+        assertThat(purchase.collectedAmount()).isEqualByComparingTo("50000.000");
+        assertThat(purchase.remainingAmount()).isEqualByComparingTo("50000.000");
+        assertThat(purchase.completionPercentage()).isEqualByComparingTo("50.000");
+        assertThat(purchase.paymentStatus()).isEqualTo(PurchasePaymentStatus.PARTIALLY_PAID);
     }
 
     @Test
     @DisplayName("the completion percentage is correct at scale 3")
     void theCompletionPercentageIsCorrectAtScaleThree() {
         // 1000 collected out of 3000 -> 33.333 %
-        ClientPurchase purchase = this.createPurchase(new BigDecimal("3000.000"), new BigDecimal("1000.000"));
+        ClientPurchaseResponse purchase = this.createPurchase(new BigDecimal("3000.000"), new BigDecimal("1000.000"));
 
-        assertThat(purchase.getCompletionPercentage()).isEqualByComparingTo("33.333");
+        assertThat(purchase.completionPercentage()).isEqualByComparingTo("33.333");
     }
 
     @Test
     @DisplayName("a contract of zero completes at 0%, not by dividing by zero")
     void aContractOfZeroCompletesAtZeroPercent() {
-        ClientPurchase purchase = this.createPurchase(BigDecimal.ZERO, BigDecimal.ZERO);
+        ClientPurchaseResponse purchase = this.createPurchase(BigDecimal.ZERO, BigDecimal.ZERO);
 
-        assertThat(purchase.getCompletionPercentage()).isEqualByComparingTo("0.000");
-        assertThat(purchase.getPaymentStatus()).isEqualTo(PurchasePaymentStatus.UNPAID);
+        assertThat(purchase.completionPercentage()).isEqualByComparingTo("0.000");
+        assertThat(purchase.paymentStatus()).isEqualTo(PurchasePaymentStatus.UNPAID);
     }
 
     @Test
@@ -159,7 +160,7 @@ class ClientPurchaseCalculationTest {
     @Test
     @DisplayName("a direct payment plus existing advances above the total is refused")
     void aDirectPaymentPlusExistingAdvancesAboveTheTotalIsRefused() {
-        Apartment apartment = this.createApartment();
+        ApartmentResponse apartment = this.createApartment();
         this.createAdvance(apartment, new BigDecimal("60000.000"));
 
         assertThatThrownBy(() -> this.createPurchaseFor(apartment, new BigDecimal("100000.000"),
@@ -171,20 +172,20 @@ class ClientPurchaseCalculationTest {
     @Test
     @DisplayName("a direct payment plus advances landing exactly on the total is accepted")
     void aDirectPaymentPlusAdvancesLandingExactlyOnTheTotalIsAccepted() {
-        Apartment apartment = this.createApartment();
+        ApartmentResponse apartment = this.createApartment();
         this.createAdvance(apartment, new BigDecimal("40000.000"));
 
-        ClientPurchase purchase = this.createPurchaseFor(apartment, new BigDecimal("100000.000"),
+        ClientPurchaseResponse purchase = this.createPurchaseFor(apartment, new BigDecimal("100000.000"),
                 new BigDecimal("60000.000"));
 
-        assertThat(purchase.getPaymentStatus()).isEqualTo(PurchasePaymentStatus.PAID);
-        assertThat(purchase.getRemainingAmount()).isEqualByComparingTo("0.000");
+        assertThat(purchase.paymentStatus()).isEqualTo(PurchasePaymentStatus.PAID);
+        assertThat(purchase.remainingAmount()).isEqualByComparingTo("0.000");
     }
 
     @Test
     @DisplayName("an apartment cannot carry two sale contracts")
     void anApartmentCannotCarryTwoSaleContracts() {
-        Apartment apartment = this.createApartment();
+        ApartmentResponse apartment = this.createApartment();
         this.createPurchaseFor(apartment, new BigDecimal("100000.000"), BigDecimal.ZERO);
 
         assertThatThrownBy(() -> this.createPurchaseFor(apartment, new BigDecimal("90000.000"), BigDecimal.ZERO))
@@ -192,43 +193,43 @@ class ClientPurchaseCalculationTest {
                 .hasMessageContaining("fait déjà l'objet d'un contrat de vente");
     }
 
-    private ClientPurchase createPurchase(BigDecimal totalAmount, BigDecimal paidAmount) {
+    private ClientPurchaseResponse createPurchase(BigDecimal totalAmount, BigDecimal paidAmount) {
         return this.createPurchaseFor(this.createApartment(), totalAmount, paidAmount);
     }
 
-    private ClientPurchase createPurchaseFor(Apartment apartment, BigDecimal totalAmount, BigDecimal paidAmount) {
+    private ClientPurchaseResponse createPurchaseFor(ApartmentResponse apartment, BigDecimal totalAmount, BigDecimal paidAmount) {
         ClientPurchaseRequest request = new ClientPurchaseRequest();
         request.setReference("PUR-CALC-" + this.sequence.incrementAndGet());
         request.setPurchaseDate(LocalDate.of(2026, 9, 1));
-        request.setAssetDescription("Appartement " + apartment.getApartmentNumber());
+        request.setAssetDescription("Appartement " + apartment.apartmentNumber());
         request.setTotalAmount(totalAmount);
         request.setPaidAmount(paidAmount);
-        request.setClientId(this.client.getId());
-        request.setProjectId(this.project.getId());
-        request.setApartmentId(apartment.getId());
+        request.setClientId(this.client.id());
+        request.setProjectId(this.project.id());
+        request.setApartmentId(apartment.id());
         return this.clientPurchaseService.create(request);
     }
 
-    private void createAdvance(Apartment apartment, BigDecimal amount) {
+    private void createAdvance(ApartmentResponse apartment, BigDecimal amount) {
         ClientAdvanceRequest request = new ClientAdvanceRequest();
         request.setAdvanceDate(LocalDate.of(2026, 9, 1));
         request.setAmount(amount);
-        request.setApartmentId(apartment.getId());
+        request.setApartmentId(apartment.id());
         this.clientAdvanceService.create(request);
     }
 
-    private Apartment createApartment() {
+    private ApartmentResponse createApartment() {
         ApartmentRequest request = new ApartmentRequest();
         request.setApartmentNumber("P-" + this.sequence.incrementAndGet());
         request.setApartmentType("S+2");
         request.setTotalSurface(new BigDecimal("100.000"));
         request.setTotalSalePrice(new BigDecimal("100000.000"));
-        request.setProjectId(this.project.getId());
-        request.setAcquirerId(this.client.getId());
+        request.setProjectId(this.project.id());
+        request.setAcquirerId(this.client.id());
         return this.apartmentService.create(request);
     }
 
-    private Project createProject() {
+    private ProjectResponse createProject() {
         ProjectRequest request = new ProjectRequest();
         request.setCode("CALC-PRJ");
         request.setName("Projet calculs");
@@ -236,10 +237,10 @@ class ClientPurchaseCalculationTest {
         return this.projectService.create(request);
     }
 
-    private Client createClient() {
+    private ClientResponse createClient() {
         ClientRequest request = new ClientRequest();
         request.setFullName("Acquéreur calculs");
-        request.setProjectId(this.project.getId());
+        request.setProjectId(this.project.id());
         return this.clientService.create(request);
     }
 }

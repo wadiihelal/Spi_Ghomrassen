@@ -1,7 +1,7 @@
 package com.promoteur.app.service;
 
 import com.promoteur.app.dto.SupplierRequest;
-import com.promoteur.app.entity.Supplier;
+import com.promoteur.app.dto.response.SupplierResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,22 +13,22 @@ public interface SupplierService {
     /**
      * Returns suppliers using the requested pagination.
      */
-    Page<Supplier> findAll(Pageable pageable);
+    Page<SupplierResponse> findAll(Pageable pageable);
 
     /**
      * Returns a single supplier by identifier.
      */
-    Supplier findById(Long id);
+    SupplierResponse findById(Long id);
 
     /**
      * Creates a new supplier.
      */
-    Supplier create(SupplierRequest request);
+    SupplierResponse create(SupplierRequest request);
 
     /**
      * Updates an existing supplier.
      */
-    Supplier update(Long id, SupplierRequest request);
+    SupplierResponse update(Long id, SupplierRequest request);
 
     /**
      * Deletes a supplier by identifier.

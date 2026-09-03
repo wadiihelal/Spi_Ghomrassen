@@ -80,12 +80,12 @@ export class SupplierInvoicesComponent implements OnInit {
   get filteredInvoices(): SupplierInvoice[] {
     return this.invoices.filter((row) => {
       const term = this.filters.search.trim().toLowerCase();
-      const matchSearch = !term || [row.invoiceNumber, row.detail, row.supplier?.name, row.project?.name]
+      const matchSearch = !term || [row.invoiceNumber, row.detail, row.supplierName, row.projectName]
         .some((value) => (value ?? '').toString().toLowerCase().includes(term));
-      const projectId = row.project?.id ?? row.projectId;
+      const projectId = row.projectId;
       const matchProject = !this.filters.projectId || projectId === this.filters.projectId;
       const matchSelectedProject = !this.selectedProjectId || projectId === this.selectedProjectId;
-      const matchSupplier = !this.filters.supplierId || (row.supplier?.id ?? row.supplierId) === this.filters.supplierId;
+      const matchSupplier = !this.filters.supplierId || row.supplierId === this.filters.supplierId;
       return matchSearch && matchProject && matchSelectedProject && matchSupplier;
     });
   }
@@ -119,8 +119,8 @@ export class SupplierInvoicesComponent implements OnInit {
       attachmentName: row.attachmentName ?? '',
       attachmentUrl: row.attachmentUrl ?? '',
       detail: row.detail ?? '',
-      supplierId: row.supplier?.id ?? row.supplierId ?? null,
-      projectId: this.selectedProjectId ?? row.project?.id ?? row.projectId ?? null
+      supplierId: row.supplierId ?? null,
+      projectId: this.selectedProjectId ?? row.projectId ?? null
     });
   }
 

@@ -32,9 +32,9 @@ export class ProjectDetailComponent implements OnInit {
     }
 
     this.api.getProject(id).subscribe({ next: (data) => (this.project = data) });
-    this.api.getExpenses().subscribe({ next: (data) => (this.expenses = data.filter((item) => (item.project?.id ?? item.projectId) === id)) });
-    this.api.getPurchases().subscribe({ next: (data) => (this.purchases = data.filter((item) => (item.project?.id ?? item.projectId) === id)) });
-    this.api.getAdvances().subscribe({ next: (data) => (this.advances = data.filter((item) => (item.project?.id ?? item.projectId) === id)) });
+    this.api.getExpenses().subscribe({ next: (data) => (this.expenses = data.filter((item) => item.projectId === id)) });
+    this.api.getPurchases().subscribe({ next: (data) => (this.purchases = data.filter((item) => item.projectId === id)) });
+    this.api.getAdvances().subscribe({ next: (data) => (this.advances = data.filter((item) => item.projectId === id)) });
     this.api.getAuditLogs('PROJECT', id).subscribe({ next: (data) => (this.auditLogs = data) });
   }
 

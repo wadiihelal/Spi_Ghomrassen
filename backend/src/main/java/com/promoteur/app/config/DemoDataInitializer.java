@@ -4,6 +4,7 @@ import com.promoteur.app.dto.ApartmentRequest;
 import com.promoteur.app.dto.ClientAdvanceRequest;
 import com.promoteur.app.dto.ClientPurchaseRequest;
 import com.promoteur.app.dto.ExpenseRequest;
+import com.promoteur.app.dto.response.ApartmentResponse;
 import com.promoteur.app.entity.Apartment;
 import com.promoteur.app.entity.Client;
 import com.promoteur.app.entity.ExpenseCategory;
@@ -252,7 +253,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                 .setScale(3, RoundingMode.HALF_UP);
         String parking = unit >= 3 ? "P-" + apartmentNumber + " + P-" + apartmentNumber + "B" : "P-" + apartmentNumber;
 
-        Apartment apartment = createApartment(
+        // createApartment now answers with a response DTO; the rest of the seeder works on the
+        // entity, so it is re-read by id.
+        Long apartmentId = createApartment(
                 apartmentNumber,
                 profile.type(),
                 residence.name() + " - Appartement " + profile.type() + " " + apartmentNumber + " étage " + floor,
@@ -263,7 +266,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                 totalSalePrice,
                 project.getId(),
                 client != null ? client.getId() : null
-        );
+        ).id();
+        Apartment apartment = apartmentRepository.findById(apartmentId)
+                .orElseThrow(() -> new IllegalStateException("Demo apartment " + apartmentId + " disappeared"));
         projectApartments.add(apartment);
         return apartment;
     }
@@ -472,7 +477,7 @@ public class DemoDataInitializer implements CommandLineRunner {
     }
 
     /** Persists an apartment through {@link ApartmentService}. */
-    private Apartment createApartment(String number, String type, String detail, BigDecimal totalSurface, BigDecimal gardenSurface, String parkingCount, Integer cellarCount, BigDecimal totalSalePrice, Long projectId, Long acquirerId) {
+    private ApartmentResponse createApartment(String number, String type, String detail, BigDecimal totalSurface, BigDecimal gardenSurface, String parkingCount, Integer cellarCount, BigDecimal totalSalePrice, Long projectId, Long acquirerId) {
         ApartmentRequest request = new ApartmentRequest();
         request.setApartmentNumber(number);
         request.setApartmentType(type);
@@ -563,9 +568,8 @@ public class DemoDataInitializer implements CommandLineRunner {
      */
     private Long findApartmentIdForSeed(Long clientId, Long projectId) {
         return apartmentService.findAll(Pageable.unpaged()).stream()
-                .filter(apartment -> apartment.getProject() != null && apartment.getAcquirer() != null)
-                .filter(apartment -> apartment.getProject().getId().equals(projectId) && apartment.getAcquirer().getId().equals(clientId))
-                .map(Apartment::getId)
+                .filter(apartment -> projectId.equals(apartment.projectId()) && clientId.equals(apartment.acquirerId()))
+                .map(ApartmentResponse::id)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No apartment seed found for client " + clientId + " and project " + projectId));
     }

@@ -28,7 +28,7 @@
             <div class="table-main">{{ row.name }}</div>
             <div class="table-meta">{{ row.fiscalId || 'MF non renseigné' }}</div>
           </td>
-          <td>{{ getSupplierTypeLabel(row.type) }}</td>
+          <td>{{ row.typeLabel || '-' }}</td>
           <td>
             <div class="table-main">{{ row.phone || '-' }}</div>
             <div class="table-meta">{{ row.email || '-' }}</div>

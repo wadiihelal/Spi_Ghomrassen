@@ -1,7 +1,7 @@
 package com.promoteur.app.controller;
 
 import com.promoteur.app.dto.ApartmentRequest;
-import com.promoteur.app.entity.Apartment;
+import com.promoteur.app.dto.response.ApartmentResponse;
 import com.promoteur.app.service.ApartmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,22 +24,22 @@ public class ApartmentController {
     private final ApartmentService apartmentService;
 
     @GetMapping
-    public Page<Apartment> findAll(Pageable pageable) {
+    public Page<ApartmentResponse> findAll(Pageable pageable) {
         return apartmentService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
-    public Apartment findById(@PathVariable Long id) {
+    public ApartmentResponse findById(@PathVariable Long id) {
         return apartmentService.findById(id);
     }
 
     @PostMapping
-    public Apartment create(@Valid @RequestBody ApartmentRequest request) {
+    public ApartmentResponse create(@Valid @RequestBody ApartmentRequest request) {
         return apartmentService.create(request);
     }
 
     @PutMapping("/{id}")
-    public Apartment update(@PathVariable Long id, @Valid @RequestBody ApartmentRequest request) {
+    public ApartmentResponse update(@PathVariable Long id, @Valid @RequestBody ApartmentRequest request) {
         return apartmentService.update(id, request);
     }
 
@@ -49,7 +49,7 @@ public class ApartmentController {
     }
 
     @GetMapping("/by-project/{projectId}")
-    public Page<Apartment> findByProject(@PathVariable Long projectId, Pageable pageable) {
+    public Page<ApartmentResponse> findByProject(@PathVariable Long projectId, Pageable pageable) {
         return apartmentService.findByProject(projectId, pageable);
     }
 }

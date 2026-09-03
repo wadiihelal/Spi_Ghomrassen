@@ -1,5 +1,6 @@
 package com.promoteur.app.service;
 
+import com.promoteur.app.dto.response.AuditLogResponse;
 import com.promoteur.app.entity.AuditLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,7 +20,7 @@ public interface AuditLogService {
     /**
      * Returns audit log entries for a given entity.
      */
-    Page<AuditLog> findByEntity(String entityType, Long entityId, Pageable pageable);
+    Page<AuditLogResponse> findByEntity(String entityType, Long entityId, Pageable pageable);
 
     /**
      * Returns audit log entries matching the given filters, most recent first. Every filter is
@@ -30,5 +31,5 @@ public interface AuditLogService {
      * @param dateFrom   earliest date, inclusive
      * @param dateTo     latest date, inclusive of the whole day
      */
-    Page<AuditLog> search(String entityType, String actor, LocalDate dateFrom, LocalDate dateTo, Pageable pageable);
+    Page<AuditLogResponse> search(String entityType, String actor, LocalDate dateFrom, LocalDate dateTo, Pageable pageable);
 }

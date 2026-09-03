@@ -1,7 +1,7 @@
 package com.promoteur.app.controller;
 
 import com.promoteur.app.dto.ClientAdvanceRequest;
-import com.promoteur.app.entity.ClientAdvance;
+import com.promoteur.app.dto.response.ClientAdvanceResponse;
 import com.promoteur.app.service.ClientAdvanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,22 +24,22 @@ public class ClientAdvanceController {
     private final ClientAdvanceService clientAdvanceService;
 
     @GetMapping
-    public Page<ClientAdvance> findAll(Pageable pageable) {
+    public Page<ClientAdvanceResponse> findAll(Pageable pageable) {
         return clientAdvanceService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
-    public ClientAdvance findById(@PathVariable Long id) {
+    public ClientAdvanceResponse findById(@PathVariable Long id) {
         return clientAdvanceService.findById(id);
     }
 
     @PostMapping
-    public ClientAdvance create(@Valid @RequestBody ClientAdvanceRequest request) {
+    public ClientAdvanceResponse create(@Valid @RequestBody ClientAdvanceRequest request) {
         return clientAdvanceService.create(request);
     }
 
     @PutMapping("/{id}")
-    public ClientAdvance update(@PathVariable Long id, @Valid @RequestBody ClientAdvanceRequest request) {
+    public ClientAdvanceResponse update(@PathVariable Long id, @Valid @RequestBody ClientAdvanceRequest request) {
         return clientAdvanceService.update(id, request);
     }
 
@@ -49,12 +49,12 @@ public class ClientAdvanceController {
     }
 
     @GetMapping("/by-client/{clientId}")
-    public Page<ClientAdvance> findByClient(@PathVariable Long clientId, Pageable pageable) {
+    public Page<ClientAdvanceResponse> findByClient(@PathVariable Long clientId, Pageable pageable) {
         return clientAdvanceService.findByClient(clientId, pageable);
     }
 
     @GetMapping("/by-project/{projectId}")
-    public Page<ClientAdvance> findByProject(@PathVariable Long projectId, Pageable pageable) {
+    public Page<ClientAdvanceResponse> findByProject(@PathVariable Long projectId, Pageable pageable) {
         return clientAdvanceService.findByProject(projectId, pageable);
     }
 }

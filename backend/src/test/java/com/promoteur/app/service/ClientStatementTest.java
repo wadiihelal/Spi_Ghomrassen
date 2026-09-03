@@ -7,9 +7,9 @@ import com.promoteur.app.dto.ClientRequest;
 import com.promoteur.app.dto.ProjectRequest;
 import com.promoteur.app.dto.report.ClientStatementDto;
 import com.promoteur.app.dto.report.ReportFilter;
-import com.promoteur.app.entity.Apartment;
-import com.promoteur.app.entity.Client;
-import com.promoteur.app.entity.Project;
+import com.promoteur.app.dto.response.ApartmentResponse;
+import com.promoteur.app.dto.response.ClientResponse;
+import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -54,7 +54,7 @@ class ClientStatementTest {
     @Autowired
     private ProjectService projectService;
 
-    private Project project;
+    private ProjectResponse project;
 
     @BeforeAll
     void seedProject() {
@@ -64,8 +64,8 @@ class ClientStatementTest {
     @Test
     @DisplayName("what a client owes is their contracts minus advances and direct payments")
     void whatAClientOwesIsTheirContractsMinusAdvancesAndDirectPayments() {
-        Client client = this.createClient("Acquéreur solde");
-        Apartment apartment = this.createApartment(client);
+        ClientResponse client = this.createClient("Acquéreur solde");
+        ApartmentResponse apartment = this.createApartment(client);
         this.createPurchase(client, apartment, new BigDecimal("100000.000"), new BigDecimal("30000.000"));
         this.createAdvance(apartment, new BigDecimal("20000.000"));
 
@@ -79,8 +79,8 @@ class ClientStatementTest {
     @Test
     @DisplayName("a client whose contract is fully collected owes nothing")
     void aClientWhoseContractIsFullyCollectedOwesNothing() {
-        Client client = this.createClient("Acquéreur soldé");
-        Apartment apartment = this.createApartment(client);
+        ClientResponse client = this.createClient("Acquéreur soldé");
+        ApartmentResponse apartment = this.createApartment(client);
         this.createPurchase(client, apartment, new BigDecimal("80000.000"), new BigDecimal("80000.000"));
 
         assertThat(this.statementFor(client).getRemainingToPay()).isEqualByComparingTo("0.000");
@@ -89,7 +89,7 @@ class ClientStatementTest {
     @Test
     @DisplayName("a client with no contract at all shows zeros rather than nulls")
     void aClientWithNoContractShowsZeros() {
-        Client client = this.createClient("Acquéreur sans contrat");
+        ClientResponse client = this.createClient("Acquéreur sans contrat");
 
         ClientStatementDto statement = this.statementFor(client);
 
@@ -101,8 +101,8 @@ class ClientStatementTest {
     @Test
     @DisplayName("an advance alone, with no contract, counts as collected")
     void anAdvanceAloneCountsAsCollected() {
-        Client client = this.createClient("Acquéreur acompte seul");
-        Apartment apartment = this.createApartment(client);
+        ClientResponse client = this.createClient("Acquéreur acompte seul");
+        ApartmentResponse apartment = this.createApartment(client);
         this.createAdvance(apartment, new BigDecimal("10000.000"));
 
         ClientStatementDto statement = this.statementFor(client);
@@ -116,54 +116,54 @@ class ClientStatementTest {
     @Test
     @DisplayName("the statement list is scoped like every other report")
     void theStatementListIsScopedLikeEveryOtherReport() {
-        Client client = this.createClient("Acquéreur liste");
-        Apartment apartment = this.createApartment(client);
+        ClientResponse client = this.createClient("Acquéreur liste");
+        ApartmentResponse apartment = this.createApartment(client);
         this.createPurchase(client, apartment, new BigDecimal("60000.000"), new BigDecimal("10000.000"));
 
         assertThat(this.reportService.clientStatements(
-                        ReportFilter.of(String.valueOf(this.project.getId()), null, null), PageRequest.of(0, 100))
+                        ReportFilter.of(String.valueOf(this.project.id()), null, null), PageRequest.of(0, 100))
                 .getContent())
                 .extracting(ClientStatementDto::getClientName)
                 .contains("Acquéreur liste");
     }
 
-    private ClientStatementDto statementFor(Client client) {
-        return this.reportService.clientStatement(client.getId(), ReportFilter.unrestricted());
+    private ClientStatementDto statementFor(ClientResponse client) {
+        return this.reportService.clientStatement(client.id(), ReportFilter.unrestricted());
     }
 
-    private void createPurchase(Client client, Apartment apartment, BigDecimal totalAmount, BigDecimal paidAmount) {
+    private void createPurchase(ClientResponse client, ApartmentResponse apartment, BigDecimal totalAmount, BigDecimal paidAmount) {
         ClientPurchaseRequest request = new ClientPurchaseRequest();
         request.setReference("PUR-STMT-" + this.sequence.incrementAndGet());
         request.setPurchaseDate(LocalDate.of(2026, 9, 1));
-        request.setAssetDescription("Appartement " + apartment.getApartmentNumber());
+        request.setAssetDescription("Appartement " + apartment.apartmentNumber());
         request.setTotalAmount(totalAmount);
         request.setPaidAmount(paidAmount);
-        request.setClientId(client.getId());
-        request.setProjectId(this.project.getId());
-        request.setApartmentId(apartment.getId());
+        request.setClientId(client.id());
+        request.setProjectId(this.project.id());
+        request.setApartmentId(apartment.id());
         this.clientPurchaseService.create(request);
     }
 
-    private void createAdvance(Apartment apartment, BigDecimal amount) {
+    private void createAdvance(ApartmentResponse apartment, BigDecimal amount) {
         ClientAdvanceRequest request = new ClientAdvanceRequest();
         request.setAdvanceDate(LocalDate.of(2026, 9, 1));
         request.setAmount(amount);
-        request.setApartmentId(apartment.getId());
+        request.setApartmentId(apartment.id());
         this.clientAdvanceService.create(request);
     }
 
-    private Apartment createApartment(Client client) {
+    private ApartmentResponse createApartment(ClientResponse client) {
         ApartmentRequest request = new ApartmentRequest();
         request.setApartmentNumber("S-" + this.sequence.incrementAndGet());
         request.setApartmentType("S+2");
         request.setTotalSurface(new BigDecimal("100.000"));
         request.setTotalSalePrice(new BigDecimal("100000.000"));
-        request.setProjectId(this.project.getId());
-        request.setAcquirerId(client.getId());
+        request.setProjectId(this.project.id());
+        request.setAcquirerId(client.id());
         return this.apartmentService.create(request);
     }
 
-    private Project createProject() {
+    private ProjectResponse createProject() {
         ProjectRequest request = new ProjectRequest();
         request.setCode("STMT-PRJ");
         request.setName("Projet situations");
@@ -171,10 +171,10 @@ class ClientStatementTest {
         return this.projectService.create(request);
     }
 
-    private Client createClient(String fullName) {
+    private ClientResponse createClient(String fullName) {
         ClientRequest request = new ClientRequest();
         request.setFullName(fullName);
-        request.setProjectId(this.project.getId());
+        request.setProjectId(this.project.id());
         return this.clientService.create(request);
     }
 }

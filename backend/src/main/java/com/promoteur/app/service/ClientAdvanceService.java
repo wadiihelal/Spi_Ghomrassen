@@ -1,7 +1,7 @@
 package com.promoteur.app.service;
 
 import com.promoteur.app.dto.ClientAdvanceRequest;
-import com.promoteur.app.entity.ClientAdvance;
+import com.promoteur.app.dto.response.ClientAdvanceResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,22 +13,22 @@ public interface ClientAdvanceService {
     /**
      * Returns client advances using the requested pagination.
      */
-    Page<ClientAdvance> findAll(Pageable pageable);
+    Page<ClientAdvanceResponse> findAll(Pageable pageable);
 
     /**
      * Returns a single client advance by identifier.
      */
-    ClientAdvance findById(Long id);
+    ClientAdvanceResponse findById(Long id);
 
     /**
      * Creates a new client advance.
      */
-    ClientAdvance create(ClientAdvanceRequest request);
+    ClientAdvanceResponse create(ClientAdvanceRequest request);
 
     /**
      * Updates an existing client advance.
      */
-    ClientAdvance update(Long id, ClientAdvanceRequest request);
+    ClientAdvanceResponse update(Long id, ClientAdvanceRequest request);
 
     /**
      * Deletes a client advance by identifier.
@@ -38,10 +38,10 @@ public interface ClientAdvanceService {
     /**
      * Returns all advances for a given client.
      */
-    Page<ClientAdvance> findByClient(Long clientId, Pageable pageable);
+    Page<ClientAdvanceResponse> findByClient(Long clientId, Pageable pageable);
 
     /**
      * Returns all advances for a given project.
      */
-    Page<ClientAdvance> findByProject(Long projectId, Pageable pageable);
+    Page<ClientAdvanceResponse> findByProject(Long projectId, Pageable pageable);
 }

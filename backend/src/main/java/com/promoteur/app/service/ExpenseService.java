@@ -1,7 +1,7 @@
 package com.promoteur.app.service;
 
 import com.promoteur.app.dto.ExpenseRequest;
-import com.promoteur.app.entity.Expense;
+import com.promoteur.app.dto.response.ExpenseResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,22 +13,22 @@ public interface ExpenseService {
     /**
      * Returns expenses using the requested pagination.
      */
-    Page<Expense> findAll(Pageable pageable);
+    Page<ExpenseResponse> findAll(Pageable pageable);
 
     /**
      * Returns a single expense by identifier.
      */
-    Expense findById(Long id);
+    ExpenseResponse findById(Long id);
 
     /**
      * Creates a new expense.
      */
-    Expense create(ExpenseRequest request);
+    ExpenseResponse create(ExpenseRequest request);
 
     /**
      * Updates an existing expense.
      */
-    Expense update(Long id, ExpenseRequest request);
+    ExpenseResponse update(Long id, ExpenseRequest request);
 
     /**
      * Deletes an expense by identifier.
@@ -38,10 +38,10 @@ public interface ExpenseService {
     /**
      * Returns expenses for a given category.
      */
-    Page<Expense> findByCategory(Long categoryId, Pageable pageable);
+    Page<ExpenseResponse> findByCategory(Long categoryId, Pageable pageable);
 
     /**
      * Returns expenses for a given project.
      */
-    Page<Expense> findByProject(Long projectId, Pageable pageable);
+    Page<ExpenseResponse> findByProject(Long projectId, Pageable pageable);
 }

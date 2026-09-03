@@ -1,6 +1,6 @@
 package com.promoteur.app.service;
 
-import com.promoteur.app.entity.VatRateOption;
+import com.promoteur.app.dto.response.VatRateOptionResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -12,5 +12,5 @@ public interface VatRateOptionService {
     /**
      * Returns the configured VAT rates, ascending.
      */
-    Page<VatRateOption> findAll(Pageable pageable);
+    Page<VatRateOptionResponse> findAll(Pageable pageable);
 }

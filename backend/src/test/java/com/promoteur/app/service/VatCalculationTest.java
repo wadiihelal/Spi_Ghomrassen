@@ -4,11 +4,11 @@ import com.promoteur.app.dto.ExpenseRequest;
 import com.promoteur.app.dto.ProjectRequest;
 import com.promoteur.app.dto.SupplierInvoiceRequest;
 import com.promoteur.app.dto.SupplierRequest;
-import com.promoteur.app.entity.Expense;
-import com.promoteur.app.entity.Project;
-import com.promoteur.app.entity.Supplier;
-import com.promoteur.app.entity.SupplierInvoice;
-import com.promoteur.app.entity.VatRateOption;
+import com.promoteur.app.dto.response.ExpenseResponse;
+import com.promoteur.app.dto.response.ProjectResponse;
+import com.promoteur.app.dto.response.SupplierResponse;
+import com.promoteur.app.dto.response.SupplierInvoiceResponse;
+import com.promoteur.app.dto.response.VatRateOptionResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
 import org.junit.jupiter.api.BeforeAll;
@@ -57,8 +57,8 @@ class VatCalculationTest {
     @Autowired
     private ExpenseCategoryRepository expenseCategoryRepository;
 
-    private Project project;
-    private Supplier supplier;
+    private ProjectResponse project;
+    private SupplierResponse supplier;
 
     @BeforeAll
     void seedProjectAndSupplier() {
@@ -70,7 +70,7 @@ class VatCalculationTest {
     @DisplayName("the four Tunisian VAT rates are reference data, not a hard-coded list")
     void theFourTunisianVatRatesAreReferenceData() {
         assertThat(this.vatRateOptionService.findAll(PageRequest.of(0, 50)).getContent())
-                .extracting(VatRateOption::getRate)
+                .extracting(VatRateOptionResponse::rate)
                 .containsExactly(
                         new BigDecimal("0.0000"),
                         new BigDecimal("0.0700"),
@@ -81,30 +81,30 @@ class VatCalculationTest {
     @Test
     @DisplayName("an expense of 1000.000 HT at 7% saves as TVA 70.000 and TTC 1070.000")
     void anExpenseAtSevenPercentSavesSeventyAndOneThousandSeventy() {
-        Expense expense = this.createExpense(new BigDecimal("1000.000"), new BigDecimal("0.0700"));
+        ExpenseResponse expense = this.createExpense(new BigDecimal("1000.000"), new BigDecimal("0.0700"));
 
-        assertThat(expense.getVatRate()).isEqualByComparingTo("0.0700");
-        assertThat(expense.getVatAmount()).isEqualByComparingTo("70.000");
-        assertThat(expense.getAmountTtc()).isEqualByComparingTo("1070.000");
+        assertThat(expense.vatRate()).isEqualByComparingTo("0.0700");
+        assertThat(expense.vatAmount()).isEqualByComparingTo("70.000");
+        assertThat(expense.amountTtc()).isEqualByComparingTo("1070.000");
     }
 
     @Test
     @DisplayName("an exempt supply at 0% saves as TVA 0.000 and TTC equal to the net amount")
     void anExemptSupplySavesZeroVat() {
-        Expense expense = this.createExpense(new BigDecimal("1000.000"), BigDecimal.ZERO);
+        ExpenseResponse expense = this.createExpense(new BigDecimal("1000.000"), BigDecimal.ZERO);
 
-        assertThat(expense.getVatAmount()).isEqualByComparingTo("0.000");
-        assertThat(expense.getAmountTtc()).isEqualByComparingTo("1000.000");
+        assertThat(expense.vatAmount()).isEqualByComparingTo("0.000");
+        assertThat(expense.amountTtc()).isEqualByComparingTo("1000.000");
     }
 
     @Test
     @DisplayName("each configured rate rounds to the millime, half up")
     void eachConfiguredRateRoundsToTheMillimeHalfUp() {
         // 333.335 x 13% = 43.33355 -> 43.334
-        Expense expense = this.createExpense(new BigDecimal("333.335"), new BigDecimal("0.1300"));
+        ExpenseResponse expense = this.createExpense(new BigDecimal("333.335"), new BigDecimal("0.1300"));
 
-        assertThat(expense.getVatAmount()).isEqualByComparingTo("43.334");
-        assertThat(expense.getAmountTtc()).isEqualByComparingTo("376.669");
+        assertThat(expense.vatAmount()).isEqualByComparingTo("43.334");
+        assertThat(expense.amountTtc()).isEqualByComparingTo("376.669");
     }
 
     @Test
@@ -134,11 +134,11 @@ class VatCalculationTest {
     @DisplayName("at every configured rate, an expense keeps TTC equal to HT plus TVA")
     void atEveryConfiguredRateAnExpenseKeepsTtcEqualToHtPlusVat(String rate) {
         BigDecimal amountHt = new BigDecimal("1234.567");
-        Expense expense = this.createExpense(amountHt, new BigDecimal(rate));
+        ExpenseResponse expense = this.createExpense(amountHt, new BigDecimal(rate));
 
         BigDecimal expectedVat = amountHt.multiply(new BigDecimal(rate)).setScale(3, RoundingMode.HALF_UP);
-        assertThat(expense.getVatAmount()).isEqualByComparingTo(expectedVat);
-        assertThat(expense.getAmountTtc()).isEqualByComparingTo(amountHt.add(expectedVat));
+        assertThat(expense.vatAmount()).isEqualByComparingTo(expectedVat);
+        assertThat(expense.amountTtc()).isEqualByComparingTo(amountHt.add(expectedVat));
     }
 
     @ParameterizedTest(name = "a supplier invoice at rate {0} keeps TTC equal to HT plus TVA")
@@ -151,14 +151,14 @@ class VatCalculationTest {
         request.setInvoiceDate(LocalDate.of(2026, 9, 1));
         request.setAmountHt(amountHt);
         request.setVatRate(new BigDecimal(rate));
-        request.setSupplierId(this.supplier.getId());
-        request.setProjectId(this.project.getId());
+        request.setSupplierId(this.supplier.id());
+        request.setProjectId(this.project.id());
 
-        SupplierInvoice invoice = this.supplierInvoiceService.create(request);
+        SupplierInvoiceResponse invoice = this.supplierInvoiceService.create(request);
 
         BigDecimal expectedVat = amountHt.multiply(new BigDecimal(rate)).setScale(3, RoundingMode.HALF_UP);
-        assertThat(invoice.getVatAmount()).isEqualByComparingTo(expectedVat);
-        assertThat(invoice.getAmountTtc()).isEqualByComparingTo(amountHt.add(expectedVat));
+        assertThat(invoice.vatAmount()).isEqualByComparingTo(expectedVat);
+        assertThat(invoice.amountTtc()).isEqualByComparingTo(amountHt.add(expectedVat));
     }
 
     @Test
@@ -169,22 +169,22 @@ class VatCalculationTest {
         request.setInvoiceDate(LocalDate.of(2026, 9, 1));
         request.setAmountHt(new BigDecimal("2000.000"));
         request.setVatRate(new BigDecimal("0.1300"));
-        request.setSupplierId(this.supplier.getId());
-        request.setProjectId(this.project.getId());
+        request.setSupplierId(this.supplier.id());
+        request.setProjectId(this.project.id());
 
-        SupplierInvoice invoice = this.supplierInvoiceService.create(request);
+        SupplierInvoiceResponse invoice = this.supplierInvoiceService.create(request);
 
-        assertThat(invoice.getVatAmount()).isEqualByComparingTo("260.000");
-        assertThat(invoice.getAmountTtc()).isEqualByComparingTo("2260.000");
+        assertThat(invoice.vatAmount()).isEqualByComparingTo("260.000");
+        assertThat(invoice.amountTtc()).isEqualByComparingTo("2260.000");
     }
 
     @Test
     @DisplayName("a supplier carries the rate usually invoiced, so data entry can default to it")
     void aSupplierCarriesTheRateUsuallyInvoiced() {
-        assertThat(this.supplier.getDefaultVatRate()).isEqualByComparingTo("0.0700");
+        assertThat(this.supplier.defaultVatRate()).isEqualByComparingTo("0.0700");
     }
 
-    private Expense createExpense(BigDecimal amountHt, BigDecimal vatRate) {
+    private ExpenseResponse createExpense(BigDecimal amountHt, BigDecimal vatRate) {
         return this.expenseService.create(this.expenseRequest(amountHt, vatRate));
     }
 
@@ -195,11 +195,11 @@ class VatCalculationTest {
         request.setAmountHt(amountHt);
         request.setVatRate(vatRate);
         request.setCategoryId(this.expenseCategoryRepository.findAll().get(0).getId());
-        request.setProjectId(this.project.getId());
+        request.setProjectId(this.project.id());
         return request;
     }
 
-    private Project createProject() {
+    private ProjectResponse createProject() {
         ProjectRequest request = new ProjectRequest();
         request.setCode("VAT-PRJ");
         request.setName("Projet TVA");
@@ -207,7 +207,7 @@ class VatCalculationTest {
         return this.projectService.create(request);
     }
 
-    private Supplier createSupplier(BigDecimal defaultVatRate) {
+    private SupplierResponse createSupplier(BigDecimal defaultVatRate) {
         SupplierRequest request = new SupplierRequest();
         request.setName("Fournisseur TVA");
         request.setDefaultVatRate(defaultVatRate);

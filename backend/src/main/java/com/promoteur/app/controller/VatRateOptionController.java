@@ -1,6 +1,6 @@
 package com.promoteur.app.controller;
 
-import com.promoteur.app.entity.VatRateOption;
+import com.promoteur.app.dto.response.VatRateOptionResponse;
 import com.promoteur.app.service.VatRateOptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,7 +17,7 @@ public class VatRateOptionController {
     private final VatRateOptionService vatRateOptionService;
 
     @GetMapping
-    public Page<VatRateOption> findAll(Pageable pageable) {
+    public Page<VatRateOptionResponse> findAll(Pageable pageable) {
         return vatRateOptionService.findAll(pageable);
     }
 }

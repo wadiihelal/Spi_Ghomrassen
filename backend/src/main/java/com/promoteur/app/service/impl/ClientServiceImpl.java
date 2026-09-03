@@ -1,9 +1,11 @@
 package com.promoteur.app.service.impl;
 
 import com.promoteur.app.dto.ClientRequest;
+import com.promoteur.app.dto.response.ClientResponse;
 import com.promoteur.app.entity.Client;
 import com.promoteur.app.entity.Project;
 import com.promoteur.app.exception.ResourceNotFoundException;
+import com.promoteur.app.mapper.ClientMapper;
 import com.promoteur.app.repository.ClientRepository;
 import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.service.AuditLogService;
@@ -24,41 +26,47 @@ public class ClientServiceImpl implements ClientService {
     private final ProjectRepository projectRepository;
     private final AuditLogService auditLogService;
     private final MessageService messageService;
+    private final ClientMapper clientMapper;
 
     @Override
-    public Page<Client> findAll(final Pageable pageable) {
-        return this.clientRepository.findAll(pageable);
+    public Page<ClientResponse> findAll(final Pageable pageable) {
+        return this.clientRepository.findAll(pageable).map(this.clientMapper::toResponse);
     }
 
     @Override
-    public Client findById(final Long id) {
+    public ClientResponse findById(final Long id) {
+        return this.clientMapper.toResponse(this.entity(id));
+    }
+
+    /** Loads the persisted Client, for the write paths that need the entity itself. */
+    private Client entity(final Long id) {
         return this.clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id " + id));
     }
 
     @Override
-    public Client create(final ClientRequest request) {
+    public ClientResponse create(final ClientRequest request) {
         final Client client = new Client();
         this.map(client, request);
         final Client saved = this.clientRepository.save(client);
         this.auditLogService.create("CLIENT", saved.getId(), "CREATE",
                 this.messageService.get("audit.client.created", saved.getFullName()));
-        return saved;
+        return this.clientMapper.toResponse(saved);
     }
 
     @Override
-    public Client update(final Long id, final ClientRequest request) {
-        final Client client = this.findById(id);
+    public ClientResponse update(final Long id, final ClientRequest request) {
+        final Client client = this.entity(id);
         this.map(client, request);
         final Client saved = this.clientRepository.save(client);
         this.auditLogService.create("CLIENT", saved.getId(), "UPDATE",
                 this.messageService.get("audit.client.updated", saved.getFullName()));
-        return saved;
+        return this.clientMapper.toResponse(saved);
     }
 
     @Override
     public void delete(final Long id) {
-        final Client client = this.findById(id);
+        final Client client = this.entity(id);
         final String fullName = client.getFullName();
         this.clientRepository.delete(client);
         this.auditLogService.create("CLIENT", id, "DELETE",

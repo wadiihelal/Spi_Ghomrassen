@@ -1,7 +1,7 @@
 package com.promoteur.app.controller;
 
 import com.promoteur.app.dto.ExpenseRequest;
-import com.promoteur.app.entity.Expense;
+import com.promoteur.app.dto.response.ExpenseResponse;
 import com.promoteur.app.service.ExpenseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,22 +24,22 @@ public class ExpenseController {
     private final ExpenseService expenseService;
 
     @GetMapping
-    public Page<Expense> findAll(Pageable pageable) {
+    public Page<ExpenseResponse> findAll(Pageable pageable) {
         return expenseService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
-    public Expense findById(@PathVariable Long id) {
+    public ExpenseResponse findById(@PathVariable Long id) {
         return expenseService.findById(id);
     }
 
     @PostMapping
-    public Expense create(@Valid @RequestBody ExpenseRequest request) {
+    public ExpenseResponse create(@Valid @RequestBody ExpenseRequest request) {
         return expenseService.create(request);
     }
 
     @PutMapping("/{id}")
-    public Expense update(@PathVariable Long id, @Valid @RequestBody ExpenseRequest request) {
+    public ExpenseResponse update(@PathVariable Long id, @Valid @RequestBody ExpenseRequest request) {
         return expenseService.update(id, request);
     }
 
@@ -49,12 +49,12 @@ public class ExpenseController {
     }
 
     @GetMapping("/by-category/{categoryId}")
-    public Page<Expense> findByCategory(@PathVariable Long categoryId, Pageable pageable) {
+    public Page<ExpenseResponse> findByCategory(@PathVariable Long categoryId, Pageable pageable) {
         return expenseService.findByCategory(categoryId, pageable);
     }
 
     @GetMapping("/by-project/{projectId}")
-    public Page<Expense> findByProject(@PathVariable Long projectId, Pageable pageable) {
+    public Page<ExpenseResponse> findByProject(@PathVariable Long projectId, Pageable pageable) {
         return expenseService.findByProject(projectId, pageable);
     }
 }

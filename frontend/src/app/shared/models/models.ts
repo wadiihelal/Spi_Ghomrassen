@@ -62,8 +62,6 @@ export interface Project {
   expectedEndDate?: string;
   budget?: number;
   status?: string;
-  activeContext?: boolean;
-  createdAt?: string;
   updatedAt?: string;
 }
 
@@ -77,7 +75,7 @@ export interface Client {
   notes?: string;
   active?: boolean;
   projectId?: number;
-  project?: Project;
+  projectName?: string;
 }
 
 export interface Supplier {
@@ -90,10 +88,8 @@ export interface Supplier {
   /** Rate this supplier usually invoices, as a fraction. Proposed by default at data entry. */
   defaultVatRate?: number | null;
   typeId?: number | null;
-  type?: SupplierTypeOption | null;
+  typeLabel?: string;
   active?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 
@@ -113,13 +109,11 @@ export interface Expense {
   attachmentUrl?: string;
   notes?: string;
   categoryId?: number;
+  categoryName?: string;
   projectId?: number;
+  projectName?: string;
   supplierId?: number | null;
-  category?: ExpenseCategory;
-  project?: Project;
-  supplier?: Supplier | null;
-  createdAt?: string;
-  updatedAt?: string;
+  supplierName?: string;
 }
 
 export interface ClientPurchase {
@@ -134,19 +128,17 @@ export interface ClientPurchase {
   attachmentUrl?: string;
   notes?: string;
   clientId: number;
+  clientName?: string;
   projectId: number;
+  projectName?: string;
   apartmentId?: number;
-  client?: Client;
-  project?: Project;
-  apartment?: Apartment;
+  apartmentNumber?: string;
   advanceAmount?: number;
   collectedAmount?: number;
   remainingAmount?: number;
   completionPercentage?: number;
   paymentStatus?: PurchasePaymentStatus;
   completed?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface ClientAdvance {
@@ -159,13 +151,11 @@ export interface ClientAdvance {
   attachmentUrl?: string;
   notes?: string;
   apartmentId?: number;
+  apartmentNumber?: string;
   clientId?: number;
+  clientName?: string;
   projectId?: number;
-  apartment?: Apartment;
-  client?: Client;
-  project?: Project;
-  createdAt?: string;
-  updatedAt?: string;
+  projectName?: string;
 }
 
 export interface ClientStatement {
@@ -189,8 +179,9 @@ export interface AuditLog {
   entityId: number;
   action: string;
   summary: string;
+  /** Who performed the action; 'system' while the application has no login. */
+  actor?: string;
   createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface Apartment {
@@ -204,11 +195,9 @@ export interface Apartment {
   totalSalePrice?: number;
   detail?: string;
   projectId?: number;
+  projectName?: string;
   acquirerId?: number | null;
-  project?: Project;
-  acquirer?: Client | null;
-  createdAt?: string;
-  updatedAt?: string;
+  acquirerName?: string;
 }
 
 export interface SupplierInvoice {
@@ -224,9 +213,7 @@ export interface SupplierInvoice {
   attachmentUrl?: string;
   detail?: string;
   supplierId?: number;
+  supplierName?: string;
   projectId?: number;
-  supplier?: Supplier;
-  project?: Project;
-  createdAt?: string;
-  updatedAt?: string;
+  projectName?: string;
 }

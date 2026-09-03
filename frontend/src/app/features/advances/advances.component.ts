@@ -54,28 +54,26 @@ export class AdvancesComponent implements OnInit {
   ];
 
   getClientName(row: ClientAdvance): string {
-    if (row.apartment?.acquirer?.fullName) return row.apartment.acquirer.fullName;
-    if (row.client?.fullName) return row.client.fullName;
+    if (row.clientName) return row.clientName;
     const clientId = row.clientId;
     return this.clients.find((item) => item.id === clientId)?.fullName ?? '-';
   }
 
   getProjectName(row: ClientAdvance): string {
-    if (row.apartment?.project?.name) return row.apartment.project.name;
-    if (row.project?.name) return row.project.name;
+    if (row.projectName) return row.projectName;
     const projectId = row.projectId;
     return this.projects.find((item) => item.id === projectId)?.name ?? '-';
   }
 
   getApartmentLabel(apartment?: Apartment | null): string {
     if (!apartment) return '-';
-    const clientName = apartment.acquirer?.fullName ?? 'Sans acquéreur';
-    const projectName = apartment.project?.name ?? 'Sans projet';
+    const clientName = apartment.acquirerName ?? 'Sans acquéreur';
+    const projectName = apartment.projectName ?? 'Sans projet';
     return `${apartment.apartmentNumber} - ${clientName} - ${projectName}`;
   }
 
   getApartmentName(row: ClientAdvance): string {
-    if (row.apartment?.apartmentNumber) return row.apartment.apartmentNumber;
+    if (row.apartmentNumber) return row.apartmentNumber;
     const apartmentId = row.apartmentId;
     return this.apartments.find((item) => item.id === apartmentId)?.apartmentNumber ?? '-';
   }
@@ -97,8 +95,8 @@ export class AdvancesComponent implements OnInit {
   get availableApartments(): Apartment[] {
     return this.apartments.filter((apartment) => {
       const activeProjectId = this.dialogProjectId ?? this.selectedProjectId;
-      const matchesProject = !activeProjectId || apartment.project?.id === activeProjectId || apartment.projectId === activeProjectId;
-      return matchesProject && !!(apartment.acquirer?.id ?? apartment.acquirerId);
+      const matchesProject = !activeProjectId || apartment.projectId === activeProjectId;
+      return matchesProject && !!apartment.acquirerId;
     });
   }
 
@@ -112,7 +110,7 @@ export class AdvancesComponent implements OnInit {
     if (!this.selectedProjectId) {
       return this.clients;
     }
-    return this.clients.filter((client) => (client.project?.id ?? client.projectId) === this.selectedProjectId);
+    return this.clients.filter((client) => client.projectId === this.selectedProjectId);
   }
 
   getPaymentMethodLabel(value?: string | null): string {
@@ -220,8 +218,8 @@ export class AdvancesComponent implements OnInit {
       const rowDate = row.advanceDate ?? '';
       const matchSearch = !term || [row.reference, row.notes, this.getClientName(row), this.getProjectName(row), this.getApartmentName(row), this.getPaymentMethodLabel(row.paymentMethod)]
         .some((value) => (value ?? '').toString().toLowerCase().includes(term));
-      const projectId = row.apartment?.project?.id ?? row.project?.id ?? row.projectId;
-      const clientId = row.apartment?.acquirer?.id ?? row.client?.id ?? row.clientId;
+      const projectId = row.projectId;
+      const clientId = row.clientId;
       const matchClient = !this.filters.clientId || clientId === this.filters.clientId;
       const matchProject = !this.filters.projectId || projectId === this.filters.projectId;
       const matchSelectedProject = !this.selectedProjectId || projectId === this.selectedProjectId;
@@ -259,7 +257,7 @@ export class AdvancesComponent implements OnInit {
   edit(advance: ClientAdvance): void {
     this.editingId = advance.id ?? null;
     this.dialogVisible = true;
-    this.dialogProjectId = advance.apartment?.project?.id ?? advance.project?.id ?? advance.projectId ?? this.selectedProjectId;
+    this.dialogProjectId = advance.projectId ?? this.selectedProjectId;
     this.form.patchValue({
       reference: advance.reference ?? '',
       advanceDate: advance.advanceDate ?? '',
@@ -268,7 +266,7 @@ export class AdvancesComponent implements OnInit {
       attachmentName: advance.attachmentName ?? '',
       attachmentUrl: advance.attachmentUrl ?? '',
       notes: advance.notes ?? '',
-      apartmentId: advance.apartment?.id ?? advance.apartmentId ?? null
+      apartmentId: advance.apartmentId ?? null
     });
   }
 
@@ -323,11 +321,11 @@ export class AdvancesComponent implements OnInit {
       return undefined;
     }
 
-    return this.purchases.find((purchase) => (purchase.apartment?.id ?? purchase.apartmentId) === apartmentId);
+    return this.purchases.find((purchase) => purchase.apartmentId === apartmentId);
   }
 
   getPurchaseForAdvance(advance: ClientAdvance): ClientPurchase | undefined {
-    return this.getPurchaseForApartment(advance.apartment?.id ?? advance.apartmentId);
+    return this.getPurchaseForApartment(advance.apartmentId);
   }
 
   getPurchaseStatusLabel(status?: PurchasePaymentStatus): string {
@@ -353,7 +351,7 @@ export class AdvancesComponent implements OnInit {
   }
 
   getRemainingForAdvance(advance: ClientAdvance): number | null {
-    const apartmentId = advance.apartment?.id ?? advance.apartmentId;
+    const apartmentId = advance.apartmentId;
     const purchase = this.getPurchaseForApartment(apartmentId);
     if (!purchase) {
       return null;
@@ -368,7 +366,7 @@ export class AdvancesComponent implements OnInit {
     }
 
     return this.advances
-      .filter((advance) => (advance.apartment?.id ?? advance.apartmentId) === apartmentId && advance.id !== excludedAdvanceId)
+      .filter((advance) => advance.apartmentId === apartmentId && advance.id !== excludedAdvanceId)
       .reduce((sum, advance) => sum + (advance.amount ?? 0), 0);
   }
 }

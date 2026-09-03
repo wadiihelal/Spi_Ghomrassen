@@ -2,9 +2,9 @@ package com.promoteur.app.service;
 
 import com.promoteur.app.dto.ExpenseRequest;
 import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.entity.AuditLog;
-import com.promoteur.app.entity.Expense;
-import com.promoteur.app.entity.Project;
+import com.promoteur.app.dto.response.AuditLogResponse;
+import com.promoteur.app.dto.response.ExpenseResponse;
+import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -45,38 +45,38 @@ class AuditTrailTest {
     @Test
     @DisplayName("creating an expense records who acted, in accented French")
     void creatingAnExpenseRecordsWhoActedInAccentedFrench() {
-        Expense expense = this.createExpense("Frais de dossier baladiya");
+        ExpenseResponse expense = this.createExpense("Frais de dossier baladiya");
 
-        AuditLog entry = this.lastEntryFor("EXPENSE", expense.getId());
-        assertThat(entry.getAction()).isEqualTo("CREATE");
-        assertThat(entry.getActor()).isEqualTo("system");
-        assertThat(entry.getSummary()).isEqualTo("Dépense Frais de dossier baladiya enregistrée.");
+        AuditLogResponse entry = this.lastEntryFor("EXPENSE", expense.id());
+        assertThat(entry.action()).isEqualTo("CREATE");
+        assertThat(entry.actor()).isEqualTo("system");
+        assertThat(entry.summary()).isEqualTo("Dépense Frais de dossier baladiya enregistrée.");
     }
 
     @Test
     @DisplayName("deleting an expense describes the row that was removed, not a detached entity")
     void deletingAnExpenseDescribesTheRowThatWasRemoved() {
-        Expense expense = this.createExpense("Honoraires notaire");
-        Long expenseId = expense.getId();
+        ExpenseResponse expense = this.createExpense("Honoraires notaire");
+        Long expenseId = expense.id();
 
         this.expenseService.delete(expenseId);
 
-        AuditLog entry = this.lastEntryFor("EXPENSE", expenseId);
-        assertThat(entry.getAction()).isEqualTo("DELETE");
-        assertThat(entry.getSummary()).isEqualTo("Dépense Honoraires notaire supprimée.");
+        AuditLogResponse entry = this.lastEntryFor("EXPENSE", expenseId);
+        assertThat(entry.action()).isEqualTo("DELETE");
+        assertThat(entry.summary()).isEqualTo("Dépense Honoraires notaire supprimée.");
     }
 
     @Test
     @DisplayName("deleting a project names the project even though the row is already gone")
     void deletingAProjectNamesTheProjectEvenThoughTheRowIsAlreadyGone() {
-        Project project = this.createProject("AUDIT-DEL", "Résidence à supprimer");
-        Long projectId = project.getId();
+        ProjectResponse project = this.createProject("AUDIT-DEL", "Résidence à supprimer");
+        Long projectId = project.id();
 
         this.projectService.delete(projectId);
 
-        AuditLog entry = this.lastEntryFor("PROJECT", projectId);
-        assertThat(entry.getAction()).isEqualTo("DELETE");
-        assertThat(entry.getSummary()).isEqualTo("Projet Résidence à supprimer supprimé.");
+        AuditLogResponse entry = this.lastEntryFor("PROJECT", projectId);
+        assertThat(entry.action()).isEqualTo("DELETE");
+        assertThat(entry.summary()).isEqualTo("Projet Résidence à supprimer supprimé.");
     }
 
     @Test
@@ -86,7 +86,7 @@ class AuditTrailTest {
 
         assertThat(this.auditLogService.search("EXPENSE", null, null, null, PageRequest.of(0, 50)).getContent())
                 .isNotEmpty()
-                .allSatisfy(entry -> assertThat(entry.getEntityType()).isEqualTo("EXPENSE"));
+                .allSatisfy(entry -> assertThat(entry.entityType()).isEqualTo("EXPENSE"));
 
         assertThat(this.auditLogService.search(null, "system", null, null, PageRequest.of(0, 50)).getContent())
                 .isNotEmpty();
@@ -101,8 +101,8 @@ class AuditTrailTest {
                 PageRequest.of(0, 50)).getContent()).isEmpty();
     }
 
-    private Expense createExpense(String description) {
-        Project project = this.createProject("AUDIT-" + description.hashCode(), "Projet audit");
+    private ExpenseResponse createExpense(String description) {
+        ProjectResponse project = this.createProject("AUDIT-" + description.hashCode(), "Projet audit");
 
         ExpenseRequest request = new ExpenseRequest();
         request.setExpenseDate(LocalDate.now());
@@ -110,11 +110,11 @@ class AuditTrailTest {
         request.setAmountHt(new BigDecimal("1000.000"));
         request.setVatRate(new BigDecimal("0.1900"));
         request.setCategoryId(this.expenseCategoryRepository.findAll().get(0).getId());
-        request.setProjectId(project.getId());
+        request.setProjectId(project.id());
         return this.expenseService.create(request);
     }
 
-    private Project createProject(String code, String name) {
+    private ProjectResponse createProject(String code, String name) {
         ProjectRequest request = new ProjectRequest();
         request.setCode(code);
         request.setName(name);
@@ -122,9 +122,9 @@ class AuditTrailTest {
         return this.projectService.create(request);
     }
 
-    private AuditLog lastEntryFor(String entityType, Long entityId) {
-        Page<AuditLog> page = this.auditLogService.findByEntity(entityType, entityId, PageRequest.of(0, 10));
-        List<AuditLog> entries = page.getContent();
+    private AuditLogResponse lastEntryFor(String entityType, Long entityId) {
+        Page<AuditLogResponse> page = this.auditLogService.findByEntity(entityType, entityId, PageRequest.of(0, 10));
+        List<AuditLogResponse> entries = page.getContent();
         assertThat(entries).as("audit entries for %s %s", entityType, entityId).isNotEmpty();
         return entries.get(0);
     }

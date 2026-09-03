@@ -1,6 +1,8 @@
 package com.promoteur.app.service.impl;
 
+import com.promoteur.app.dto.response.AuditLogResponse;
 import com.promoteur.app.entity.AuditLog;
+import com.promoteur.app.mapper.AuditLogMapper;
 import com.promoteur.app.repository.AuditLogRepository;
 import com.promoteur.app.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class AuditLogServiceImpl implements AuditLogService {
     private static final String SYSTEM_ACTOR = "system";
 
     private final AuditLogRepository auditLogRepository;
+    private final AuditLogMapper auditLogMapper;
 
     /**
      * Written in its own transaction: a business transaction that rolls back after the audit
@@ -43,16 +46,18 @@ public class AuditLogServiceImpl implements AuditLogService {
     }
 
     @Override
-    public Page<AuditLog> findByEntity(final String entityType, final Long entityId, final Pageable pageable) {
-        return this.auditLogRepository.findByEntityTypeAndEntityIdOrderByCreatedAtDesc(entityType, entityId, pageable);
+    public Page<AuditLogResponse> findByEntity(final String entityType, final Long entityId, final Pageable pageable) {
+        return this.auditLogRepository.findByEntityTypeAndEntityIdOrderByCreatedAtDesc(entityType, entityId, pageable)
+                .map(this.auditLogMapper::toResponse);
     }
 
     @Override
-    public Page<AuditLog> search(final String entityType, final String actor, final LocalDate dateFrom,
-                                 final LocalDate dateTo, final Pageable pageable) {
+    public Page<AuditLogResponse> search(final String entityType, final String actor, final LocalDate dateFrom,
+                                        final LocalDate dateTo, final Pageable pageable) {
         final LocalDateTime from = dateFrom == null ? null : dateFrom.atStartOfDay();
         final LocalDateTime to = dateTo == null ? null : dateTo.atTime(LocalTime.MAX);
-        return this.auditLogRepository.search(this.blankToNull(entityType), this.blankToNull(actor), from, to, pageable);
+        return this.auditLogRepository.search(this.blankToNull(entityType), this.blankToNull(actor), from, to, pageable)
+                .map(this.auditLogMapper::toResponse);
     }
 
     /**

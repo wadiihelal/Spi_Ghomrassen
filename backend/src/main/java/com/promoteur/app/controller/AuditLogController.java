@@ -1,6 +1,6 @@
 package com.promoteur.app.controller;
 
-import com.promoteur.app.entity.AuditLog;
+import com.promoteur.app.dto.response.AuditLogResponse;
 import com.promoteur.app.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,7 +22,7 @@ public class AuditLogController {
     private final AuditLogService auditLogService;
 
     @GetMapping
-    public Page<AuditLog> search(
+    public Page<AuditLogResponse> search(
             @RequestParam(required = false) String entityType,
             @RequestParam(required = false) String actor,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
@@ -32,7 +32,7 @@ public class AuditLogController {
     }
 
     @GetMapping("/by-entity/{entityType}/{entityId}")
-    public Page<AuditLog> findByEntity(@PathVariable String entityType, @PathVariable Long entityId, Pageable pageable) {
+    public Page<AuditLogResponse> findByEntity(@PathVariable String entityType, @PathVariable Long entityId, Pageable pageable) {
         return auditLogService.findByEntity(entityType, entityId, pageable);
     }
 }

@@ -5,10 +5,11 @@ import com.promoteur.app.dto.ClientAdvanceRequest;
 import com.promoteur.app.dto.ClientPurchaseRequest;
 import com.promoteur.app.dto.ClientRequest;
 import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.entity.Apartment;
-import com.promoteur.app.entity.Client;
+import com.promoteur.app.dto.response.ApartmentResponse;
+import com.promoteur.app.dto.response.ClientResponse;
+import com.promoteur.app.dto.response.ClientAdvanceResponse;
 import com.promoteur.app.entity.ClientAdvance;
-import com.promoteur.app.entity.Project;
+import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.repository.ClientAdvanceRepository;
 import org.junit.jupiter.api.BeforeAll;
@@ -59,8 +60,8 @@ class AdvanceCeilingTest {
     @Autowired
     private ClientAdvanceRepository clientAdvanceRepository;
 
-    private Project project;
-    private Client client;
+    private ProjectResponse project;
+    private ClientResponse client;
 
     @BeforeAll
     void seedProjectAndClient() {
@@ -71,18 +72,18 @@ class AdvanceCeilingTest {
     @Test
     @DisplayName("an apartment with neither a contract nor a sale price cannot take an advance")
     void anApartmentWithNeitherContractNorSalePriceCannotTakeAnAdvance() {
-        Apartment apartment = this.createApartment(null);
+        ApartmentResponse apartment = this.createApartment(null);
 
         assertThatThrownBy(() -> this.createAdvance(apartment, new BigDecimal("1000.000")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Aucun contrat de vente ni prix de vente défini pour l'appartement")
-                .hasMessageContaining(apartment.getApartmentNumber());
+                .hasMessageContaining(apartment.apartmentNumber());
     }
 
     @Test
     @DisplayName("without a contract the advance is capped by the apartment's declared sale price")
     void withoutAContractTheAdvanceIsCappedByTheDeclaredSalePrice() {
-        Apartment apartment = this.createApartment(new BigDecimal("100000.000"));
+        ApartmentResponse apartment = this.createApartment(new BigDecimal("100000.000"));
 
         this.createAdvance(apartment, new BigDecimal("60000.000"));
 
@@ -94,13 +95,13 @@ class AdvanceCeilingTest {
     @Test
     @DisplayName("the refusal names the apartment and both amounts, so the toast can show them")
     void theRefusalNamesTheApartmentAndBothAmounts() {
-        Apartment apartment = this.createApartment(new BigDecimal("100000.000"));
+        ApartmentResponse apartment = this.createApartment(new BigDecimal("100000.000"));
 
         assertThatThrownBy(() -> this.createAdvance(apartment, new BigDecimal("150000.000")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .satisfies(thrown -> {
                     String message = thrown.getMessage();
-                    assertThat(message).contains(apartment.getApartmentNumber());
+                    assertThat(message).contains(apartment.apartmentNumber());
                     // Amounts are rendered in French: a non-breaking space groups the thousands.
                     assertThat(message.replace('\u00a0', ' ').replace('\u202f', ' '))
                             .contains("150 000,000")
@@ -111,17 +112,17 @@ class AdvanceCeilingTest {
     @Test
     @DisplayName("an advance exactly reaching the sale price is accepted")
     void anAdvanceExactlyReachingTheSalePriceIsAccepted() {
-        Apartment apartment = this.createApartment(new BigDecimal("50000.000"));
+        ApartmentResponse apartment = this.createApartment(new BigDecimal("50000.000"));
 
-        ClientAdvance advance = this.createAdvance(apartment, new BigDecimal("50000.000"));
+        ClientAdvanceResponse advance = this.createAdvance(apartment, new BigDecimal("50000.000"));
 
-        assertThat(advance.getAmount()).isEqualByComparingTo("50000.000");
+        assertThat(advance.amount()).isEqualByComparingTo("50000.000");
     }
 
     @Test
     @DisplayName("with a contract the advance is capped by the contract total, direct payment included")
     void withAContractTheAdvanceIsCappedByTheContractTotal() {
-        Apartment apartment = this.createApartment(new BigDecimal("100000.000"));
+        ApartmentResponse apartment = this.createApartment(new BigDecimal("100000.000"));
         this.createPurchase(apartment, new BigDecimal("80000.000"), new BigDecimal("30000.000"));
 
         this.createAdvance(apartment, new BigDecimal("50000.000"));
@@ -134,20 +135,20 @@ class AdvanceCeilingTest {
     @Test
     @DisplayName("editing an advance excludes itself from the other advances it is compared against")
     void editingAnAdvanceExcludesItselfFromTheComparison() {
-        Apartment apartment = this.createApartment(new BigDecimal("100000.000"));
-        ClientAdvance advance = this.createAdvance(apartment, new BigDecimal("90000.000"));
+        ApartmentResponse apartment = this.createApartment(new BigDecimal("100000.000"));
+        ClientAdvanceResponse advance = this.createAdvance(apartment, new BigDecimal("90000.000"));
 
         ClientAdvanceRequest request = this.advanceRequest(apartment, new BigDecimal("95000.000"));
-        request.setReference(advance.getReference());
+        request.setReference(advance.reference());
 
-        assertThat(this.clientAdvanceService.update(advance.getId(), request).getAmount())
+        assertThat(this.clientAdvanceService.update(advance.id(), request).amount())
                 .isEqualByComparingTo("95000.000");
     }
 
     @Test
     @DisplayName("two advances of 60% of the contract fired at once produce one success and one refusal")
     void twoAdvancesOfSixtyPercentFiredAtOnceProduceOneSuccessAndOneRefusal() throws Exception {
-        Apartment apartment = this.createApartment(new BigDecimal("100000.000"));
+        ApartmentResponse apartment = this.createApartment(new BigDecimal("100000.000"));
         this.createPurchase(apartment, new BigDecimal("100000.000"), BigDecimal.ZERO);
         BigDecimal sixtyPercent = new BigDecimal("60000.000");
 
@@ -181,48 +182,48 @@ class AdvanceCeilingTest {
                 .singleElement(org.assertj.core.api.InstanceOfAssertFactories.STRING)
                 .contains("alors que le plafond est de");
 
-        List<ClientAdvance> stored = this.clientAdvanceRepository.findByApartmentId(apartment.getId());
+        List<ClientAdvance> stored = this.clientAdvanceRepository.findByApartmentId(apartment.id());
         assertThat(stored).hasSize(1);
         assertThat(stored.get(0).getAmount()).isEqualByComparingTo(sixtyPercent);
     }
 
-    private ClientAdvance createAdvance(Apartment apartment, BigDecimal amount) {
+    private ClientAdvanceResponse createAdvance(ApartmentResponse apartment, BigDecimal amount) {
         return this.clientAdvanceService.create(this.advanceRequest(apartment, amount));
     }
 
-    private ClientAdvanceRequest advanceRequest(Apartment apartment, BigDecimal amount) {
+    private ClientAdvanceRequest advanceRequest(ApartmentResponse apartment, BigDecimal amount) {
         ClientAdvanceRequest request = new ClientAdvanceRequest();
         request.setAdvanceDate(LocalDate.of(2026, 9, 1));
         request.setAmount(amount);
-        request.setApartmentId(apartment.getId());
+        request.setApartmentId(apartment.id());
         return request;
     }
 
-    private void createPurchase(Apartment apartment, BigDecimal totalAmount, BigDecimal paidAmount) {
+    private void createPurchase(ApartmentResponse apartment, BigDecimal totalAmount, BigDecimal paidAmount) {
         ClientPurchaseRequest request = new ClientPurchaseRequest();
         request.setReference("PUR-CEIL-" + this.sequence.incrementAndGet());
         request.setPurchaseDate(LocalDate.of(2026, 9, 1));
-        request.setAssetDescription("Appartement " + apartment.getApartmentNumber());
+        request.setAssetDescription("Appartement " + apartment.apartmentNumber());
         request.setTotalAmount(totalAmount);
         request.setPaidAmount(paidAmount);
-        request.setClientId(this.client.getId());
-        request.setProjectId(this.project.getId());
-        request.setApartmentId(apartment.getId());
+        request.setClientId(this.client.id());
+        request.setProjectId(this.project.id());
+        request.setApartmentId(apartment.id());
         this.clientPurchaseService.create(request);
     }
 
-    private Apartment createApartment(BigDecimal totalSalePrice) {
+    private ApartmentResponse createApartment(BigDecimal totalSalePrice) {
         ApartmentRequest request = new ApartmentRequest();
         request.setApartmentNumber("C-" + this.sequence.incrementAndGet());
         request.setApartmentType("S+2");
         request.setTotalSurface(new BigDecimal("100.000"));
         request.setTotalSalePrice(totalSalePrice);
-        request.setProjectId(this.project.getId());
-        request.setAcquirerId(this.client.getId());
+        request.setProjectId(this.project.id());
+        request.setAcquirerId(this.client.id());
         return this.apartmentService.create(request);
     }
 
-    private Project createProject() {
+    private ProjectResponse createProject() {
         ProjectRequest request = new ProjectRequest();
         request.setCode("CEIL-PRJ");
         request.setName("Projet plafond");
@@ -230,10 +231,10 @@ class AdvanceCeilingTest {
         return this.projectService.create(request);
     }
 
-    private Client createClient() {
+    private ClientResponse createClient() {
         ClientRequest request = new ClientRequest();
         request.setFullName("Acquéreur plafond");
-        request.setProjectId(this.project.getId());
+        request.setProjectId(this.project.id());
         return this.clientService.create(request);
     }
 }

@@ -75,7 +75,7 @@ export class PurchasesComponent implements OnInit {
     if (!this.selectedProjectId) {
       return this.clients;
     }
-    return this.clients.filter((client) => (client.project?.id ?? client.projectId) === this.selectedProjectId);
+    return this.clients.filter((client) => client.projectId === this.selectedProjectId);
   }
 
   get availableApartments(): Apartment[] {
@@ -84,13 +84,13 @@ export class PurchasesComponent implements OnInit {
     const currentApartmentId = this.selectedApartmentId;
 
     return this.apartments.filter((apartment) => {
-      const apartmentProjectId = apartment.project?.id ?? apartment.projectId;
+      const apartmentProjectId = apartment.projectId;
       if (projectId && apartmentProjectId !== projectId) {
         return false;
       }
 
       const apartmentPurchase = this.purchases.find(
-        (purchase) => (purchase.apartment?.id ?? purchase.apartmentId) === apartment.id && purchase.id !== this.editingId
+        (purchase) => purchase.apartmentId === apartment.id && purchase.id !== this.editingId
       );
       if (apartmentPurchase) {
         return false;
@@ -100,7 +100,7 @@ export class PurchasesComponent implements OnInit {
         return true;
       }
 
-      const acquirerId = apartment.acquirer?.id ?? apartment.acquirerId ?? null;
+      const acquirerId = apartment.acquirerId ?? null;
       if (!clientId) {
         return true;
       }
@@ -115,7 +115,7 @@ export class PurchasesComponent implements OnInit {
     }
 
     return this.advances
-      .filter((advance) => (advance.apartment?.id ?? advance.apartmentId) === this.selectedApartmentId)
+      .filter((advance) => advance.apartmentId === this.selectedApartmentId)
       .reduce((sum, advance) => sum + (advance.amount ?? 0), 0);
   }
 
@@ -225,14 +225,14 @@ export class PurchasesComponent implements OnInit {
         row.reference,
         row.assetDescription,
         row.notes,
-        this.getClientName(row.client?.id ?? row.clientId),
-        this.getProjectName(row.project?.id ?? row.projectId),
-        this.getApartmentName(row.apartment?.id ?? row.apartmentId),
+        this.getClientName(row.clientId),
+        this.getProjectName(row.projectId),
+        this.getApartmentName(row.apartmentId),
         this.getPaymentStatusLabel(row.paymentStatus)
       ]
         .some((value) => (value ?? '').toString().toLowerCase().includes(term));
-      const projectId = row.project?.id ?? row.projectId;
-      const matchClient = !this.filters.clientId || (row.client?.id ?? row.clientId) === this.filters.clientId;
+      const projectId = row.projectId;
+      const matchClient = !this.filters.clientId || row.clientId === this.filters.clientId;
       const matchProject = !this.filters.projectId || projectId === this.filters.projectId;
       const matchSelectedProject = !this.selectedProjectId || projectId === this.selectedProjectId;
       const matchStatus = !this.filters.paymentStatus || row.paymentStatus === this.filters.paymentStatus;
@@ -282,9 +282,9 @@ export class PurchasesComponent implements OnInit {
       attachmentName: purchase.attachmentName ?? '',
       attachmentUrl: purchase.attachmentUrl ?? '',
       notes: purchase.notes ?? '',
-      clientId: purchase.client?.id ?? purchase.clientId ?? null,
-      apartmentId: purchase.apartment?.id ?? purchase.apartmentId ?? null,
-      projectId: this.selectedProjectId ?? purchase.project?.id ?? purchase.projectId ?? null
+      clientId: purchase.clientId ?? null,
+      apartmentId: purchase.apartmentId ?? null,
+      projectId: this.selectedProjectId ?? purchase.projectId ?? null
     });
   }
 
@@ -397,7 +397,7 @@ export class PurchasesComponent implements OnInit {
       return;
     }
 
-    const apartmentClientId = apartment.acquirer?.id ?? apartment.acquirerId ?? null;
+    const apartmentClientId = apartment.acquirerId ?? null;
     if (apartmentClientId && this.form.get('clientId')?.value !== apartmentClientId) {
       this.form.patchValue({ clientId: apartmentClientId }, { emitEvent: false });
     }
@@ -421,7 +421,7 @@ export class PurchasesComponent implements OnInit {
       return;
     }
 
-    const apartmentClientId = apartment.acquirer?.id ?? apartment.acquirerId ?? null;
+    const apartmentClientId = apartment.acquirerId ?? null;
     if (apartmentClientId && clientId && apartmentClientId !== clientId) {
       this.form.patchValue({ apartmentId: null }, { emitEvent: false });
       this.ui.info('Appartement incompatible', 'Merci de choisir un appartement libre ou déjà affecté à ce client.');

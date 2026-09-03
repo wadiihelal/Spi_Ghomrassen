@@ -1,9 +1,11 @@
 package com.promoteur.app.service.impl;
 
 import com.promoteur.app.dto.SupplierRequest;
+import com.promoteur.app.dto.response.SupplierResponse;
 import com.promoteur.app.entity.Supplier;
 import com.promoteur.app.entity.SupplierTypeOption;
 import com.promoteur.app.exception.ResourceNotFoundException;
+import com.promoteur.app.mapper.SupplierMapper;
 import com.promoteur.app.repository.SupplierRepository;
 import com.promoteur.app.repository.SupplierTypeOptionRepository;
 import com.promoteur.app.service.AuditLogService;
@@ -24,41 +26,47 @@ public class SupplierServiceImpl implements SupplierService {
     private final SupplierTypeOptionRepository supplierTypeOptionRepository;
     private final AuditLogService auditLogService;
     private final MessageService messageService;
+    private final SupplierMapper supplierMapper;
 
     @Override
-    public Page<Supplier> findAll(final Pageable pageable) {
-        return this.supplierRepository.findAll(pageable);
+    public Page<SupplierResponse> findAll(final Pageable pageable) {
+        return this.supplierRepository.findAll(pageable).map(this.supplierMapper::toResponse);
     }
 
     @Override
-    public Supplier findById(final Long id) {
+    public SupplierResponse findById(final Long id) {
+        return this.supplierMapper.toResponse(this.entity(id));
+    }
+
+    /** Loads the persisted Supplier, for the write paths that need the entity itself. */
+    private Supplier entity(final Long id) {
         return this.supplierRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id " + id));
     }
 
     @Override
-    public Supplier create(final SupplierRequest request) {
+    public SupplierResponse create(final SupplierRequest request) {
         final Supplier supplier = new Supplier();
         this.map(supplier, request);
         final Supplier saved = this.supplierRepository.save(supplier);
         this.auditLogService.create("SUPPLIER", saved.getId(), "CREATE",
                 this.messageService.get("audit.supplier.created", saved.getName()));
-        return saved;
+        return this.supplierMapper.toResponse(saved);
     }
 
     @Override
-    public Supplier update(final Long id, final SupplierRequest request) {
-        final Supplier supplier = this.findById(id);
+    public SupplierResponse update(final Long id, final SupplierRequest request) {
+        final Supplier supplier = this.entity(id);
         this.map(supplier, request);
         final Supplier saved = this.supplierRepository.save(supplier);
         this.auditLogService.create("SUPPLIER", saved.getId(), "UPDATE",
                 this.messageService.get("audit.supplier.updated", saved.getName()));
-        return saved;
+        return this.supplierMapper.toResponse(saved);
     }
 
     @Override
     public void delete(final Long id) {
-        final Supplier supplier = this.findById(id);
+        final Supplier supplier = this.entity(id);
         final String name = supplier.getName();
         this.supplierRepository.delete(supplier);
         this.auditLogService.create("SUPPLIER", id, "DELETE",
