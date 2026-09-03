@@ -15,6 +15,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
@@ -22,6 +24,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -124,6 +127,38 @@ class VatCalculationTest {
         assertThatThrownBy(() -> this.expenseService.create(request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("doit être égal au montant HT plus la TVA");
+    }
+
+    @ParameterizedTest(name = "an expense at rate {0} keeps TTC equal to HT plus TVA")
+    @ValueSource(strings = {"0.0000", "0.0700", "0.1300", "0.1900"})
+    @DisplayName("at every configured rate, an expense keeps TTC equal to HT plus TVA")
+    void atEveryConfiguredRateAnExpenseKeepsTtcEqualToHtPlusVat(String rate) {
+        BigDecimal amountHt = new BigDecimal("1234.567");
+        Expense expense = this.createExpense(amountHt, new BigDecimal(rate));
+
+        BigDecimal expectedVat = amountHt.multiply(new BigDecimal(rate)).setScale(3, RoundingMode.HALF_UP);
+        assertThat(expense.getVatAmount()).isEqualByComparingTo(expectedVat);
+        assertThat(expense.getAmountTtc()).isEqualByComparingTo(amountHt.add(expectedVat));
+    }
+
+    @ParameterizedTest(name = "a supplier invoice at rate {0} keeps TTC equal to HT plus TVA")
+    @ValueSource(strings = {"0.0000", "0.0700", "0.1300", "0.1900"})
+    @DisplayName("at every configured rate, a supplier invoice keeps TTC equal to HT plus TVA")
+    void atEveryConfiguredRateASupplierInvoiceKeepsTtcEqualToHtPlusVat(String rate) {
+        BigDecimal amountHt = new BigDecimal("987.654");
+        SupplierInvoiceRequest request = new SupplierInvoiceRequest();
+        request.setInvoiceNumber("FAC-RATE-" + rate + "-" + this.sequence.incrementAndGet());
+        request.setInvoiceDate(LocalDate.of(2026, 9, 1));
+        request.setAmountHt(amountHt);
+        request.setVatRate(new BigDecimal(rate));
+        request.setSupplierId(this.supplier.getId());
+        request.setProjectId(this.project.getId());
+
+        SupplierInvoice invoice = this.supplierInvoiceService.create(request);
+
+        BigDecimal expectedVat = amountHt.multiply(new BigDecimal(rate)).setScale(3, RoundingMode.HALF_UP);
+        assertThat(invoice.getVatAmount()).isEqualByComparingTo(expectedVat);
+        assertThat(invoice.getAmountTtc()).isEqualByComparingTo(amountHt.add(expectedVat));
     }
 
     @Test
