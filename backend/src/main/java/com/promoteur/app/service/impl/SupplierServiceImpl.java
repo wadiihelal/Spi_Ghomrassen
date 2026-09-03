@@ -76,6 +76,7 @@ public class SupplierServiceImpl implements SupplierService {
         supplier.setPhone(request.getPhone());
         supplier.setEmail(request.getEmail());
         supplier.setAddress(request.getAddress());
+        supplier.setDefaultVatRate(request.getDefaultVatRate());
         supplier.setType(type);
         supplier.setActive(request.getActive() == null || request.getActive());
     }

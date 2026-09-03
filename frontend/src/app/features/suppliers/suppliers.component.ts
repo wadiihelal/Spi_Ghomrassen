@@ -9,7 +9,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { DialogModule } from 'primeng/dialog';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
-import { Supplier, SupplierTypeOption } from '../../shared/models/models';
+import { Supplier, SupplierTypeOption, VatRateOption } from '../../shared/models/models';
 
 @Component({
   selector: 'app-suppliers',
@@ -28,6 +28,7 @@ export class SuppliersComponent implements OnInit {
   dialogVisible = false;
   supplierTypes: SupplierTypeOption[] = [];
   supplierTypeDialogVisible = false;
+  vatRates: VatRateOption[] = [];
 
   form = this.fb.group({
     name: ['', [Validators.required]],
@@ -35,6 +36,7 @@ export class SuppliersComponent implements OnInit {
     phone: [''],
     email: [''],
     address: [''],
+    defaultVatRate: [null as number | null],
     typeId: [null as number | null],
     active: [true]
   });
@@ -47,6 +49,7 @@ export class SuppliersComponent implements OnInit {
   ngOnInit(): void {
     this.loadSuppliers();
     this.loadSupplierTypes();
+    this.api.getVatRates().subscribe({ next: (data) => (this.vatRates = data) });
   }
 
   getSupplierTypeLabel(type?: SupplierTypeOption | null): string {
@@ -98,6 +101,7 @@ export class SuppliersComponent implements OnInit {
       phone: supplier.phone ?? '',
       email: supplier.email ?? '',
       address: supplier.address ?? '',
+      defaultVatRate: supplier.defaultVatRate ?? null,
       typeId: supplier.type?.id ?? supplier.typeId ?? null,
       active: supplier.active ?? true
     });
@@ -131,6 +135,7 @@ export class SuppliersComponent implements OnInit {
       phone: '',
       email: '',
       address: '',
+      defaultVatRate: null,
       typeId: null,
       active: true
     });

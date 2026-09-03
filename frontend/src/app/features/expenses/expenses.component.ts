@@ -11,11 +11,10 @@ import { DialogModule } from 'primeng/dialog';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
-import { Expense, ExpenseCategory, Project, Supplier } from '../../shared/models/models';
+import { Expense, ExpenseCategory, Project, Supplier, VatRateOption } from '../../shared/models/models';
 
-// TODO CALC-01 : taux de TVA figé à 19 % côté navigateur. La Tunisie applique 0 %, 7 %,
-// 13 % et 19 % ; la phase 2.2 déplace le calcul vers le backend et rend le taux saisissable.
-const DEFAULT_VAT_RATE = 0.19;
+/** Rate proposed when the supplier has none of its own. */
+const FALLBACK_VAT_RATE = 0.19;
 
 @Component({
   selector: 'app-expenses',
@@ -37,7 +36,7 @@ export class ExpensesComponent implements OnInit {
   editingId: number | null = null;
   expenseDialogVisible = false;
   categoryDialogVisible = false;
-  readonly vatRate = DEFAULT_VAT_RATE;
+  vatRates: VatRateOption[] = [];
   selectedProjectId: number | null = null;
   filters = {
     search: '',
@@ -61,8 +60,7 @@ export class ExpensesComponent implements OnInit {
     description: ['', [Validators.required]],
     expenseDate: ['', [Validators.required]],
     amountHt: [0, [Validators.required]],
-    vatAmount: [{ value: 0, disabled: true }, [Validators.required]],
-    amountTtc: [{ value: 0, disabled: true }, [Validators.required]],
+    vatRate: [FALLBACK_VAT_RATE, [Validators.required]],
     paymentMethod: ['OTHER'],
     documentNumber: [''],
     attachmentName: [''],
@@ -86,10 +84,6 @@ export class ExpensesComponent implements OnInit {
       }
     });
     this.loadData();
-    this.form.controls.amountHt.valueChanges.subscribe((value) => {
-      this.updateComputedAmounts(value ?? 0);
-    });
-    this.updateComputedAmounts(this.form.controls.amountHt.value ?? 0);
   }
 
   loadData(): void {
@@ -97,6 +91,7 @@ export class ExpensesComponent implements OnInit {
     this.api.getExpenseCategories().subscribe({ next: (data) => (this.categories = data) });
     this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
     this.api.getSuppliers().subscribe({ next: (data) => (this.suppliers = data) });
+    this.api.getVatRates().subscribe({ next: (data) => (this.vatRates = data) });
   }
 
   getCategoryName(row: Expense): string {
@@ -174,8 +169,7 @@ export class ExpensesComponent implements OnInit {
       description: expense.description,
       expenseDate: expense.expenseDate ?? '',
       amountHt: expense.amountHt,
-      vatAmount: expense.vatAmount,
-      amountTtc: expense.amountTtc,
+      vatRate: expense.vatRate ?? FALLBACK_VAT_RATE,
       paymentMethod: expense.paymentMethod ?? 'OTHER',
       documentNumber: expense.documentNumber ?? '',
       attachmentName: expense.attachmentName ?? '',
@@ -188,7 +182,6 @@ export class ExpensesComponent implements OnInit {
     if (this.selectedProjectId) {
       this.form.patchValue({ projectId: this.selectedProjectId });
     }
-    this.updateComputedAmounts(expense.amountHt ?? 0);
   }
 
   resetForm(): void {
@@ -197,8 +190,7 @@ export class ExpensesComponent implements OnInit {
     this.form.reset({
       reference: '',
       amountHt: 0,
-      vatAmount: 0,
-      amountTtc: 0,
+      vatRate: FALLBACK_VAT_RATE,
       paymentMethod: 'OTHER',
       documentNumber: '',
       attachmentName: '',
@@ -210,7 +202,6 @@ export class ExpensesComponent implements OnInit {
       description: '',
       expenseDate: ''
     });
-    this.updateComputedAmounts(0);
   }
 
   openCreateDialog(): void {
@@ -218,17 +209,23 @@ export class ExpensesComponent implements OnInit {
     this.expenseDialogVisible = true;
   }
 
-  private updateComputedAmounts(amountHt: number): void {
-    const normalizedHt = Number(amountHt) || 0;
-    const vatAmount = this.roundAmount(normalizedHt * this.vatRate);
-    const amountTtc = this.roundAmount(normalizedHt + vatAmount);
-    this.form.patchValue(
-      {
-        vatAmount,
-        amountTtc
-      },
-      { emitEvent: false }
-    );
+  /**
+   * Preview only. The backend derives the VAT and gross amounts from the net amount and the
+   * rate (CALC-01), so these values are shown as read-only text and never sent.
+   */
+  get computedVatAmount(): number {
+    const amountHt = Number(this.form.controls.amountHt.value) || 0;
+    return this.roundAmount(amountHt * (Number(this.form.controls.vatRate.value) || 0));
+  }
+
+  get computedAmountTtc(): number {
+    return this.roundAmount((Number(this.form.controls.amountHt.value) || 0) + this.computedVatAmount);
+  }
+
+  /** Proposes the rate this supplier usually invoices, falling back to 19 %. */
+  onSupplierChange(supplierId: number | null): void {
+    const supplier = this.suppliers.find((item) => item.id === supplierId);
+    this.form.patchValue({ vatRate: supplier?.defaultVatRate ?? FALLBACK_VAT_RATE });
   }
 
   private roundAmount(value: number): number {

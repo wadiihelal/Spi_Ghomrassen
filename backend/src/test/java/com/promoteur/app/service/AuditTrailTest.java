@@ -108,8 +108,7 @@ class AuditTrailTest {
         request.setExpenseDate(LocalDate.now());
         request.setDescription(description);
         request.setAmountHt(new BigDecimal("1000.000"));
-        request.setVatAmount(new BigDecimal("190.000"));
-        request.setAmountTtc(new BigDecimal("1190.000"));
+        request.setVatRate(new BigDecimal("0.1900"));
         request.setCategoryId(this.expenseCategoryRepository.findAll().get(0).getId());
         request.setProjectId(project.getId());
         return this.expenseService.create(request);

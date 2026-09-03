@@ -2,7 +2,7 @@
   <div class="section-header">
     <div>
       <h2 class="page-title">Factures fournisseurs</h2>
-      <p class="page-subtitle">Suivi par projet des factures fournisseurs et de la retenue à la source.</p>
+      <p class="page-subtitle">Suivi par projet des factures fournisseurs.</p>
     </div>
     <button pButton type="button" label="Nouvelle facture" icon="pi pi-plus" (click)="openCreateDialog()"></button>
   </div>
@@ -21,9 +21,9 @@
           <th>Facture</th>
           <th>Fournisseur</th>
           <th>Projet</th>
+          <th>HT</th>
+          <th>TVA</th>
           <th>TTC</th>
-          <th>Retenue</th>
-          <th>Net à payer</th>
           <th>Actions</th>
         </tr>
       </ng-template>
@@ -35,42 +35,13 @@
           </td>
           <td>{{ row.supplier?.name || '-' }}</td>
           <td>{{ row.project?.name || '-' }}</td>
+          <td>{{ row.amountHt | number:'1.0-2' }} DT</td>
+          <td>{{ row.vatAmount | number:'1.0-2' }} DT ({{ (row.vatRate ?? 0) * 100 | number:'1.0-2' }}%)</td>
           <td>{{ row.amountTtc | number:'1.0-2' }} DT</td>
-          <td>{{ row.withholdingAmount | number:'1.0-2' }} DT</td>
-          <td>{{ row.netToPay | number:'1.0-2' }} DT</td>
           <td class="actions-cell">
             <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir facture" (click)="edit(row)"></button>
             <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>
           </td>
-        </tr>
-      </ng-template>
-    </p-table>
-  </p-card>
-
-  <p-card header="Retenues à la source générées">
-    <div class="table-actions">
-      <button pButton type="button" label="Export retenues CSV" icon="pi pi-download" severity="secondary" (click)="exportWithholdingsCsv()"></button>
-    </div>
-    <p-table [value]="generatedWithholdings" responsiveLayout="scroll" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Facture</th>
-          <th>Fournisseur</th>
-          <th>Projet</th>
-          <th>Retenue</th>
-          <th>Net à payer</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-row>
-        <tr>
-          <td>
-            <div class="table-main">{{ row.invoiceNumber }}</div>
-            <div class="table-meta">{{ row.invoiceDate }} · TTC {{ row.amountTtc | number:'1.0-2' }} DT</div>
-          </td>
-          <td>{{ row.supplierName }}</td>
-          <td>{{ row.projectName }}</td>
-          <td>{{ row.withholdingAmount | number:'1.0-2' }} DT</td>
-          <td>{{ row.netToPay | number:'1.0-2' }} DT</td>
         </tr>
       </ng-template>
     </p-table>
@@ -84,7 +55,7 @@
       </div>
       <div class="field">
         <label>Fournisseur</label>
-        <p-dropdown formControlName="supplierId" [options]="suppliers" optionLabel="name" optionValue="id" placeholder="Choisir fournisseur"></p-dropdown>
+        <p-dropdown formControlName="supplierId" [options]="suppliers" optionLabel="name" optionValue="id" (onChange)="onSupplierChange($event.value)" placeholder="Choisir fournisseur"></p-dropdown>
       </div>
       <div class="field">
         <label>Numéro facture</label>
@@ -99,20 +70,16 @@
         <p-inputNumber formControlName="amountHt" mode="decimal"></p-inputNumber>
       </div>
       <div class="field">
-        <label>TVA ({{ vatRate * 100 }}%)</label>
-        <p-inputNumber formControlName="vatAmount" mode="decimal"></p-inputNumber>
+        <label>Taux de TVA</label>
+        <p-dropdown formControlName="vatRate" [options]="vatRates" optionLabel="label" optionValue="rate" placeholder="Choisir le taux"></p-dropdown>
+      </div>
+      <div class="field">
+        <label>TVA</label>
+        <div class="computed-amount">{{ computedVatAmount | number:'1.3-3' }} DT</div>
       </div>
       <div class="field">
         <label>Montant TTC</label>
-        <p-inputNumber formControlName="amountTtc" mode="decimal"></p-inputNumber>
-      </div>
-      <div class="field">
-        <label>Retenue à la source ({{ withholdingRate * 100 }}%)</label>
-        <p-inputNumber formControlName="withholdingAmount" mode="decimal"></p-inputNumber>
-      </div>
-      <div class="field">
-        <label>Net à payer</label>
-        <p-inputNumber formControlName="netToPay" mode="decimal"></p-inputNumber>
+        <div class="computed-amount">{{ computedAmountTtc | number:'1.3-3' }} DT</div>
       </div>
       <div class="field">
         <label>Nom pièce jointe</label>

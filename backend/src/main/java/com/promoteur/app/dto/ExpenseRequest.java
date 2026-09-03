@@ -41,15 +41,23 @@ public class ExpenseRequest {
     private BigDecimal amountHt;
 
     /**
-     * VAT amount associated with the expense.
+     * VAT rate applied, as a fraction: {@code 0.1900} for 19 %. The backend derives the VAT and
+     * gross amounts from this and {@link #amountHt} (CALC-01).
+     */
+    @NotNull
+    @PositiveOrZero
+    private BigDecimal vatRate;
+
+    /**
+     * VAT amount. Derived by the backend; when present it is only checked for consistency.
      */
     @PositiveOrZero
     private BigDecimal vatAmount;
 
     /**
-     * Gross amount including VAT.
+     * Gross amount including VAT. Derived by the backend; when present it is only checked for
+     * consistency.
      */
-    @NotNull
     @Positive
     private BigDecimal amountTtc;
 

@@ -44,6 +44,14 @@ export interface SupplierTypeOption {
   active?: boolean;
 }
 
+/** A VAT rate offered at data entry. `rate` is a fraction: 0.19 for 19 %. */
+export interface VatRateOption {
+  id: number;
+  label: string;
+  rate: number;
+  active?: boolean;
+}
+
 export interface Project {
   id?: number;
   code?: string;
@@ -79,6 +87,8 @@ export interface Supplier {
   phone?: string;
   email?: string;
   address?: string;
+  /** Rate this supplier usually invoices, as a fraction. Proposed by default at data entry. */
+  defaultVatRate?: number | null;
   typeId?: number | null;
   type?: SupplierTypeOption | null;
   active?: boolean;
@@ -93,8 +103,10 @@ export interface Expense {
   description: string;
   expenseDate: string;
   amountHt: number;
-  vatAmount: number;
-  amountTtc: number;
+  /** VAT rate applied, as a fraction. Sent to the backend, which derives the amounts below. */
+  vatRate: number;
+  vatAmount?: number;
+  amountTtc?: number;
   paymentMethod?: string;
   documentNumber?: string;
   attachmentName?: string;
@@ -204,10 +216,10 @@ export interface SupplierInvoice {
   invoiceNumber: string;
   invoiceDate: string;
   amountHt: number;
-  vatAmount: number;
-  amountTtc: number;
-  withholdingAmount: number;
-  netToPay: number;
+  /** VAT rate applied, as a fraction. Sent to the backend, which derives the amounts below. */
+  vatRate: number;
+  vatAmount?: number;
+  amountTtc?: number;
   attachmentName?: string;
   attachmentUrl?: string;
   detail?: string;

@@ -67,6 +67,10 @@
           <button pButton type="button" icon="pi pi-plus" severity="secondary" (click)="openSupplierTypeDialog()"></button>
         </div>
       </div>
+      <div class="field">
+        <label>Taux de TVA habituel</label>
+        <p-dropdown formControlName="defaultVatRate" [options]="vatRates" optionLabel="label" optionValue="rate" placeholder="Aucun" [showClear]="true"></p-dropdown>
+      </div>
       <div class="field field-full">
         <label>Adresse</label>
         <input pInputText formControlName="address" />

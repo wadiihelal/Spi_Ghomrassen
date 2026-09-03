@@ -35,32 +35,25 @@ public class SupplierInvoiceRequest {
     private BigDecimal amountHt;
 
     /**
-     * VAT amount.
+     * VAT rate applied, as a fraction: {@code 0.1900} for 19 %. The backend derives the VAT and
+     * gross amounts from this and {@link #amountHt} (CALC-01).
      */
     @NotNull
+    @PositiveOrZero
+    private BigDecimal vatRate;
+
+    /**
+     * VAT amount. Derived by the backend; when present it is only checked for consistency.
+     */
     @PositiveOrZero
     private BigDecimal vatAmount;
 
     /**
-     * Gross amount including VAT.
+     * Gross amount including VAT. Derived by the backend; when present it is only checked for
+     * consistency.
      */
-    @NotNull
     @Positive
     private BigDecimal amountTtc;
-
-    /**
-     * Retenue a la source amount.
-     */
-    @NotNull
-    @PositiveOrZero
-    private BigDecimal withholdingAmount;
-
-    /**
-     * Net amount to pay after withholding.
-     */
-    @NotNull
-    @PositiveOrZero
-    private BigDecimal netToPay;
 
     /**
      * Original attachment file name if available.

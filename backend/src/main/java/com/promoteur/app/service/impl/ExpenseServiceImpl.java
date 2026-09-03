@@ -1,6 +1,7 @@
 package com.promoteur.app.service.impl;
 
 import com.promoteur.app.dto.ExpenseRequest;
+import com.promoteur.app.dto.VatAmounts;
 import com.promoteur.app.entity.Expense;
 import com.promoteur.app.entity.ExpenseCategory;
 import com.promoteur.app.entity.Project;
@@ -13,6 +14,7 @@ import com.promoteur.app.repository.SupplierRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.ExpenseService;
 import com.promoteur.app.service.MessageService;
+import com.promoteur.app.service.VatCalculationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -34,6 +35,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final SupplierRepository supplierRepository;
     private final AuditLogService auditLogService;
     private final MessageService messageService;
+    private final VatCalculationService vatCalculationService;
 
     @Override
     public Page<Expense> findAll(final Pageable pageable) {
@@ -89,7 +91,9 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     private void map(final Expense expense, final ExpenseRequest request) {
-        this.validateAmounts(request);
+        // Le backend est seul maitre du calcul : HT + taux donnent la TVA et le TTC.
+        final VatAmounts amounts = this.vatCalculationService.compute(request.getAmountHt(), request.getVatRate());
+        this.vatCalculationService.rejectInconsistentDeclaration(amounts, request.getVatAmount(), request.getAmountTtc());
 
         final ExpenseCategory category = this.expenseCategoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Expense category not found with id " + request.getCategoryId()));
@@ -106,8 +110,9 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setExpenseDate(request.getExpenseDate());
         expense.setDescription(request.getDescription());
         expense.setAmountHt(request.getAmountHt());
-        expense.setVatAmount(this.normalizedVatAmount(request));
-        expense.setAmountTtc(request.getAmountTtc());
+        expense.setVatRate(request.getVatRate());
+        expense.setVatAmount(amounts.vatAmount());
+        expense.setAmountTtc(amounts.amountTtc());
         expense.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : com.promoteur.app.enums.PaymentMethod.OTHER);
         expense.setDocumentNumber(request.getDocumentNumber());
         expense.setAttachmentName(request.getAttachmentName());
@@ -116,17 +121,6 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setCategory(category);
         expense.setProject(project);
         expense.setSupplier(supplier);
-    }
-
-    private void validateAmounts(final ExpenseRequest request) {
-        final BigDecimal expectedAmountTtc = request.getAmountHt().add(this.normalizedVatAmount(request));
-        if (expectedAmountTtc.compareTo(request.getAmountTtc()) != 0) {
-            throw new IllegalArgumentException("amountTtc must be equal to amountHt + vatAmount");
-        }
-    }
-
-    private BigDecimal normalizedVatAmount(final ExpenseRequest request) {
-        return request.getVatAmount() == null ? BigDecimal.ZERO : request.getVatAmount();
     }
 
     private String resolveReference(final Expense expense, final String requestedReference) {

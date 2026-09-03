@@ -11,3 +11,6 @@
 @media (max-width: 900px) {
   .filter-grid { grid-template-columns: 1fr; }
 }
+
+/* Montants dérivés par le backend : affichés en lecture seule, jamais saisis (CALC-01). */
+.computed-amount{padding:.6rem .75rem;border:1px solid #e7ecf3;border-radius:10px;background:#f7f9fc;color:#374151;font-variant-numeric:tabular-nums;}

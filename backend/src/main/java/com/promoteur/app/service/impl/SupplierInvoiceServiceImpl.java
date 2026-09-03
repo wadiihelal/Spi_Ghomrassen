@@ -1,6 +1,7 @@
 package com.promoteur.app.service.impl;
 
 import com.promoteur.app.dto.SupplierInvoiceRequest;
+import com.promoteur.app.dto.VatAmounts;
 import com.promoteur.app.entity.Project;
 import com.promoteur.app.entity.Supplier;
 import com.promoteur.app.entity.SupplierInvoice;
@@ -10,6 +11,7 @@ import com.promoteur.app.repository.SupplierInvoiceRepository;
 import com.promoteur.app.repository.SupplierRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.MessageService;
+import com.promoteur.app.service.VatCalculationService;
 import com.promoteur.app.service.SupplierInvoiceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,7 +19,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 
 @Service
 @Transactional
@@ -29,6 +30,7 @@ public class SupplierInvoiceServiceImpl implements SupplierInvoiceService {
     private final ProjectRepository projectRepository;
     private final AuditLogService auditLogService;
     private final MessageService messageService;
+    private final VatCalculationService vatCalculationService;
 
     @Override
     public Page<SupplierInvoice> findAll(final Pageable pageable) {
@@ -81,7 +83,9 @@ public class SupplierInvoiceServiceImpl implements SupplierInvoiceService {
     }
 
     private void map(final SupplierInvoice invoice, final SupplierInvoiceRequest request) {
-        this.validateAmounts(request);
+        // Le backend est seul maitre du calcul : HT + taux donnent la TVA et le TTC.
+        final VatAmounts amounts = this.vatCalculationService.compute(request.getAmountHt(), request.getVatRate());
+        this.vatCalculationService.rejectInconsistentDeclaration(amounts, request.getVatAmount(), request.getAmountTtc());
 
         final Supplier supplier = this.supplierRepository.findById(request.getSupplierId())
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id " + request.getSupplierId()));
@@ -91,26 +95,13 @@ public class SupplierInvoiceServiceImpl implements SupplierInvoiceService {
         invoice.setInvoiceNumber(request.getInvoiceNumber());
         invoice.setInvoiceDate(request.getInvoiceDate());
         invoice.setAmountHt(request.getAmountHt());
-        invoice.setVatAmount(request.getVatAmount());
-        invoice.setAmountTtc(request.getAmountTtc());
-        invoice.setWithholdingAmount(request.getWithholdingAmount());
-        invoice.setNetToPay(request.getNetToPay());
+        invoice.setVatRate(request.getVatRate());
+        invoice.setVatAmount(amounts.vatAmount());
+        invoice.setAmountTtc(amounts.amountTtc());
         invoice.setAttachmentName(request.getAttachmentName());
         invoice.setAttachmentUrl(request.getAttachmentUrl());
         invoice.setDetail(request.getDetail());
         invoice.setSupplier(supplier);
         invoice.setProject(project);
-    }
-
-    private void validateAmounts(final SupplierInvoiceRequest request) {
-        final BigDecimal expectedAmountTtc = request.getAmountHt().add(request.getVatAmount());
-        if (expectedAmountTtc.compareTo(request.getAmountTtc()) != 0) {
-            throw new IllegalArgumentException("amountTtc must be equal to amountHt + vatAmount");
-        }
-
-        final BigDecimal expectedNetToPay = request.getAmountTtc().subtract(request.getWithholdingAmount());
-        if (expectedNetToPay.compareTo(request.getNetToPay()) != 0) {
-            throw new IllegalArgumentException("netToPay must be equal to amountTtc - withholdingAmount");
-        }
     }
 }

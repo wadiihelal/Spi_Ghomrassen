@@ -9,6 +9,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,6 +26,10 @@ public class Supplier extends BaseEntity {
     private String phone;
     private String email;
     private String address;
+
+    /** Rate usually invoiced by this supplier, proposed by default at data entry (CALC-01). */
+    @Column(precision = 5, scale = 4)
+    private BigDecimal defaultVatRate;
 
     @ManyToOne
     @JoinColumn(name = "type_id")

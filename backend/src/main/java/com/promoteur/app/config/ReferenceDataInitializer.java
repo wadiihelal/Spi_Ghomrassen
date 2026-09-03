@@ -2,8 +2,10 @@ package com.promoteur.app.config;
 
 import com.promoteur.app.dto.SupplierTypeOptionRequest;
 import com.promoteur.app.entity.ExpenseCategory;
+import com.promoteur.app.entity.VatRateOption;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
 import com.promoteur.app.repository.SupplierTypeOptionRepository;
+import com.promoteur.app.repository.VatRateOptionRepository;
 import com.promoteur.app.service.SupplierTypeOptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -11,6 +13,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -42,8 +45,20 @@ public class ReferenceDataInitializer implements CommandLineRunner {
             "Autre"
     );
 
+    /**
+     * VAT rates levied in Tunisia. Reference data, so the console's dropdown is a query rather
+     * than a hard-coded list (CALC-01).
+     */
+    private static final List<BigDecimal> DEFAULT_VAT_RATES = List.of(
+            new BigDecimal("0.0000"),
+            new BigDecimal("0.0700"),
+            new BigDecimal("0.1300"),
+            new BigDecimal("0.1900")
+    );
+
     private final ExpenseCategoryRepository expenseCategoryRepository;
     private final SupplierTypeOptionRepository supplierTypeOptionRepository;
+    private final VatRateOptionRepository vatRateOptionRepository;
     private final SupplierTypeOptionService supplierTypeOptionService;
 
     /**
@@ -56,6 +71,7 @@ public class ReferenceDataInitializer implements CommandLineRunner {
     public void run(String... args) {
         ensureCategories();
         ensureSupplierTypes();
+        ensureVatRates();
     }
 
     /** Creates each default expense category that is not already present. */
@@ -71,6 +87,23 @@ public class ReferenceDataInitializer implements CommandLineRunner {
         DEFAULT_SUPPLIER_TYPES.stream()
                 .filter(label -> !supplierTypeOptionRepository.existsByLabel(label))
                 .forEach(this::saveSupplierType);
+    }
+
+    /** Creates each Tunisian VAT rate that is not already present. */
+    private void ensureVatRates() {
+        DEFAULT_VAT_RATES.stream()
+                .filter(rate -> !vatRateOptionRepository.existsByRate(rate))
+                .map(this::buildVatRate)
+                .forEach(vatRateOptionRepository::save);
+    }
+
+    /** Builds one VAT rate option, labelled as a percentage. */
+    private VatRateOption buildVatRate(BigDecimal rate) {
+        VatRateOption option = new VatRateOption();
+        option.setRate(rate);
+        option.setLabel(rate.movePointRight(2).stripTrailingZeros().toPlainString() + " %");
+        option.setActive(true);
+        return option;
     }
 
     /** Persists one supplier type option with the given label. */

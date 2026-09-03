@@ -490,7 +490,7 @@ public class DemoDataInitializer implements CommandLineRunner {
     /** Inserts the fixed demo expense rows for the main projects. */
     private void seedExpenses(Map<String, ExpenseCategory> categories, Map<String, Supplier> suppliers, Map<String, Project> projects) {
         createExpense("DEP-2026-001", LocalDate.of(2026, 3, 3), "Achat ciment et ferraillage tranche A", new BigDecimal("18500.000"), new BigDecimal("3515.000"), new BigDecimal("22015.000"), PaymentMethod.BANK_TRANSFER, "FAC-CMS-2026-031", "Approvisionnement principal chantier mars 2026.", categories.get("Frais Fournisseurs").getId(), projects.get("Résidence Oasis Ghomrassen").getId(), suppliers.get("Comptoir des Matériaux du Sud").getId());
-        createExpense("DEP-2026-002", LocalDate.of(2026, 3, 7), "Situation travaux gros oeuvre lot B", new BigDecimal("42000.000"), new BigDecimal("7980.000"), new BigDecimal("49980.000"), PaymentMethod.CHECK, "SIT-BG-2026-007", "Retenue automatique attendue sur entrepreneur.", categories.get("Frais Fournisseurs").getId(), projects.get("Résidence Oasis Ghomrassen").getId(), suppliers.get("Entreprise Bâtir Ghomrassen").getId());
+        createExpense("DEP-2026-002", LocalDate.of(2026, 3, 7), "Situation travaux gros oeuvre lot B", new BigDecimal("42000.000"), new BigDecimal("7980.000"), new BigDecimal("49980.000"), PaymentMethod.CHECK, "SIT-BG-2026-007", "Situation mensuelle entrepreneur, lot B.", categories.get("Frais Fournisseurs").getId(), projects.get("Résidence Oasis Ghomrassen").getId(), suppliers.get("Entreprise Bâtir Ghomrassen").getId());
         createExpense("DEP-2026-003", LocalDate.of(2026, 3, 15), "Honoraires étude béton armé", new BigDecimal("6500.000"), new BigDecimal("1235.000"), new BigDecimal("7735.000"), PaymentMethod.BANK_TRANSFER, "BEIT-2026-014", "Étude structure bâtiment principal.", categories.get("Frais Ingénieurs").getId(), projects.get("Résidence Oasis Ghomrassen").getId(), suppliers.get("Bureau d'Études Ingénierie Tataouine").getId());
         createExpense("DEP-2026-004", LocalDate.of(2026, 3, 20), "Frais dépôt dossier municipal", new BigDecimal("1200.000"), BigDecimal.ZERO, new BigDecimal("1200.000"), PaymentMethod.CASH, "BAL-2026-089", "Paiement municipalité Ghomrassen.", categories.get("Frais Baladiya").getId(), projects.get("Immeuble Jasmin").getId(), null);
         createExpense("DEP-2026-005", LocalDate.of(2026, 4, 2), "Esquisses architecturales phase APS", new BigDecimal("4800.000"), new BigDecimal("912.000"), new BigDecimal("5712.000"), PaymentMethod.BANK_TRANSFER, "ATM-APS-2026-005", "Études préliminaires immeuble Jasmin.", categories.get("Autres").getId(), projects.get("Immeuble Jasmin").getId(), suppliers.get("Atelier Architecture El Medina").getId());
@@ -530,6 +530,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         request.setExpenseDate(date);
         request.setDescription(description);
         request.setAmountHt(amountHt);
+        // Le taux est deduit du couple HT / TVA des donnees de demonstration, pour que les
+        // montants generes restent identiques a ceux d'avant CALC-01.
+        request.setVatRate(vatAmount.divide(amountHt, 4, RoundingMode.HALF_UP));
         request.setVatAmount(vatAmount);
         request.setAmountTtc(amountTtc);
         request.setPaymentMethod(paymentMethod);

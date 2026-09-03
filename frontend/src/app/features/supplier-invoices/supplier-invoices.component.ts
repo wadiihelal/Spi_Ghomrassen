@@ -8,29 +8,13 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DropdownModule } from 'primeng/dropdown';
 import { DialogModule } from 'primeng/dialog';
-import { Project, Supplier, SupplierInvoice } from '../../shared/models/models';
+import { Project, Supplier, SupplierInvoice, VatRateOption } from '../../shared/models/models';
+
+/** Rate proposed when the supplier has none of its own. */
+const FALLBACK_VAT_RATE = 0.19;
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
-
-interface GeneratedWithholdingRow {
-  invoiceDate: string;
-  invoiceNumber: string;
-  supplierName: string;
-  projectName: string;
-  amountHt: number;
-  amountTtc: number;
-  withholdingAmount: number;
-  netToPay: number;
-}
-
-// TODO CALC-01 : taux de TVA figé à 19 % côté navigateur. La phase 2.2 déplace le calcul
-// vers le backend et rend le taux saisissable.
-const DEFAULT_VAT_RATE = 0.19;
-
-// TODO CALC-02 : la retenue à la source doit être retirée de l'application (décision métier).
-// La phase 2.2 supprime les colonnes, les champs du formulaire et l'export CSV.
-const DEFAULT_WITHHOLDING_RATE = 0.015;
 
 @Component({
   selector: 'app-supplier-invoices',
@@ -47,12 +31,11 @@ export class SupplierInvoicesComponent implements OnInit {
 
   invoices: SupplierInvoice[] = [];
   suppliers: Supplier[] = [];
+  vatRates: VatRateOption[] = [];
   projects: Project[] = [];
   editingId: number | null = null;
   dialogVisible = false;
   selectedProjectId: number | null = null;
-  readonly vatRate = DEFAULT_VAT_RATE;
-  readonly withholdingRate = DEFAULT_WITHHOLDING_RATE;
   filters = {
     projectId: null as number | null,
     supplierId: null as number | null,
@@ -68,10 +51,7 @@ export class SupplierInvoicesComponent implements OnInit {
     invoiceNumber: ['', [Validators.required]],
     invoiceDate: ['', [Validators.required]],
     amountHt: [0, [Validators.required]],
-    vatAmount: [{ value: 0, disabled: true }, [Validators.required]],
-    amountTtc: [{ value: 0, disabled: true }, [Validators.required]],
-    withholdingAmount: [{ value: 0, disabled: true }, [Validators.required]],
-    netToPay: [{ value: 0, disabled: true }, [Validators.required]],
+    vatRate: [FALLBACK_VAT_RATE, [Validators.required]],
     attachmentName: [''],
     attachmentUrl: [''],
     detail: [''],
@@ -88,14 +68,13 @@ export class SupplierInvoicesComponent implements OnInit {
       }
     });
     this.loadData();
-    this.form.controls.amountHt.valueChanges.subscribe((value) => this.updateComputedAmounts(value ?? 0));
-    this.updateComputedAmounts(this.form.controls.amountHt.value ?? 0);
   }
 
   loadData(): void {
     this.api.getSupplierInvoices().subscribe({ next: (data) => (this.invoices = data) });
     this.api.getSuppliers().subscribe({ next: (data) => (this.suppliers = data) });
     this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
+    this.api.getVatRates().subscribe({ next: (data) => (this.vatRates = data) });
   }
 
   get filteredInvoices(): SupplierInvoice[] {
@@ -109,22 +88,6 @@ export class SupplierInvoicesComponent implements OnInit {
       const matchSupplier = !this.filters.supplierId || (row.supplier?.id ?? row.supplierId) === this.filters.supplierId;
       return matchSearch && matchProject && matchSelectedProject && matchSupplier;
     });
-  }
-
-  get generatedWithholdings(): GeneratedWithholdingRow[] {
-    return this.filteredInvoices
-      .filter((row) => (row.withholdingAmount ?? 0) > 0)
-      .map((row) => ({
-        invoiceDate: row.invoiceDate,
-        invoiceNumber: row.invoiceNumber,
-        supplierName: row.supplier?.name ?? '-',
-        projectName: row.project?.name ?? '-',
-        amountHt: row.amountHt ?? 0,
-        amountTtc: row.amountTtc ?? 0,
-        withholdingAmount: row.withholdingAmount ?? 0,
-        netToPay: row.netToPay ?? 0
-      }))
-      .sort((a, b) => (b.invoiceDate ?? '').localeCompare(a.invoiceDate ?? ''));
   }
 
   submit(): void {
@@ -153,17 +116,13 @@ export class SupplierInvoicesComponent implements OnInit {
       invoiceNumber: row.invoiceNumber,
       invoiceDate: row.invoiceDate,
       amountHt: row.amountHt,
-      vatAmount: row.vatAmount,
-      amountTtc: row.amountTtc,
-      withholdingAmount: row.withholdingAmount,
-      netToPay: row.netToPay,
+      vatRate: row.vatRate ?? FALLBACK_VAT_RATE,
       attachmentName: row.attachmentName ?? '',
       attachmentUrl: row.attachmentUrl ?? '',
       detail: row.detail ?? '',
       supplierId: row.supplier?.id ?? row.supplierId ?? null,
       projectId: this.selectedProjectId ?? row.project?.id ?? row.projectId ?? null
     });
-    this.updateComputedAmounts(row.amountHt ?? 0);
   }
 
   remove(row: SupplierInvoice): void {
@@ -187,17 +146,13 @@ export class SupplierInvoicesComponent implements OnInit {
       invoiceNumber: '',
       invoiceDate: '',
       amountHt: 0,
-      vatAmount: 0,
-      amountTtc: 0,
-      withholdingAmount: 0,
-      netToPay: 0,
+      vatRate: FALLBACK_VAT_RATE,
       attachmentName: '',
       attachmentUrl: '',
       detail: '',
       supplierId: null,
       projectId: this.selectedProjectId
     });
-    this.updateComputedAmounts(0);
   }
 
   openCreateDialog(): void {
@@ -205,55 +160,26 @@ export class SupplierInvoicesComponent implements OnInit {
     this.dialogVisible = true;
   }
 
-  exportWithholdingsCsv(): void {
-    const rows = this.generatedWithholdings;
-    const header = ['Date', 'Facture', 'Fournisseur', 'Projet', 'Montant HT', 'Montant TTC', 'Retenue', 'Net a payer'];
-    const lines = [
-      header.join(';'),
-      ...rows.map((row) => [
-        row.invoiceDate,
-        row.invoiceNumber,
-        row.supplierName,
-        row.projectName,
-        this.formatDecimal(row.amountHt),
-        this.formatDecimal(row.amountTtc),
-        this.formatDecimal(row.withholdingAmount),
-        this.formatDecimal(row.netToPay)
-      ].map((value) => this.escapeCsv(value)).join(';'))
-    ];
-    const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const projectSuffix = this.selectedProjectId ? `-projet-${this.selectedProjectId}` : '';
-    this.saveFile(blob, `retenues-source${projectSuffix}.csv`);
+  /**
+   * Preview only. The backend derives the VAT and gross amounts from the net amount and the
+   * rate (CALC-01), so these values are shown as read-only text and never sent.
+   */
+  get computedVatAmount(): number {
+    const amountHt = Number(this.form.controls.amountHt.value) || 0;
+    return this.round(amountHt * (Number(this.form.controls.vatRate.value) || 0));
   }
 
-  private updateComputedAmounts(amountHt: number): void {
-    const normalizedHt = Number(amountHt) || 0;
-    const vatAmount = this.round(normalizedHt * this.vatRate);
-    const amountTtc = this.round(normalizedHt + vatAmount);
-    const withholdingAmount = this.round(normalizedHt * this.withholdingRate);
-    const netToPay = this.round(amountTtc - withholdingAmount);
-    this.form.patchValue({ vatAmount, amountTtc, withholdingAmount, netToPay }, { emitEvent: false });
+  get computedAmountTtc(): number {
+    return this.round((Number(this.form.controls.amountHt.value) || 0) + this.computedVatAmount);
+  }
+
+  /** Proposes the rate this supplier usually invoices, falling back to 19 %. */
+  onSupplierChange(supplierId: number | null): void {
+    const supplier = this.suppliers.find((item) => item.id === supplierId);
+    this.form.patchValue({ vatRate: supplier?.defaultVatRate ?? FALLBACK_VAT_RATE });
   }
 
   private round(value: number): number {
     return Math.round((value + Number.EPSILON) * 1000) / 1000;
-  }
-
-  private formatDecimal(value: number): string {
-    return this.round(value).toFixed(3);
-  }
-
-  private escapeCsv(value: string | number): string {
-    const normalized = String(value ?? '');
-    return `"${normalized.replaceAll('"', '""')}"`;
-  }
-
-  private saveFile(blob: Blob, fileName: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    window.URL.revokeObjectURL(url);
   }
 }

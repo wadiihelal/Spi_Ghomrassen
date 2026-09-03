@@ -166,8 +166,7 @@ class ReportScopeTest {
         request.setExpenseDate(date);
         request.setDescription(description);
         request.setAmountHt(new BigDecimal(amountTtc));
-        request.setVatAmount(BigDecimal.ZERO);
-        request.setAmountTtc(new BigDecimal(amountTtc));
+        request.setVatRate(BigDecimal.ZERO);
         request.setCategoryId(this.expenseCategoryRepository.findAll().get(0).getId());
         request.setProjectId(project.getId());
         this.expenseService.create(request);

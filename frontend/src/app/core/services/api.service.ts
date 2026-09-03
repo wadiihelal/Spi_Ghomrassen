@@ -19,7 +19,8 @@ import {
   ReportScopeParams,
   Supplier,
   SupplierInvoice,
-  SupplierTypeOption
+  SupplierTypeOption,
+  VatRateOption
 } from '../../shared/models/models';
 
 @Injectable({ providedIn: 'root' })
@@ -156,6 +157,10 @@ export class ApiService {
 
   getSupplierTypes(): Observable<SupplierTypeOption[]> {
     return this.getPaged<SupplierTypeOption>('/supplier-types');
+  }
+
+  getVatRates(): Observable<VatRateOption[]> {
+    return this.getPaged<VatRateOption>('/vat-rates');
   }
 
   createSupplierType(payload: SupplierTypeOption): Observable<SupplierTypeOption> {

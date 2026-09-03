@@ -28,17 +28,15 @@ public class SupplierInvoice extends BaseEntity {
     @Column(nullable = false, precision = 19, scale = 3)
     private BigDecimal amountHt;
 
+    /** VAT rate applied, as a fraction: {@code 0.1900} for 19 % (CALC-01). */
+    @Column(nullable = false, precision = 5, scale = 4)
+    private BigDecimal vatRate;
+
     @Column(nullable = false, precision = 19, scale = 3)
     private BigDecimal vatAmount;
 
     @Column(nullable = false, precision = 19, scale = 3)
     private BigDecimal amountTtc;
-
-    @Column(nullable = false, precision = 19, scale = 3)
-    private BigDecimal withholdingAmount;
-
-    @Column(nullable = false, precision = 19, scale = 3)
-    private BigDecimal netToPay;
 
     private String attachmentName;
 
