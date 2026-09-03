@@ -185,8 +185,7 @@ export class ApartmentsComponent implements OnInit {
         this.ui.success(this.editingId ? 'Appartement modifié' : 'Appartement ajouté', 'L’inventaire a été mis à jour.');
         this.resetForm();
         this.loadData();
-      },
-      error: () => this.ui.error('Enregistrement impossible', 'L’appartement n’a pas pu être enregistré.')
+      }
     });
   }
 
@@ -233,8 +232,7 @@ export class ApartmentsComponent implements OnInit {
         this.ui.success('Bloc généré', `${created.length} appartements ont été créés pour le bloc ${blockCode}.`);
         this.resetBulkForm();
         this.loadData();
-      },
-      error: () => this.ui.error('Génération impossible', 'Les appartements du bloc n’ont pas pu être générés.')
+      }
     });
   }
 
@@ -263,8 +261,7 @@ export class ApartmentsComponent implements OnInit {
           this.ui.success('Appartement supprimé', 'L’appartement a été supprimé.');
           this.loadData();
           if (this.editingId === row.id) this.resetForm();
-        },
-        error: () => this.ui.error('Suppression impossible', 'L’appartement n’a pas pu être supprimé.')
+        }
       });
     });
   }

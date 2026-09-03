@@ -58,15 +58,13 @@ export class SuppliersComponent implements OnInit {
 
   loadSuppliers(): void {
     this.api.getSuppliers().subscribe({
-      next: (data) => (this.suppliers = data),
-      error: () => this.ui.error('Chargement impossible', 'Les fournisseurs n’ont pas pu être récupérés.')
+      next: (data) => (this.suppliers = data)
     });
   }
 
   loadSupplierTypes(): void {
     this.api.getSupplierTypes().subscribe({
-      next: (data) => (this.supplierTypes = data.filter((item) => item.active !== false)),
-      error: () => this.ui.error('Chargement impossible', 'Les types de fournisseur n’ont pas pu être récupérés.')
+      next: (data) => (this.supplierTypes = data.filter((item) => item.active !== false))
     });
   }
 
@@ -87,8 +85,7 @@ export class SuppliersComponent implements OnInit {
         this.ui.success(this.editingId ? 'Fournisseur modifié' : 'Fournisseur ajouté', 'Les informations du fournisseur ont été enregistrées.');
         this.resetForm();
         this.loadSuppliers();
-      },
-      error: () => this.ui.error('Enregistrement impossible', 'Le fournisseur n’a pas pu être enregistré.')
+      }
     });
   }
 
@@ -120,8 +117,7 @@ export class SuppliersComponent implements OnInit {
           }
           this.ui.success('Fournisseur supprimé', 'Le fournisseur a été supprimé avec succès.');
           this.loadSuppliers();
-        },
-        error: () => this.ui.error('Suppression impossible', 'Le fournisseur n’a pas pu être supprimé.')
+        }
       });
     });
   }
@@ -168,8 +164,7 @@ export class SuppliersComponent implements OnInit {
         this.loadSupplierTypes();
         this.form.patchValue({ typeId: created.id });
         this.closeSupplierTypeDialog();
-      },
-      error: () => this.ui.error('Enregistrement impossible', 'Le type fournisseur n’a pas pu être enregistré.')
+      }
     });
   }
 }

@@ -88,7 +88,24 @@ class AdvanceCeilingTest {
 
         assertThatThrownBy(() -> this.createAdvance(apartment, new BigDecimal("60000.000")))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("exceeds declared amount");
+                .hasMessageContaining("alors que le plafond est de");
+    }
+
+    @Test
+    @DisplayName("the refusal names the apartment and both amounts, so the toast can show them")
+    void theRefusalNamesTheApartmentAndBothAmounts() {
+        Apartment apartment = this.createApartment(new BigDecimal("100000.000"));
+
+        assertThatThrownBy(() -> this.createAdvance(apartment, new BigDecimal("150000.000")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .satisfies(thrown -> {
+                    String message = thrown.getMessage();
+                    assertThat(message).contains(apartment.getApartmentNumber());
+                    // Amounts are rendered in French: a non-breaking space groups the thousands.
+                    assertThat(message.replace('\u00a0', ' ').replace('\u202f', ' '))
+                            .contains("150 000,000")
+                            .contains("100 000,000");
+                });
     }
 
     @Test
@@ -111,7 +128,7 @@ class AdvanceCeilingTest {
 
         assertThatThrownBy(() -> this.createAdvance(apartment, new BigDecimal("0.001")))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("exceeds declared amount");
+                .hasMessageContaining("alors que le plafond est de");
     }
 
     @Test
@@ -162,7 +179,7 @@ class AdvanceCeilingTest {
         // The refusal must be the ceiling check, not a lock timeout or an unrelated failure.
         assertThat(outcomes).filteredOn(outcome -> !"accepted".equals(outcome))
                 .singleElement(org.assertj.core.api.InstanceOfAssertFactories.STRING)
-                .contains("exceeds declared amount");
+                .contains("alors que le plafond est de");
 
         List<ClientAdvance> stored = this.clientAdvanceRepository.findByApartmentId(apartment.getId());
         assertThat(stored).hasSize(1);

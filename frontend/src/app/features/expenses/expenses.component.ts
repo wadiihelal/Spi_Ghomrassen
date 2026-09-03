@@ -156,8 +156,7 @@ export class ExpensesComponent implements OnInit {
         this.ui.success(this.editingId ? 'Dépense modifiée' : 'Dépense ajoutée', 'La dépense a été enregistrée avec succès.');
         this.resetForm();
         this.loadData();
-      },
-      error: () => this.ui.error('Enregistrement impossible', 'La dépense n’a pas pu être enregistrée.')
+      }
     });
   }
 
@@ -182,6 +181,19 @@ export class ExpensesComponent implements OnInit {
     if (this.selectedProjectId) {
       this.form.patchValue({ projectId: this.selectedProjectId });
     }
+  }
+
+  remove(row: Expense): void {
+    if (!row.id) return;
+    this.ui.confirmDelete(`Supprimer la dépense ${row.reference || row.description} ?`, () => {
+      this.api.deleteExpense(row.id!).subscribe({
+        next: () => {
+          this.ui.success('Dépense supprimée', 'La dépense a été supprimée.');
+          this.loadData();
+          if (this.editingId === row.id) this.resetForm();
+        }
+      });
+    });
   }
 
   resetForm(): void {
@@ -254,8 +266,7 @@ export class ExpensesComponent implements OnInit {
         this.loadData();
         this.form.patchValue({ categoryId: created.id });
         this.closeCategoryDialog();
-      },
-      error: () => this.ui.error('Enregistrement impossible', 'La catégorie de dépense n’a pas pu être enregistrée.')
+      }
     });
   }
 }

@@ -61,8 +61,7 @@ export class ClientsComponent implements OnInit {
 
   loadClients(): void {
     this.api.getClients().subscribe({
-      next: (data) => (this.clients = data),
-      error: () => this.ui.error('Chargement impossible', 'Les clients n’ont pas pu être récupérés.')
+      next: (data) => (this.clients = data)
     });
     this.api.getPurchases().subscribe({ next: (data) => (this.purchases = data) });
     this.api.getAdvances().subscribe({ next: (data) => (this.advances = data) });
@@ -94,8 +93,7 @@ export class ClientsComponent implements OnInit {
         this.ui.success(this.editingId ? 'Client modifié' : 'Client ajouté', 'Les informations du client ont été enregistrées.');
         this.resetForm();
         this.loadClients();
-      },
-      error: () => this.ui.error('Enregistrement impossible', 'Le client n’a pas pu être enregistré.')
+      }
     });
   }
 
@@ -127,8 +125,7 @@ export class ClientsComponent implements OnInit {
           }
           this.ui.success('Client supprimé', 'Le client a été supprimé avec succès.');
           this.loadClients();
-        },
-        error: () => this.ui.error('Suppression impossible', 'Le client n’a pas pu être supprimé.')
+        }
       });
     });
   }

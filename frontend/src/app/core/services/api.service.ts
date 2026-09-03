@@ -63,6 +63,10 @@ export class ApiService {
     return this.http.put<Expense>(`${this.baseUrl}/expenses/${id}`, payload);
   }
 
+  deleteExpense(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/expenses/${id}`);
+  }
+
   getExpenseCategories(): Observable<ExpenseCategory[]> {
     return this.getPaged<ExpenseCategory>('/expense-categories');
   }
@@ -191,6 +195,10 @@ export class ApiService {
     return this.http.put<ClientPurchase>(`${this.baseUrl}/client-purchases/${id}`, payload);
   }
 
+  deletePurchase(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/client-purchases/${id}`);
+  }
+
   getAdvances(): Observable<ClientAdvance[]> {
     return this.getPaged<ClientAdvance>('/client-advances');
   }
@@ -201,6 +209,10 @@ export class ApiService {
 
   updateAdvance(id: number, payload: ClientAdvance): Observable<ClientAdvance> {
     return this.http.put<ClientAdvance>(`${this.baseUrl}/client-advances/${id}`, payload);
+  }
+
+  deleteAdvance(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/client-advances/${id}`);
   }
 
   getClientStatements(scope?: ReportScopeParams): Observable<ClientStatement[]> {

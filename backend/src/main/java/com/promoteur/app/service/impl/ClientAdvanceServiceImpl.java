@@ -43,7 +43,8 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
     @Override
     public ClientAdvance findById(final Long id) {
         return this.clientAdvanceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Client advance not found with id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        this.messageService.get("error.notFound.advance", String.valueOf(id))));
     }
 
     @Override
@@ -91,14 +92,17 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
         // Verrou d'ecriture sur la ligne appartement : le controle de plafond ci-dessous et
         // l'enregistrement qui suit forment une seule operation atomique (CONC-01).
         final Apartment apartment = this.apartmentRepository.findByIdForUpdate(request.getApartmentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Apartment not found with id " + request.getApartmentId()));
+                .orElseThrow(() -> new ResourceNotFoundException(this.messageService.get(
+                        "error.notFound.apartment", String.valueOf(request.getApartmentId()))));
         final Client client = apartment.getAcquirer();
         if (client == null) {
-            throw new ResourceNotFoundException("Apartment has no assigned client/acquirer");
+            throw new ResourceNotFoundException(
+                    this.messageService.get("error.apartment.noAcquirer", apartment.getApartmentNumber()));
         }
         final Project project = apartment.getProject();
         if (project == null) {
-            throw new ResourceNotFoundException("Apartment has no assigned project");
+            throw new ResourceNotFoundException(
+                    this.messageService.get("error.apartment.noProject", apartment.getApartmentNumber()));
         }
 
         this.validateAdvanceAmount(clientAdvance, apartment, request.getAmount());
@@ -149,7 +153,8 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
                 .add(this.normalize(requestedAmount));
 
         if (totalCollectedAmount.compareTo(ceiling) > 0) {
-            throw new IllegalArgumentException("Collected amount exceeds declared amount for apartment " + apartment.getApartmentNumber());
+            throw new IllegalArgumentException(this.messageService.get("validation.advance.exceedsCeiling",
+                    apartment.getApartmentNumber(), totalCollectedAmount, ceiling));
         }
     }
 

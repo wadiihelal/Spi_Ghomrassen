@@ -69,8 +69,7 @@ export class ProjectsComponent implements OnInit {
 
   loadProjects(): void {
     this.api.getProjects().subscribe({
-      next: (data) => (this.projects = data),
-      error: () => this.ui.error('Chargement impossible', 'Les projets n’ont pas pu être récupérés.')
+      next: (data) => (this.projects = data)
     });
   }
 
@@ -87,8 +86,7 @@ export class ProjectsComponent implements OnInit {
         this.ui.success(this.editingId ? 'Projet modifié' : 'Projet ajouté', 'Le projet a été enregistré avec succès.');
         this.resetForm();
         this.loadProjects();
-      },
-      error: () => this.ui.error('Enregistrement impossible', 'Le projet n’a pas pu être enregistré.')
+      }
     });
   }
 
@@ -119,8 +117,7 @@ export class ProjectsComponent implements OnInit {
           }
           this.ui.success('Projet supprimé', 'Le projet a été supprimé avec succès.');
           this.loadProjects();
-        },
-        error: () => this.ui.error('Suppression impossible', 'Le projet n’a pas pu être supprimé.')
+        }
       });
     });
   }

@@ -265,8 +265,7 @@ export class PurchasesComponent implements OnInit {
         this.ui.success(this.editingId ? 'Achat modifié' : 'Achat ajouté', 'L’achat client a été enregistré avec succès.');
         this.resetForm();
         this.loadData();
-      },
-      error: () => this.ui.error('Enregistrement impossible', 'L’achat client n’a pas pu être enregistré.')
+      }
     });
   }
 
@@ -286,6 +285,19 @@ export class PurchasesComponent implements OnInit {
       clientId: purchase.client?.id ?? purchase.clientId ?? null,
       apartmentId: purchase.apartment?.id ?? purchase.apartmentId ?? null,
       projectId: this.selectedProjectId ?? purchase.project?.id ?? purchase.projectId ?? null
+    });
+  }
+
+  remove(row: ClientPurchase): void {
+    if (!row.id) return;
+    this.ui.confirmDelete(`Supprimer l’achat client ${row.reference} ?`, () => {
+      this.api.deletePurchase(row.id!).subscribe({
+        next: () => {
+          this.ui.success('Achat supprimé', 'L’achat client a été supprimé.');
+          this.loadData();
+          if (this.editingId === row.id) this.resetForm();
+        }
+      });
     });
   }
 

@@ -252,8 +252,7 @@ export class AdvancesComponent implements OnInit {
         this.ui.success(this.editingId ? 'Acompte modifié' : 'Acompte ajouté', 'L’acompte a été enregistré avec succès.');
         this.resetForm();
         this.loadData();
-      },
-      error: () => this.ui.error('Enregistrement impossible', 'L’acompte n’a pas pu être enregistré.')
+      }
     });
   }
 
@@ -270,6 +269,19 @@ export class AdvancesComponent implements OnInit {
       attachmentUrl: advance.attachmentUrl ?? '',
       notes: advance.notes ?? '',
       apartmentId: advance.apartment?.id ?? advance.apartmentId ?? null
+    });
+  }
+
+  remove(row: ClientAdvance): void {
+    if (!row.id) return;
+    this.ui.confirmDelete(`Supprimer l’acompte ${row.reference} ?`, () => {
+      this.api.deleteAdvance(row.id!).subscribe({
+        next: () => {
+          this.ui.success('Acompte supprimé', 'L’acompte a été supprimé.');
+          this.loadData();
+          if (this.editingId === row.id) this.resetForm();
+        }
+      });
     });
   }
 

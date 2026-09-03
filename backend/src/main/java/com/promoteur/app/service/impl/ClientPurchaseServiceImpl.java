@@ -47,7 +47,8 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
     @Override
     public ClientPurchase findById(final Long id) {
         final ClientPurchase purchase = this.clientPurchaseRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Client purchase not found with id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        this.messageService.get("error.notFound.purchase", String.valueOf(id))));
         return this.enrichPurchase(purchase);
     }
 
@@ -94,26 +95,32 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
 
     private void map(final ClientPurchase purchase, final ClientPurchaseRequest request) {
         final Client client = this.clientRepository.findById(request.getClientId())
-                .orElseThrow(() -> new ResourceNotFoundException("Client not found with id " + request.getClientId()));
+                .orElseThrow(() -> new ResourceNotFoundException(this.messageService.get(
+                        "error.notFound.client", String.valueOf(request.getClientId()))));
         final Project project = this.projectRepository.findById(request.getProjectId())
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id " + request.getProjectId()));
+                .orElseThrow(() -> new ResourceNotFoundException(this.messageService.get(
+                        "error.notFound.project", String.valueOf(request.getProjectId()))));
         // Verrou d'ecriture sur la ligne appartement : le controle d'unicite du contrat et le
         // controle de plafond ci-dessous ne peuvent plus etre doubles (CONC-01).
         final Apartment apartment = this.apartmentRepository.findByIdForUpdate(request.getApartmentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Apartment not found with id " + request.getApartmentId()));
+                .orElseThrow(() -> new ResourceNotFoundException(this.messageService.get(
+                        "error.notFound.apartment", String.valueOf(request.getApartmentId()))));
         final BigDecimal paidAmount = this.normalize(request.getPaidAmount());
 
         if (client.getProject() == null || !project.getId().equals(client.getProject().getId())) {
-            throw new ResourceNotFoundException("Client " + client.getId() + " does not belong to project " + project.getId());
+            throw new ResourceNotFoundException(this.messageService.get("error.client.notInProject",
+                    client.getFullName(), project.getName()));
         }
         if (apartment.getProject() == null || !project.getId().equals(apartment.getProject().getId())) {
-            throw new ResourceNotFoundException("Apartment " + apartment.getId() + " does not belong to project " + project.getId());
+            throw new ResourceNotFoundException(this.messageService.get("error.apartment.notInProject",
+                    apartment.getApartmentNumber(), project.getName()));
         }
         if (apartment.getAcquirer() != null && !client.getId().equals(apartment.getAcquirer().getId())) {
-            throw new ResourceNotFoundException("Apartment " + apartment.getApartmentNumber() + " is already assigned to another client");
+            throw new ResourceNotFoundException(this.messageService.get(
+                    "error.apartment.assignedToAnotherClient", apartment.getApartmentNumber()));
         }
 
-        this.validateUniqueApartmentPurchase(purchase.getId(), apartment.getId());
+        this.validateUniqueApartmentPurchase(purchase.getId(), apartment.getId(), apartment.getApartmentNumber());
         this.validateCollectedAmount(request.getTotalAmount(), paidAmount, this.sumAdvanceAmount(apartment.getId()), apartment.getApartmentNumber());
 
         apartment.setAcquirer(client);
@@ -132,10 +139,12 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
         purchase.setApartment(apartment);
     }
 
-    private void validateUniqueApartmentPurchase(final Long currentPurchaseId, final Long apartmentId) {
+    private void validateUniqueApartmentPurchase(final Long currentPurchaseId, final Long apartmentId,
+                                                final String apartmentNumber) {
         final ClientPurchase existingPurchase = this.clientPurchaseRepository.findByApartmentId(apartmentId).orElse(null);
         if (existingPurchase != null && (currentPurchaseId == null || !existingPurchase.getId().equals(currentPurchaseId))) {
-            throw new IllegalArgumentException("This apartment already has a client purchase");
+            throw new IllegalArgumentException(
+                    this.messageService.get("validation.purchase.apartmentAlreadySold", apartmentNumber));
         }
     }
 
@@ -184,7 +193,8 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
     private void validateCollectedAmount(final BigDecimal totalAmount, final BigDecimal paidAmount, final BigDecimal advanceAmount, final String apartmentNumber) {
         final BigDecimal collectedAmount = paidAmount.add(advanceAmount);
         if (collectedAmount.compareTo(totalAmount) > 0) {
-            throw new IllegalArgumentException("Collected amount exceeds declared amount for apartment " + apartmentNumber);
+            throw new IllegalArgumentException(this.messageService.get("validation.purchase.exceedsTotal",
+                    apartmentNumber, collectedAmount, totalAmount));
         }
     }
 

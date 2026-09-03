@@ -104,8 +104,7 @@ export class SupplierInvoicesComponent implements OnInit {
         this.ui.success(this.editingId ? 'Facture modifiée' : 'Facture ajoutée', 'La facture fournisseur a été enregistrée.');
         this.resetForm();
         this.loadData();
-      },
-      error: () => this.ui.error('Enregistrement impossible', 'La facture fournisseur n’a pas pu être enregistrée.')
+      }
     });
   }
 
@@ -133,8 +132,7 @@ export class SupplierInvoicesComponent implements OnInit {
           this.ui.success('Facture supprimée', 'La facture fournisseur a été supprimée.');
           this.loadData();
           if (this.editingId === row.id) this.resetForm();
-        },
-        error: () => this.ui.error('Suppression impossible', 'La facture fournisseur n’a pas pu être supprimée.')
+        }
       });
     });
   }
