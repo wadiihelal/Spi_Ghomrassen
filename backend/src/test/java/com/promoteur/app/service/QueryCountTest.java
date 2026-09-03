@@ -1,0 +1,177 @@
+package com.promoteur.app.service;
+
+import com.promoteur.app.dto.ApartmentRequest;
+import com.promoteur.app.dto.ClientAdvanceRequest;
+import com.promoteur.app.dto.ClientPurchaseRequest;
+import com.promoteur.app.dto.ClientRequest;
+import com.promoteur.app.dto.ProjectRequest;
+import com.promoteur.app.dto.report.ReportFilter;
+import com.promoteur.app.dto.response.ApartmentResponse;
+import com.promoteur.app.dto.response.ClientResponse;
+import com.promoteur.app.dto.response.ProjectResponse;
+import com.promoteur.app.enums.ProjectStatus;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Guards the query counts fixed in PERF-01 and PERF-03. Before this work, listing sale
+ * contracts fetched three associations per row and ran one advance lookup per row, and the
+ * client statement report ran three queries per client.
+ */
+@SpringBootTest
+@ActiveProfiles("test")
+@TestPropertySource(properties = {
+        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_queries;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
+        "spring.jpa.properties.hibernate.generate_statistics=true"
+})
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class QueryCountTest {
+
+    private static final int CONTRACTS = 25;
+
+    private final AtomicInteger sequence = new AtomicInteger();
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Autowired
+    private ClientPurchaseService clientPurchaseService;
+    @Autowired
+    private ClientAdvanceService clientAdvanceService;
+    @Autowired
+    private ApartmentService apartmentService;
+    @Autowired
+    private ClientService clientService;
+    @Autowired
+    private ProjectService projectService;
+    @Autowired
+    private ReportService reportService;
+
+    private ProjectResponse project;
+
+    @BeforeAll
+    void seedContracts() {
+        this.project = this.createProject();
+        for (int index = 0; index < CONTRACTS; index++) {
+            ClientResponse client = this.createClient();
+            ApartmentResponse apartment = this.createApartment(client);
+            this.createPurchase(client, apartment);
+            this.createAdvance(apartment);
+        }
+    }
+
+    @Test
+    @DisplayName("listing a page of 100 sale contracts stays under five queries")
+    void listingAPageOfContractsStaysUnderFiveQueries() {
+        long before = this.statementCount();
+
+        assertThat(this.clientPurchaseService.findAll(PageRequest.of(0, 100)).getContent())
+                .hasSize(CONTRACTS);
+
+        long issued = this.statementCount() - before;
+        assertThat(issued).as("queries for a page of %d contracts", CONTRACTS).isLessThan(5);
+    }
+
+    @Test
+    @DisplayName("the client statement report is a single query")
+    void theClientStatementReportIsASingleQuery() {
+        long before = this.statementCount();
+
+        assertThat(this.reportService.clientStatements(ReportFilter.unrestricted(), PageRequest.of(0, 200))
+                .getContent()).hasSize(CONTRACTS);
+
+        assertThat(this.statementCount() - before).as("queries for the statement report").isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("expense aggregates are grouped by the database, not in Java")
+    void expenseAggregatesAreGroupedByTheDatabase() {
+        long before = this.statementCount();
+
+        this.reportService.expensesByCategory(ReportFilter.unrestricted(), PageRequest.of(0, 200));
+
+        assertThat(this.statementCount() - before).as("queries for the category aggregate").isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("listing apartments is one query despite two lazy associations")
+    void listingApartmentsIsOneQuery() {
+        long before = this.statementCount();
+
+        assertThat(this.apartmentService.findAll(PageRequest.of(0, 100)).getContent()).hasSize(CONTRACTS);
+
+        assertThat(this.statementCount() - before).as("queries for a page of apartments").isEqualTo(1);
+    }
+
+    private long statementCount() {
+        return this.statistics().getPrepareStatementCount();
+    }
+
+    private Statistics statistics() {
+        return this.entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+    }
+
+    private ProjectResponse createProject() {
+        ProjectRequest request = new ProjectRequest();
+        request.setCode("QRY-PRJ");
+        request.setName("Projet requêtes");
+        request.setStatus(ProjectStatus.IN_PROGRESS);
+        return this.projectService.create(request);
+    }
+
+    private ClientResponse createClient() {
+        ClientRequest request = new ClientRequest();
+        request.setFullName("Acquéreur " + this.sequence.incrementAndGet());
+        request.setProjectId(this.project.id());
+        return this.clientService.create(request);
+    }
+
+    private ApartmentResponse createApartment(ClientResponse client) {
+        ApartmentRequest request = new ApartmentRequest();
+        request.setApartmentNumber("Q-" + this.sequence.incrementAndGet());
+        request.setApartmentType("S+2");
+        request.setTotalSurface(new BigDecimal("100.000"));
+        request.setTotalSalePrice(new BigDecimal("100000.000"));
+        request.setProjectId(this.project.id());
+        request.setAcquirerId(client.id());
+        return this.apartmentService.create(request);
+    }
+
+    private void createPurchase(ClientResponse client, ApartmentResponse apartment) {
+        ClientPurchaseRequest request = new ClientPurchaseRequest();
+        request.setReference("PUR-QRY-" + this.sequence.incrementAndGet());
+        request.setPurchaseDate(LocalDate.of(2026, 9, 1));
+        request.setAssetDescription("Appartement " + apartment.apartmentNumber());
+        request.setTotalAmount(new BigDecimal("100000.000"));
+        request.setPaidAmount(new BigDecimal("10000.000"));
+        request.setClientId(client.id());
+        request.setProjectId(this.project.id());
+        request.setApartmentId(apartment.id());
+        this.clientPurchaseService.create(request);
+    }
+
+    private void createAdvance(ApartmentResponse apartment) {
+        ClientAdvanceRequest request = new ClientAdvanceRequest();
+        request.setAdvanceDate(LocalDate.of(2026, 9, 1));
+        request.setAmount(new BigDecimal("5000.000"));
+        request.setApartmentId(apartment.id());
+        this.clientAdvanceService.create(request);
+    }
+}

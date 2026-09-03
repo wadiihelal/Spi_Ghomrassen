@@ -2,6 +2,7 @@ package com.promoteur.app.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -31,7 +32,7 @@ public class Supplier extends BaseEntity {
     @Column(precision = 5, scale = 4)
     private BigDecimal defaultVatRate;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "type_id")
     private SupplierTypeOption type;
 

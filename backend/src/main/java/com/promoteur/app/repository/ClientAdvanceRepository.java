@@ -1,27 +1,39 @@
 package com.promoteur.app.repository;
 
+import com.promoteur.app.dto.report.CountAndTotal;
+import com.promoteur.app.dto.ApartmentAdvanceTotal;
 import com.promoteur.app.entity.ClientAdvance;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface ClientAdvanceRepository extends JpaRepository<ClientAdvance, Long> {
+    /** One query for the list endpoint: the associations the response needs are joined. */
+    @EntityGraph(attributePaths = {"client", "project", "apartment"})
+    @Override
+    Page<ClientAdvance> findAll(Pageable pageable);
+
     List<ClientAdvance> findByClientId(Long clientId);
 
     List<ClientAdvance> findByProjectId(Long projectId);
 
     List<ClientAdvance> findByApartmentId(Long apartmentId);
 
+    @EntityGraph(attributePaths = {"client", "project", "apartment"})
     Page<ClientAdvance> findByClientId(Long clientId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"client", "project", "apartment"})
     Page<ClientAdvance> findByProjectId(Long projectId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"client", "project", "apartment"})
     Page<ClientAdvance> findByApartmentId(Long apartmentId, Pageable pageable);
 
     Optional<ClientAdvance> findByReference(String reference);
@@ -41,4 +53,29 @@ public interface ClientAdvanceRepository extends JpaRepository<ClientAdvance, Lo
                                       @Param("projectId") Long projectId,
                                       @Param("from") LocalDate from,
                                       @Param("to") LocalDate to);
+
+    /**
+     * Advance totals for a set of apartments, in one query. Replaces the per-row lookup that
+     * made every page of sale contracts issue an extra query per line (PERF-03).
+     */
+    @Query("""
+            select new com.promoteur.app.dto.ApartmentAdvanceTotal(a.apartment.id, sum(a.amount))
+            from ClientAdvance a
+            where a.apartment.id in :apartmentIds
+            group by a.apartment.id
+            """)
+    List<ApartmentAdvanceTotal> sumAmountByApartmentIds(@Param("apartmentIds") Collection<Long> apartmentIds);
+
+    /** Advance count and total for the dashboard summary, in one query. */
+    @Query("""
+            select new com.promoteur.app.dto.report.CountAndTotal(count(a), coalesce(sum(a.amount), 0))
+            from ClientAdvance a
+            where (:projectId is null or a.project.id = :projectId)
+              and (:from is null or a.advanceDate >= :from)
+              and (:to is null or a.advanceDate <= :to)
+            """)
+    CountAndTotal countAndTotal(@Param("projectId") Long projectId,
+                                @Param("from") LocalDate from,
+                                @Param("to") LocalDate to);
+
 }

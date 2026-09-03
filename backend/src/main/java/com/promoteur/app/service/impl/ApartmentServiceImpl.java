@@ -32,11 +32,13 @@ public class ApartmentServiceImpl implements ApartmentService {
     private final ApartmentMapper apartmentMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ApartmentResponse> findAll(final Pageable pageable) {
         return this.apartmentRepository.findAll(pageable).map(this.apartmentMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ApartmentResponse findById(final Long id) {
         return this.apartmentMapper.toResponse(this.entity(id));
     }
@@ -77,6 +79,7 @@ public class ApartmentServiceImpl implements ApartmentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ApartmentResponse> findByProject(final Long projectId, final Pageable pageable) {
         return this.apartmentRepository.findByProjectId(projectId, pageable).map(this.apartmentMapper::toResponse);
     }

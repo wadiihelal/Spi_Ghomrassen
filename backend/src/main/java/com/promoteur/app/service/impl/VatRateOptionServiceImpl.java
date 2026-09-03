@@ -21,6 +21,7 @@ public class VatRateOptionServiceImpl implements VatRateOptionService {
     private final VatRateOptionMapper vatRateOptionMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<VatRateOptionResponse> findAll(final Pageable pageable) {
         final Pageable sorted = pageable.getSort().isSorted()
                 ? pageable

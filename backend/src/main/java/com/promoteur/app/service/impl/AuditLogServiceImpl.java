@@ -46,6 +46,7 @@ public class AuditLogServiceImpl implements AuditLogService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<AuditLogResponse> findByEntity(final String entityType, final Long entityId, final Pageable pageable) {
         return this.auditLogRepository.findByEntityTypeAndEntityIdOrderByCreatedAtDesc(entityType, entityId, pageable)
                 .map(this.auditLogMapper::toResponse);

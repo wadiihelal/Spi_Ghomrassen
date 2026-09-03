@@ -26,11 +26,13 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectMapper projectMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ProjectResponse> findAll(final Pageable pageable) {
         return this.projectRepository.findAll(pageable).map(this.projectMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProjectResponse findById(final Long id) {
         return this.projectMapper.toResponse(this.entity(id));
     }
@@ -81,6 +83,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProjectResponse findActiveContext() {
         return this.projectMapper.toResponse(this.projectRepository.findFirstByActiveContextTrue()
                 .orElseThrow(() -> new ResourceNotFoundException("No active project context configured")));

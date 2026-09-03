@@ -12,6 +12,8 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.promoteur.app.dto.report.AmountByLabelDto;
 import com.promoteur.app.dto.report.ClientStatementDto;
+import com.promoteur.app.dto.report.CountAndTotal;
+import com.promoteur.app.dto.report.PurchaseSummary;
 import com.promoteur.app.dto.report.ReportFilter;
 import com.promoteur.app.dto.report.ReportScope;
 import com.promoteur.app.entity.Client;
@@ -36,9 +38,10 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -49,9 +52,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
+// Reporting only ever reads (ARCH-03).
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
 
@@ -130,99 +134,55 @@ public class ReportServiceImpl implements ReportService {
         return start.withDayOfMonth(start.lengthOfMonth());
     }
 
-    private List<Expense> scopedExpenses(ReportScope scope) {
-        return expenseRepository.findForReport(scope.projectId(), scope.dateFrom(), scope.dateTo());
-    }
-
-    private List<ClientAdvance> scopedAdvances(ReportScope scope, Long clientId) {
-        return clientAdvanceRepository.findForReport(clientId, scope.projectId(), scope.dateFrom(), scope.dateTo());
-    }
-
-    private List<ClientPurchase> scopedPurchases(ReportScope scope, Long clientId) {
-        return clientPurchaseRepository.findForReport(clientId, scope.projectId(), scope.dateFrom(), scope.dateTo());
-    }
-
     @Override
     public Page<AmountByLabelDto> expensesByCategory(ReportFilter filter, Pageable pageable) {
-        return toPage(expensesByCategoryList(resolveScope(filter)), pageable);
-    }
-
-    private List<AmountByLabelDto> expensesByCategoryList(ReportScope scope) {
-        return scopedExpenses(scope).stream()
-                .collect(Collectors.groupingBy(e -> e.getCategory().getName(),
-                        Collectors.mapping(e -> safe(e.getAmountTtc()),
-                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
-                .entrySet().stream()
-                .map(e -> new AmountByLabelDto(e.getKey(), e.getValue()))
-                .sorted((a, b) -> safe(b.getAmount()).compareTo(safe(a.getAmount())))
-                .toList();
+        ReportScope scope = resolveScope(filter);
+        return expenseRepository.sumByCategory(scope.projectId(), scope.dateFrom(), scope.dateTo(), pageable);
     }
 
     @Override
     public Page<AmountByLabelDto> expensesByProject(ReportFilter filter, Pageable pageable) {
-        return toPage(expensesByProjectList(resolveScope(filter)), pageable);
-    }
-
-    private List<AmountByLabelDto> expensesByProjectList(ReportScope scope) {
-        return scopedExpenses(scope).stream()
-                .collect(Collectors.groupingBy(e -> e.getProject().getName(),
-                        Collectors.mapping(e -> safe(e.getAmountTtc()),
-                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
-                .entrySet().stream()
-                .map(e -> new AmountByLabelDto(e.getKey(), e.getValue()))
-                .sorted((a, b) -> safe(b.getAmount()).compareTo(safe(a.getAmount())))
-                .toList();
-    }
-
-    @Override
-    public Page<ClientStatementDto> clientStatements(ReportFilter filter, Pageable pageable) {
-        return toPage(clientStatementsList(resolveScope(filter)), pageable);
+        ReportScope scope = resolveScope(filter);
+        return expenseRepository.sumByProject(scope.projectId(), scope.dateFrom(), scope.dateTo(), pageable);
     }
 
     /**
-     * Statements for the clients in scope. When a project is resolved, only the clients attached
-     * to that project are listed, and their figures cover that project and period only.
+     * Statements for the clients in scope, aggregated and paginated by the database. When a
+     * project is resolved, only the clients attached to that project are listed, and their
+     * figures cover that project and period only.
      */
-    private List<ClientStatementDto> clientStatementsList(ReportScope scope) {
-        List<Client> clients = scope.projectId() == null
-                ? clientRepository.findAll()
-                : clientRepository.findByProjectId(scope.projectId());
-        return clients.stream()
-                .map(client -> buildStatement(client.getId(), client.getFullName(), scope))
-                .sorted((a, b) -> safe(b.getRemainingToPay()).compareTo(safe(a.getRemainingToPay())))
-                .toList();
+    @Override
+    public Page<ClientStatementDto> clientStatements(ReportFilter filter, Pageable pageable) {
+        return statements(null, resolveScope(filter), pageable);
     }
 
     @Override
     public ClientStatementDto clientStatement(Long clientId, ReportFilter filter) {
-        Client client = clientRepository.findById(clientId)
+        return statements(clientId, resolveScope(filter), PageRequest.of(0, 1)).getContent().stream()
+                .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id " + clientId));
-        return buildStatement(client.getId(), client.getFullName(), resolveScope(filter));
     }
 
+    private Page<ClientStatementDto> statements(Long clientId, ReportScope scope, Pageable pageable) {
+        return clientRepository.statements(clientId, scope.projectId(), scope.dateFrom(), scope.dateTo(), pageable);
+    }
+
+    /**
+     * Dashboard summary. Six aggregate queries rather than one: JPQL has no FROM-less select, so
+     * a single-row projection would mean a native query and give up PostgreSQL/H2 portability
+     * for five saved round trips. What matters for PERF-01 is that the count is constant and
+     * nothing is grouped in Java any more.
+     */
     @Override
     public Map<String, Object> globalSummary(ReportFilter filter) {
         ReportScope scope = resolveScope(filter);
 
-        List<Expense> expenses = scopedExpenses(scope);
-        List<ClientAdvance> advances = scopedAdvances(scope, null);
-        List<ClientPurchase> purchases = scopedPurchases(scope, null);
+        CountAndTotal expenses = expenseRepository.countAndTotal(scope.projectId(), scope.dateFrom(), scope.dateTo());
+        CountAndTotal advances = clientAdvanceRepository.countAndTotal(scope.projectId(), scope.dateFrom(), scope.dateTo());
+        PurchaseSummary purchases = clientPurchaseRepository.summary(scope.projectId(), scope.dateFrom(), scope.dateTo());
 
-        BigDecimal totalExpenses = expenses.stream()
-                .map(e -> safe(e.getAmountTtc()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalCollected = advances.stream()
-                .map(a -> safe(a.getAmount()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        totalCollected = totalCollected.add(purchases.stream()
-                .map(p -> safe(p.getPaidAmount()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        BigDecimal totalPurchases = purchases.stream()
-                .map(p -> safe(p.getTotalAmount()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalCollected = safe(advances.total()).add(safe(purchases.totalPaidDirectly()));
+        BigDecimal totalPurchases = safe(purchases.totalContracted());
 
         Map<String, Object> result = new HashMap<>();
         result.put("projectId", scope.projectId());
@@ -230,14 +190,14 @@ public class ReportServiceImpl implements ReportService {
         result.put("periodLabel", scope.periodLabel());
         result.put("clients", scope.projectId() == null
                 ? clientRepository.count()
-                : (long) clientRepository.findByProjectId(scope.projectId()).size());
+                : clientRepository.countByProjectId(scope.projectId()));
         result.put("projects", scope.projectId() == null ? projectRepository.count() : 1L);
         // Les fournisseurs ne sont pas rattaches a un projet : le compteur reste global.
         result.put("suppliers", supplierRepository.count());
-        result.put("expenses", (long) expenses.size());
-        result.put("clientAdvances", (long) advances.size());
-        result.put("clientPurchases", (long) purchases.size());
-        result.put("totalExpenses", totalExpenses);
+        result.put("expenses", expenses.count());
+        result.put("clientAdvances", advances.count());
+        result.put("clientPurchases", purchases.count());
+        result.put("totalExpenses", safe(expenses.total()));
         result.put("totalAdvances", totalCollected);
         result.put("totalPurchases", totalPurchases);
         result.put("totalRemainingFromClients", totalPurchases.subtract(totalCollected));
@@ -248,9 +208,9 @@ public class ReportServiceImpl implements ReportService {
     public byte[] exportReportsExcel(ReportFilter filter) {
         ReportScope scope = resolveScope(filter);
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            List<AmountByLabelDto> byCategory = expensesByCategoryList(scope);
-            List<AmountByLabelDto> byProject = expensesByProjectList(scope);
-            List<ClientStatementDto> statements = clientStatementsList(scope);
+            List<AmountByLabelDto> byCategory = allByCategory(scope);
+            List<AmountByLabelDto> byProject = allByProject(scope);
+            List<ClientStatementDto> statements = allStatements(scope);
 
             CellStyle headerStyle = workbook.createCellStyle();
             org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont();
@@ -272,9 +232,9 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public byte[] exportReportsPdf(ReportFilter filter) {
         ReportScope scope = resolveScope(filter);
-        List<AmountByLabelDto> byCategory = expensesByCategoryList(scope);
-        List<AmountByLabelDto> byProject = expensesByProjectList(scope);
-        List<ClientStatementDto> statements = clientStatementsList(scope);
+        List<AmountByLabelDto> byCategory = allByCategory(scope);
+        List<AmountByLabelDto> byProject = allByProject(scope);
+        List<ClientStatementDto> statements = allStatements(scope);
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4.rotate(), 24, 24, 24, 24);
@@ -384,13 +344,19 @@ public class ReportServiceImpl implements ReportService {
         return cell;
     }
 
-    private <T> Page<T> toPage(List<T> items, Pageable pageable) {
-        int start = (int) pageable.getOffset();
-        int end = Math.min(start + pageable.getPageSize(), items.size());
-        if (start >= items.size()) {
-            return new PageImpl<>(List.of(), pageable, items.size());
-        }
-        return new PageImpl<>(items.subList(start, end), pageable, items.size());
+    /** A whole export is not paginated: the aggregate is read in one page. */
+    private List<AmountByLabelDto> allByCategory(ReportScope scope) {
+        return expenseRepository.sumByCategory(scope.projectId(), scope.dateFrom(), scope.dateTo(),
+                Pageable.unpaged()).getContent();
+    }
+
+    private List<AmountByLabelDto> allByProject(ReportScope scope) {
+        return expenseRepository.sumByProject(scope.projectId(), scope.dateFrom(), scope.dateTo(),
+                Pageable.unpaged()).getContent();
+    }
+
+    private List<ClientStatementDto> allStatements(ReportScope scope) {
+        return statements(null, scope, Pageable.unpaged()).getContent();
     }
 
     private void writeCell(Row row, int columnIndex, String value, CellStyle style) {
@@ -405,30 +371,6 @@ public class ReportServiceImpl implements ReportService {
         for (int i = 0; i < columns; i++) {
             sheet.autoSizeColumn(i);
         }
-    }
-
-    private ClientStatementDto buildStatement(Long clientId, String clientName, ReportScope scope) {
-        List<ClientPurchase> purchases = scopedPurchases(scope, clientId);
-
-        BigDecimal totalPurchases = purchases.stream()
-                .map(p -> safe(p.getTotalAmount()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalCollected = scopedAdvances(scope, clientId).stream()
-                .map(a -> safe(a.getAmount()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        totalCollected = totalCollected.add(purchases.stream()
-                .map(p -> safe(p.getPaidAmount()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        return ClientStatementDto.builder()
-                .clientId(clientId)
-                .clientName(clientName)
-                .totalPurchases(totalPurchases)
-                .totalAdvances(totalCollected)
-                .remainingToPay(totalPurchases.subtract(totalCollected))
-                .build();
     }
 
     private BigDecimal safe(BigDecimal value) {

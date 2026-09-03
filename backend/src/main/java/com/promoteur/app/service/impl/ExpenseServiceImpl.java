@@ -42,11 +42,13 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final ReferenceGeneratorService referenceGeneratorService;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ExpenseResponse> findAll(final Pageable pageable) {
         return this.expenseRepository.findAll(pageable).map(this.expenseMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ExpenseResponse findById(final Long id) {
         return this.expenseMapper.toResponse(this.entity(id));
     }
@@ -89,11 +91,13 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ExpenseResponse> findByCategory(final Long categoryId, final Pageable pageable) {
         return this.expenseRepository.findByCategoryId(categoryId, pageable).map(this.expenseMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ExpenseResponse> findByProject(final Long projectId, final Pageable pageable) {
         return this.expenseRepository.findByProjectId(projectId, pageable).map(this.expenseMapper::toResponse);
     }

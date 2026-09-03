@@ -26,11 +26,13 @@ public class SupplierTypeOptionServiceImpl implements SupplierTypeOptionService 
     private final SupplierTypeOptionMapper supplierTypeOptionMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<SupplierTypeOptionResponse> findAll(final Pageable pageable) {
         return this.supplierTypeOptionRepository.findAll(pageable).map(this.supplierTypeOptionMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public SupplierTypeOptionResponse findById(final Long id) {
         return this.supplierTypeOptionMapper.toResponse(this.entity(id));
     }

@@ -39,11 +39,13 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
     private final ReferenceGeneratorService referenceGeneratorService;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ClientAdvanceResponse> findAll(final Pageable pageable) {
         return this.clientAdvanceRepository.findAll(pageable).map(this.clientAdvanceMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ClientAdvanceResponse findById(final Long id) {
         return this.clientAdvanceMapper.toResponse(this.entity(id));
     }
@@ -87,11 +89,13 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ClientAdvanceResponse> findByClient(final Long clientId, final Pageable pageable) {
         return this.clientAdvanceRepository.findByClientId(clientId, pageable).map(this.clientAdvanceMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ClientAdvanceResponse> findByProject(final Long projectId, final Pageable pageable) {
         return this.clientAdvanceRepository.findByProjectId(projectId, pageable).map(this.clientAdvanceMapper::toResponse);
     }

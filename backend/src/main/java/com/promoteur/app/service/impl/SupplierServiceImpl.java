@@ -29,11 +29,13 @@ public class SupplierServiceImpl implements SupplierService {
     private final SupplierMapper supplierMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<SupplierResponse> findAll(final Pageable pageable) {
         return this.supplierRepository.findAll(pageable).map(this.supplierMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public SupplierResponse findById(final Long id) {
         return this.supplierMapper.toResponse(this.entity(id));
     }

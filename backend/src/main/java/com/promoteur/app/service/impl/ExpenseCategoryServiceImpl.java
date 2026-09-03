@@ -26,11 +26,13 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
     private final ExpenseCategoryMapper expenseCategoryMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ExpenseCategoryResponse> findAll(final Pageable pageable) {
         return this.expenseCategoryRepository.findAll(pageable).map(this.expenseCategoryMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ExpenseCategoryResponse findById(final Long id) {
         return this.expenseCategoryMapper.toResponse(this.entity(id));
     }

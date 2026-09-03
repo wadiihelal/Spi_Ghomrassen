@@ -1,5 +1,6 @@
 package com.promoteur.app.service.impl;
 
+import com.promoteur.app.dto.ApartmentAdvanceTotal;
 import com.promoteur.app.dto.ClientPurchaseRequest;
 import com.promoteur.app.dto.PurchaseTotals;
 import com.promoteur.app.dto.response.ClientPurchaseResponse;
@@ -27,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -44,11 +48,13 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
     private final ClientPurchaseMapper clientPurchaseMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ClientPurchaseResponse> findAll(final Pageable pageable) {
-        return this.clientPurchaseRepository.findAll(pageable).map(this::toResponse);
+        return this.toResponsePage(this.clientPurchaseRepository.findAll(pageable));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ClientPurchaseResponse findById(final Long id) {
         return this.toResponse(this.entity(id));
     }
@@ -90,13 +96,15 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ClientPurchaseResponse> findByClient(final Long clientId, final Pageable pageable) {
-        return this.clientPurchaseRepository.findByClientId(clientId, pageable).map(this::toResponse);
+        return this.toResponsePage(this.clientPurchaseRepository.findByClientId(clientId, pageable));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ClientPurchaseResponse> findByProject(final Long projectId, final Pageable pageable) {
-        return this.clientPurchaseRepository.findByProjectId(projectId, pageable).map(this::toResponse);
+        return this.toResponsePage(this.clientPurchaseRepository.findByProjectId(projectId, pageable));
     }
 
     private void map(final ClientPurchase purchase, final ClientPurchaseRequest request) {
@@ -155,13 +163,42 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
     }
 
     /**
-     * Maps a contract to its response, deriving the collected/remaining/percentage figures. Read
-     * only: nothing is written back to the entity, so a GET no longer flushes an UPDATE
+     * Maps a whole page, resolving every advance total in a single grouped query instead of one
+     * query per row (PERF-03).
+     */
+    private Page<ClientPurchaseResponse> toResponsePage(final Page<ClientPurchase> page) {
+        final List<Long> apartmentIds = page.getContent().stream()
+                .map(purchase -> purchase.getApartment() == null ? null : purchase.getApartment().getId())
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        final Map<Long, BigDecimal> advancesByApartment = apartmentIds.isEmpty()
+                ? Map.of()
+                : this.clientAdvanceRepository.sumAmountByApartmentIds(apartmentIds).stream()
+                        .collect(Collectors.toMap(ApartmentAdvanceTotal::apartmentId,
+                                ApartmentAdvanceTotal::totalAmount));
+
+        return page.map(purchase -> this.toResponse(purchase, this.advanceAmountFor(purchase, advancesByApartment)));
+    }
+
+    private BigDecimal advanceAmountFor(final ClientPurchase purchase, final Map<Long, BigDecimal> advances) {
+        final Long apartmentId = purchase.getApartment() == null ? null : purchase.getApartment().getId();
+        return apartmentId == null ? BigDecimal.ZERO : advances.getOrDefault(apartmentId, BigDecimal.ZERO);
+    }
+
+    /** Single-row mapping: the advance total is fetched for that apartment alone. */
+    private ClientPurchaseResponse toResponse(final ClientPurchase purchase) {
+        final Long apartmentId = purchase.getApartment() == null ? null : purchase.getApartment().getId();
+        return this.toResponse(purchase,
+                apartmentId == null ? BigDecimal.ZERO : this.sumAdvanceAmount(apartmentId));
+    }
+
+    /**
+     * Read only: nothing is written back to the entity, so a GET no longer flushes an UPDATE
      * (ARCH-01, ARCH-03).
      */
-    private ClientPurchaseResponse toResponse(final ClientPurchase purchase) {
-        final Long apartmentId = purchase.getApartment() != null ? purchase.getApartment().getId() : null;
-        final BigDecimal advanceAmount = apartmentId == null ? BigDecimal.ZERO : this.sumAdvanceAmount(apartmentId);
+    private ClientPurchaseResponse toResponse(final ClientPurchase purchase, final BigDecimal advanceAmount) {
         final PurchaseTotals totals = this.clientPurchaseCalculationService.totals(
                 purchase.getTotalAmount(), purchase.getPaidAmount(), advanceAmount);
         return this.clientPurchaseMapper.toResponse(purchase, totals);

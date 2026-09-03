@@ -29,11 +29,13 @@ public class ClientServiceImpl implements ClientService {
     private final ClientMapper clientMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ClientResponse> findAll(final Pageable pageable) {
         return this.clientRepository.findAll(pageable).map(this.clientMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ClientResponse findById(final Long id) {
         return this.clientMapper.toResponse(this.entity(id));
     }

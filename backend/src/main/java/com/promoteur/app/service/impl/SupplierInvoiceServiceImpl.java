@@ -36,11 +36,13 @@ public class SupplierInvoiceServiceImpl implements SupplierInvoiceService {
     private final VatCalculationService vatCalculationService;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<SupplierInvoiceResponse> findAll(final Pageable pageable) {
         return this.supplierInvoiceRepository.findAll(pageable).map(this.supplierInvoiceMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public SupplierInvoiceResponse findById(final Long id) {
         return this.supplierInvoiceMapper.toResponse(this.entity(id));
     }
@@ -81,11 +83,13 @@ public class SupplierInvoiceServiceImpl implements SupplierInvoiceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<SupplierInvoiceResponse> findByProject(final Long projectId, final Pageable pageable) {
         return this.supplierInvoiceRepository.findByProjectId(projectId, pageable).map(this.supplierInvoiceMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<SupplierInvoiceResponse> findBySupplier(final Long supplierId, final Pageable pageable) {
         return this.supplierInvoiceRepository.findBySupplierId(supplierId, pageable).map(this.supplierInvoiceMapper::toResponse);
     }
