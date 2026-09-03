@@ -14,6 +14,7 @@ import com.promoteur.app.repository.SupplierRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.ExpenseService;
 import com.promoteur.app.service.MessageService;
+import com.promoteur.app.service.ReferenceGeneratorService;
 import com.promoteur.app.service.VatCalculationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.UUID;
 
 @Service
 @Transactional
@@ -36,6 +36,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final AuditLogService auditLogService;
     private final MessageService messageService;
     private final VatCalculationService vatCalculationService;
+    private final ReferenceGeneratorService referenceGeneratorService;
 
     @Override
     public Page<Expense> findAll(final Pageable pageable) {
@@ -53,8 +54,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         final Expense expense = new Expense();
         this.map(expense, request);
 
-        Expense saved = this.expenseRepository.save(expense);
-        saved = this.finalizeGeneratedReference(saved, request.getReference());
+        final Expense saved = this.expenseRepository.save(expense);
 
         this.auditLogService.create("EXPENSE", saved.getId(), "CREATE",
                 this.messageService.get("audit.expense.created", saved.getDescription()));
@@ -106,7 +106,7 @@ public class ExpenseServiceImpl implements ExpenseService {
                     .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id " + request.getSupplierId()));
         }
 
-        expense.setReference(this.resolveReference(expense, request.getReference()));
+        expense.setReference(this.resolveReference(expense, request));
         expense.setExpenseDate(request.getExpenseDate());
         expense.setDescription(request.getDescription());
         expense.setAmountHt(request.getAmountHt());
@@ -123,34 +123,17 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setSupplier(supplier);
     }
 
-    private String resolveReference(final Expense expense, final String requestedReference) {
-        if (StringUtils.hasText(requestedReference)) {
-            return requestedReference.trim();
+    /**
+     * Resolves the reference before the first save (DATA-03): the caller's own reference when
+     * given, the existing one on an update, otherwise a freshly allocated sequential number.
+     */
+    private String resolveReference(final Expense expense, final ExpenseRequest request) {
+        if (StringUtils.hasText(request.getReference())) {
+            return request.getReference().trim();
         }
         if (StringUtils.hasText(expense.getReference())) {
             return expense.getReference();
         }
-        if (expense.getId() != null) {
-            return this.formatReference(expense.getId());
-        }
-        return "DEP-TMP-" + UUID.randomUUID();
-    }
-
-    private Expense finalizeGeneratedReference(final Expense expense, final String requestedReference) {
-        if (StringUtils.hasText(requestedReference)) {
-            return expense;
-        }
-
-        final String finalReference = this.formatReference(expense.getId());
-        if (finalReference.equals(expense.getReference())) {
-            return expense;
-        }
-
-        expense.setReference(finalReference);
-        return this.expenseRepository.save(expense);
-    }
-
-    private String formatReference(final Long id) {
-        return String.format("DEP-%05d", id);
+        return this.referenceGeneratorService.nextExpenseReference(request.getExpenseDate());
     }
 }

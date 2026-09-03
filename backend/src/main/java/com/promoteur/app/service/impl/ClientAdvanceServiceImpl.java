@@ -13,6 +13,7 @@ import com.promoteur.app.repository.ClientPurchaseRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.ClientAdvanceService;
 import com.promoteur.app.service.MessageService;
+import com.promoteur.app.service.ReferenceGeneratorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Service
 @Transactional
@@ -33,6 +33,7 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
     private final ApartmentRepository apartmentRepository;
     private final AuditLogService auditLogService;
     private final MessageService messageService;
+    private final ReferenceGeneratorService referenceGeneratorService;
 
     @Override
     public Page<ClientAdvance> findAll(final Pageable pageable) {
@@ -50,8 +51,7 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
         final ClientAdvance advance = new ClientAdvance();
         this.map(advance, request);
 
-        ClientAdvance saved = this.clientAdvanceRepository.save(advance);
-        saved = this.finalizeGeneratedReference(saved, request.getReference());
+        final ClientAdvance saved = this.clientAdvanceRepository.save(advance);
 
         this.auditLogService.create("ADVANCE", saved.getId(), "CREATE",
                 this.messageService.get("audit.advance.created", saved.getReference()));
@@ -103,7 +103,7 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
 
         this.validateAdvanceAmount(clientAdvance, apartment, request.getAmount());
 
-        clientAdvance.setReference(this.resolveReference(clientAdvance, request.getReference()));
+        clientAdvance.setReference(this.resolveReference(clientAdvance, request));
         clientAdvance.setAdvanceDate(request.getAdvanceDate());
         clientAdvance.setAmount(request.getAmount());
         clientAdvance.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : com.promoteur.app.enums.PaymentMethod.OTHER);
@@ -153,35 +153,18 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
         }
     }
 
-    private String resolveReference(final ClientAdvance clientAdvance, final String requestedReference) {
-        if (StringUtils.hasText(requestedReference)) {
-            return requestedReference.trim();
+    /**
+     * Resolves the reference before the first save (DATA-03): the caller's own reference when
+     * given, the existing one on an update, otherwise a freshly allocated sequential number.
+     */
+    private String resolveReference(final ClientAdvance clientAdvance, final ClientAdvanceRequest request) {
+        if (StringUtils.hasText(request.getReference())) {
+            return request.getReference().trim();
         }
         if (StringUtils.hasText(clientAdvance.getReference())) {
             return clientAdvance.getReference();
         }
-        if (clientAdvance.getId() != null) {
-            return this.formatReference(clientAdvance.getId());
-        }
-        return "ACC-TMP-" + UUID.randomUUID();
-    }
-
-    private ClientAdvance finalizeGeneratedReference(final ClientAdvance clientAdvance, final String requestedReference) {
-        if (StringUtils.hasText(requestedReference)) {
-            return clientAdvance;
-        }
-
-        final String finalReference = this.formatReference(clientAdvance.getId());
-        if (finalReference.equals(clientAdvance.getReference())) {
-            return clientAdvance;
-        }
-
-        clientAdvance.setReference(finalReference);
-        return this.clientAdvanceRepository.save(clientAdvance);
-    }
-
-    private String formatReference(final Long id) {
-        return String.format("ACC-%05d", id);
+        return this.referenceGeneratorService.nextAdvanceReference(request.getAdvanceDate());
     }
 
     private BigDecimal normalize(final BigDecimal value) {
