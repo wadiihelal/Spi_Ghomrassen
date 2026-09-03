@@ -1,7 +1,10 @@
 package com.promoteur.app.exception;
 
+import com.promoteur.app.service.MessageService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -17,9 +20,12 @@ import java.util.Map;
  * Centralized REST exception handling for the application API.
  */
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final MessageService messageService;
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(final ResourceNotFoundException ex) {
@@ -44,6 +50,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(final IllegalArgumentException ex) {
         return this.buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /**
+     * A concurrent write won the race (CONC-01). 409 tells the console to reload rather than
+     * silently overwriting the other operation.
+     */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, Object>> handleOptimisticLocking(final OptimisticLockingFailureException ex) {
+        LOGGER.warn("Optimistic locking conflict", ex);
+        return this.buildResponse(HttpStatus.CONFLICT, this.messageService.get("error.optimisticLock"));
     }
 
     @ExceptionHandler(Exception.class)

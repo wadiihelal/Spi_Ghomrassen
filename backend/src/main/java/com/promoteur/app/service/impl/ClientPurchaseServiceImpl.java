@@ -97,7 +97,9 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id " + request.getClientId()));
         final Project project = this.projectRepository.findById(request.getProjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id " + request.getProjectId()));
-        final Apartment apartment = this.apartmentRepository.findById(request.getApartmentId())
+        // Verrou d'ecriture sur la ligne appartement : le controle d'unicite du contrat et le
+        // controle de plafond ci-dessous ne peuvent plus etre doubles (CONC-01).
+        final Apartment apartment = this.apartmentRepository.findByIdForUpdate(request.getApartmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Apartment not found with id " + request.getApartmentId()));
         final BigDecimal paidAmount = this.normalize(request.getPaidAmount());
 

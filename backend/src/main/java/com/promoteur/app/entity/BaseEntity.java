@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -26,6 +27,14 @@ public abstract class BaseEntity {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    /**
+     * Optimistic lock (CONC-01). Two operations that read the same row and both write it can no
+     * longer silently overwrite one another: the second fails and the API answers 409.
+     */
+    @Version
+    @Column(nullable = false)
+    private Long version;
 
     @PrePersist
     void onCreate() {

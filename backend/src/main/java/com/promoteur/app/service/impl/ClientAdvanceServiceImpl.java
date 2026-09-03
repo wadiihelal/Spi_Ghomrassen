@@ -88,7 +88,9 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
     }
 
     private void map(final ClientAdvance clientAdvance, final ClientAdvanceRequest request) {
-        final Apartment apartment = this.apartmentRepository.findById(request.getApartmentId())
+        // Verrou d'ecriture sur la ligne appartement : le controle de plafond ci-dessous et
+        // l'enregistrement qui suit forment une seule operation atomique (CONC-01).
+        final Apartment apartment = this.apartmentRepository.findByIdForUpdate(request.getApartmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Apartment not found with id " + request.getApartmentId()));
         final Client client = apartment.getAcquirer();
         if (client == null) {
@@ -113,23 +115,40 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
         clientAdvance.setApartment(apartment);
     }
 
+    /**
+     * Caps the advance. With a sale contract the ceiling is the contract total; without one it
+     * is the apartment's declared sale price, and an apartment with neither cannot take an
+     * advance at all — before CALC-03 it took unlimited ones.
+     */
     private void validateAdvanceAmount(final ClientAdvance clientAdvance, final Apartment apartment, final BigDecimal requestedAmount) {
         final ClientPurchase purchase = this.clientPurchaseRepository.findByApartmentId(apartment.getId()).orElse(null);
-        if (purchase == null) {
-            return;
+
+        final BigDecimal ceiling;
+        final BigDecimal directPaidAmount;
+        if (purchase != null) {
+            ceiling = this.normalize(purchase.getTotalAmount());
+            directPaidAmount = this.normalize(purchase.getPaidAmount());
+        } else {
+            ceiling = this.normalize(apartment.getTotalSalePrice());
+            if (ceiling.signum() <= 0) {
+                throw new IllegalArgumentException(this.messageService.get(
+                        "validation.advance.noContractOrSalePrice", apartment.getApartmentNumber()));
+            }
+            directPaidAmount = BigDecimal.ZERO;
         }
 
+        // L'acompte en cours de modification est exclu de la somme des "autres" acomptes.
         final BigDecimal otherAdvancesAmount = this.clientAdvanceRepository.findByApartmentId(apartment.getId()).stream()
                 .filter(advance -> clientAdvance.getId() == null || !advance.getId().equals(clientAdvance.getId()))
                 .map(ClientAdvance::getAmount)
                 .map(this::normalize)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        final BigDecimal totalCollectedAmount = this.normalize(purchase.getPaidAmount())
+        final BigDecimal totalCollectedAmount = directPaidAmount
                 .add(otherAdvancesAmount)
                 .add(this.normalize(requestedAmount));
 
-        if (totalCollectedAmount.compareTo(this.normalize(purchase.getTotalAmount())) > 0) {
+        if (totalCollectedAmount.compareTo(ceiling) > 0) {
             throw new IllegalArgumentException("Collected amount exceeds declared amount for apartment " + apartment.getApartmentNumber());
         }
     }
