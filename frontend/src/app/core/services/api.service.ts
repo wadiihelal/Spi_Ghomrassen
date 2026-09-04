@@ -276,6 +276,25 @@ export class ApiService {
     return this.http.delete<void>(`${this.baseUrl}/client-advances/${id}`);
   }
 
+  // --- Printed documents (UX-06) --------------------------------------------
+
+  /**
+   * Address of a printable document. The document is a plain GET, so the browser's own PDF
+   * viewer opens it and offers to print or save: no blob juggling in the client.
+   */
+  receiptUrl(advanceId: number): string {
+    return `${this.baseUrl}/documents/advances/${advanceId}/receipt`;
+  }
+
+  clientStatementUrl(clientId: number): string {
+    return `${this.baseUrl}/documents/clients/${clientId}/statement`;
+  }
+
+  vatSummaryUrl(year: number, month: number, projectId?: number | null): string {
+    const scope = projectId === null || projectId === undefined ? '' : `?projectId=${projectId}`;
+    return `${this.baseUrl}/documents/vat/${year}/${String(month).padStart(2, '0')}${scope}`;
+  }
+
   // --- Sales board (UX-05) --------------------------------------------------
 
   /** The commercial state of the stock, laid out by block and floor. */

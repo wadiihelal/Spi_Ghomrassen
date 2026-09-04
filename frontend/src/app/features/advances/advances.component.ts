@@ -288,6 +288,11 @@ export class AdvancesComponent implements OnInit {
     });
   }
 
+  /** Address of the payment's receipt, opened as an ordinary link (UX-06). */
+  receiptUrl(row: ClientAdvance): string {
+    return row.id ? this.api.receiptUrl(row.id) : '';
+  }
+
   edit(advance: ClientAdvance): void {
     this.editingId = advance.id ?? null;
     this.dialogVisible = true;

@@ -34,6 +34,10 @@ public interface ClientAdvanceRepository extends JpaRepository<ClientAdvance, Lo
 
     List<ClientAdvance> findByClientId(Long clientId);
 
+    /** A buyer's payments in date order, for their statement of account (UX-06). */
+    @EntityGraph(attributePaths = {"project", "apartment"})
+    List<ClientAdvance> findByClientIdOrderByAdvanceDateAsc(Long clientId);
+
     List<ClientAdvance> findByProjectId(Long projectId);
 
     List<ClientAdvance> findByApartmentId(Long apartmentId);

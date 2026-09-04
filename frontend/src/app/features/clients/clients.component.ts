@@ -94,6 +94,11 @@ export class ClientsComponent implements OnInit {
     });
   }
 
+  /** Address of the client's statement of account, opened as an ordinary link (UX-06). */
+  statementUrl(row: Client): string {
+    return row.id ? this.api.clientStatementUrl(row.id) : '';
+  }
+
   edit(client: Client): void {
     this.editingId = client.id ?? null;
     this.dialogVisible = true;

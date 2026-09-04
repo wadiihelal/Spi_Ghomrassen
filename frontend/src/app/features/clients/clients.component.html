@@ -34,6 +34,8 @@
           </td>
           <td>{{ row.active ? 'Actif' : 'Inactif' }}</td>
           <td class="actions-cell">
+            <a pButton [href]="statementUrl(row)" target="_blank" rel="noopener"
+               class="p-button-text" icon="pi pi-print" aria-label="Imprimer la situation"></a>
             <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir client" (click)="edit(row)"></button>
             <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>
           </td>

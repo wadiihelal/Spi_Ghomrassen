@@ -33,6 +33,10 @@ public interface ClientPurchaseRepository extends JpaRepository<ClientPurchase, 
 
     List<ClientPurchase> findByClientId(Long clientId);
 
+    /** A buyer's contracts in date order, for their statement of account (UX-06). */
+    @EntityGraph(attributePaths = {"project", "apartment"})
+    List<ClientPurchase> findByClientIdOrderByPurchaseDateAsc(Long clientId);
+
     List<ClientPurchase> findByProjectId(Long projectId);
 
     @EntityGraph(attributePaths = {"client", "project", "apartment"})

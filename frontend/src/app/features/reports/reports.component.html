@@ -1,74 +1,138 @@
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Analyse</span>
+    <h1>Rapports</h1>
+    <p class="page-sub">Dépenses, encaissements et situation des acquéreurs sur la période
+      choisie. Les exports reprennent exactement ce qui est affiché.</p>
+  </div>
+</section>
+
+<p-card styleClass="period-card">
+  <div class="period-bar">
+    <div class="period-fields">
+      <div class="field">
+        <label for="reportYear">Année</label>
+        <p-dropdown inputId="reportYear" [(ngModel)]="selectedYear" (ngModelChange)="loadReports()"
+                    [options]="years" optionLabel="label" optionValue="value"></p-dropdown>
+      </div>
+      <div class="field">
+        <label for="reportMonth">Mois</label>
+        <p-dropdown inputId="reportMonth" [(ngModel)]="selectedMonth" (ngModelChange)="loadReports()"
+                    [options]="months" optionLabel="label" optionValue="value"></p-dropdown>
+      </div>
+      <div class="field field-inline">
+        <p-checkbox [(ngModel)]="allProjects" (ngModelChange)="loadReports()" [binary]="true"
+                    inputId="allProjects"></p-checkbox>
+        <label for="allProjects">Tous les projets</label>
+      </div>
+    </div>
+
+    <div class="period-actions">
+      <button pButton type="button" label="Excel" icon="pi pi-file-excel"
+              [loading]="exportingExcel" (click)="exportExcel()"></button>
+      <button pButton type="button" label="PDF" icon="pi pi-file-pdf" severity="secondary"
+              [loading]="exportingPdf" (click)="exportPdf()"></button>
+      <a pButton [href]="vatSummaryUrl" target="_blank" rel="noopener"
+         label="Récapitulatif TVA" icon="pi pi-print"
+         class="p-button-secondary p-button-outlined"></a>
+    </div>
+  </div>
+  <p class="report-scope">Chiffres affichés et exportés : {{ scopeLabel }}</p>
+</p-card>
+
+<section class="summary-grid">
+  <p-card styleClass="metric-card danger">
+    <div class="metric-head">
+      <span class="metric-label">Dépenses de la période</span>
+      <i class="pi pi-wallet"></i>
+    </div>
+    <div class="metric-value">{{ totalExpenses() | dinar:'short' }}</div>
+  </p-card>
+  <p-card styleClass="metric-card primary">
+    <div class="metric-head">
+      <span class="metric-label">Contracté</span>
+      <i class="pi pi-file-edit"></i>
+    </div>
+    <div class="metric-value">{{ totalContracted() | dinar:'short' }}</div>
+  </p-card>
+  <p-card styleClass="metric-card success">
+    <div class="metric-head">
+      <span class="metric-label">Encaissé</span>
+      <i class="pi pi-check-circle"></i>
+    </div>
+    <div class="metric-value">{{ totalCollected() | dinar:'short' }}</div>
+  </p-card>
+  <p-card styleClass="metric-card accent">
+    <div class="metric-head">
+      <span class="metric-label">Reste à encaisser</span>
+      <i class="pi pi-hourglass"></i>
+    </div>
+    <div class="metric-value">{{ totalRemaining() | dinar:'short' }}</div>
+  </p-card>
+</section>
+
 <section class="reports-grid">
-    <p-card header="Dépenses par catégorie">
-        <p-table [value]="byCategory()" responsiveLayout="scroll">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>Catégorie</th>
-                    <th class="num-col">Total</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-row>
-                <tr>
-                    <td>{{ row.label }}</td>
-                    <td class="num-col">{{ row.amount | dinar }}</td>
-                </tr>
-            </ng-template>
-        </p-table>
-    </p-card>
+  <p-card header="Dépenses par catégorie">
+    <p-table [value]="byCategory()">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Catégorie</th>
+          <th class="num-col">Total</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>{{ row.label }}</td>
+          <td class="num-col">{{ row.amount | dinar }}</td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="2">Aucune dépense sur la période.</td></tr>
+      </ng-template>
+    </p-table>
+  </p-card>
 
-    <p-card header="Dépenses par projet">
-        <p-table [value]="byProject()" responsiveLayout="scroll">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>Projet</th>
-                    <th class="num-col">Total</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-row>
-                <tr>
-                    <td>{{ row.label }}</td>
-                    <td class="num-col">{{ row.amount | dinar }}</td>
-                </tr>
-            </ng-template>
-        </p-table>
-    </p-card>
+  <p-card header="Dépenses par projet">
+    <p-table [value]="byProject()">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Projet</th>
+          <th class="num-col">Total</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>{{ row.label }}</td>
+          <td class="num-col">{{ row.amount | dinar }}</td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="2">Aucune dépense sur la période.</td></tr>
+      </ng-template>
+    </p-table>
+  </p-card>
 
-    <p-card header="Période et périmètre" class="full-span">
-        <div class="table-toolbar report-filters">
-            <div class="filters-left">
-                <label>Année</label>
-                <input type="number" [(ngModel)]="selectedYear" (ngModelChange)="loadReports()" min="2000" max="2100" />
-                <label>Mois</label>
-                <input type="number" [(ngModel)]="selectedMonth" (ngModelChange)="loadReports()" min="1" max="12" />
-                <p-checkbox [(ngModel)]="allProjects" (ngModelChange)="loadReports()" [binary]="true" inputId="allProjects"></p-checkbox>
-                <label for="allProjects">Tous les projets</label>
-            </div>
-            <div class="filters-right">
-                <button pButton type="button" label="Export Excel" [loading]="exportingExcel" (click)="exportExcel()"></button>
-                <button pButton type="button" label="Export PDF" severity="secondary" [loading]="exportingPdf" (click)="exportPdf()"></button>
-            </div>
-        </div>
-        <p class="report-scope">Chiffres affichés et exportés : {{ scopeLabel }}</p>
-    </p-card>
-
-    <p-card header="Situation clients" class="full-span">
-        <p-table [value]="clientStatements()" responsiveLayout="scroll">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>Client</th>
-                    <th class="num-col">Achats</th>
-                    <th class="num-col">Paiements</th>
-                    <th class="num-col">Reste</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-row>
-                <tr>
-                    <td>{{ row.clientName }}</td>
-                    <td class="num-col">{{ row.totalPurchases | dinar }}</td>
-                    <td class="num-col">{{ row.totalAdvances | dinar }}</td>
-                    <td class="num-col">{{ row.remainingToPay | dinar }}</td>
-                </tr>
-            </ng-template>
-        </p-table>
-    </p-card>
+  <p-card header="Situation des acquéreurs" class="full-span">
+    <p-table [value]="clientStatements()">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Client</th>
+          <th class="num-col">Contracté</th>
+          <th class="num-col">Encaissé</th>
+          <th class="num-col">Reste à payer</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>{{ row.clientName }}</td>
+          <td class="num-col">{{ row.totalPurchases | dinar }}</td>
+          <td class="num-col">{{ row.totalAdvances | dinar }}</td>
+          <td class="num-col">{{ row.remainingToPay | dinar }}</td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="4">Aucun acquéreur sur la période.</td></tr>
+      </ng-template>
+    </p-table>
+  </p-card>
 </section>

@@ -1,5 +1,6 @@
 package com.promoteur.app.repository;
 
+import com.promoteur.app.dto.VatByRate;
 import com.promoteur.app.dto.report.AmountByLabelDto;
 import com.promoteur.app.dto.report.CountAndTotal;
 import com.promoteur.app.dto.report.MonthlyAmount;
@@ -143,4 +144,21 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
                                    @Param("to") LocalDate to,
                                    Pageable pageable);
 
+
+    /**
+     * Deductible VAT of one month, grouped by rate (UX-06). Aggregated in the database: the
+     * declaration must not depend on loading a month of expenses into memory.
+     */
+    @Query("""
+            select new com.promoteur.app.dto.VatByRate(e.vatRate, sum(e.amountHt), sum(e.vatAmount))
+            from Expense e
+            where (:projectId is null or e.project.id = :projectId)
+              and year(e.expenseDate) = :year
+              and month(e.expenseDate) = :month
+            group by e.vatRate
+            order by e.vatRate
+            """)
+    List<VatByRate> sumVatByRate(@Param("projectId") Long projectId,
+                                 @Param("year") int year,
+                                 @Param("month") int month);
 }

@@ -183,7 +183,6 @@ body .p-datatable table { border-collapse: separate; border-spacing: 0; }
 /* A dense business table must scroll inside its own card rather than pushing the page
    sideways: the sidebar and the topbar would drift with it. */
 body .p-datatable .p-datatable-wrapper { overflow-x: auto; }
-body .p-datatable table { min-width: 44rem; }
 
 body .p-datatable .p-datatable-thead > tr > th {
   position: sticky;
