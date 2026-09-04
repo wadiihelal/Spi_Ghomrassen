@@ -9,7 +9,17 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DropdownModule } from 'primeng/dropdown';
 import { DialogModule } from 'primeng/dialog';
-import { ListFilter, Project, Supplier, SupplierInvoice, VatRateOption } from '../../shared/models/models';
+import { TagModule } from 'primeng/tag';
+import { ListFilter, PayablesSummary, Project, SettlementStatus, Supplier, SupplierInvoice, VatRateOption } from '../../shared/models/models';
+
+/** Settlement states offered in the filter bar (UX-04). */
+const SETTLEMENT_OPTIONS = [
+  { label: 'Tous les règlements', value: null },
+  { label: 'À régler', value: 'UNPAID' },
+  { label: 'Partiellement réglées', value: 'PARTIALLY_PAID' },
+  { label: 'Réglées', value: 'PAID' },
+  { label: 'En retard', value: 'OVERDUE' }
+];
 
 /** Rate proposed when the supplier has none of its own. */
 const FALLBACK_VAT_RATE = 0.19;
@@ -20,11 +30,12 @@ import { UiService } from '../../core/services/ui.service';
 import { AttachmentsPanelComponent } from '../../shared/attachments/attachments-panel.component';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { LazyTable } from '../../core/services/lazy-table';
+import { SupplierPaymentsComponent } from '../../shared/supplier-payments/supplier-payments.component';
 
 @Component({
   selector: 'app-supplier-invoices',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, AttachmentsPanelComponent, DinarPipe, PercentSharePipe],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, TagModule, AttachmentsPanelComponent, DinarPipe, PercentSharePipe, SupplierPaymentsComponent],
   templateUrl: './supplier-invoices.component.html',
   styleUrl: './supplier-invoices.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -47,12 +58,19 @@ export class SupplierInvoicesComponent implements OnInit {
   readonly suppliers = signal<Supplier[]>([]);
   readonly vatRates = signal<VatRateOption[]>([]);
   readonly projects = signal<Project[]>([]);
+  /** What is owed to suppliers in scope (UX-04). */
+  readonly payables = signal<PayablesSummary | undefined>(undefined);
+  readonly settlementOptions = SETTLEMENT_OPTIONS;
+  /** Invoice whose payments are open in the dialog. */
+  readonly paymentsForInvoice = signal<SupplierInvoice | null>(null);
+  paymentsDialogVisible = false;
   editingId: number | null = null;
   dialogVisible = false;
   readonly selectedProjectId = signal<number | null>(null);
   filters = {
     projectId: null as number | null,
     supplierId: null as number | null,
+    settlement: null as string | null,
     search: ''
   };
 
@@ -65,6 +83,7 @@ export class SupplierInvoicesComponent implements OnInit {
   form = this.fb.group({
     invoiceNumber: ['', [Validators.required]],
     invoiceDate: ['', [Validators.required]],
+    dueDate: [''],
     amountHt: [0, [Validators.required]],
     vatRate: [FALLBACK_VAT_RATE, [Validators.required]],
     detail: [''],
@@ -91,6 +110,7 @@ export class SupplierInvoicesComponent implements OnInit {
     return {
       projectId: this.selectedProjectId() ?? this.filters.projectId,
       supplierId: this.filters.supplierId,
+      settlement: this.filters.settlement,
       search: this.filters.search
     };
   }
@@ -99,6 +119,8 @@ export class SupplierInvoicesComponent implements OnInit {
     this.api.getSuppliers().subscribe({ next: (data) => this.suppliers.set(data) });
     this.api.getProjects().subscribe({ next: (data) => this.projects.set(data) });
     this.api.getVatRates().subscribe({ next: (data) => this.vatRates.set(data) });
+    this.api.getPayablesSummary(this.selectedProjectId())
+      .subscribe({ next: (data) => this.payables.set(data) });
   }
 
   submit(): void {
@@ -125,12 +147,45 @@ export class SupplierInvoicesComponent implements OnInit {
     this.form.patchValue({
       invoiceNumber: row.invoiceNumber,
       invoiceDate: row.invoiceDate,
+      dueDate: row.dueDate ?? '',
       amountHt: row.amountHt,
       vatRate: row.vatRate ?? FALLBACK_VAT_RATE,
       detail: row.detail ?? '',
       supplierId: row.supplierId ?? null,
       projectId: this.selectedProjectId() ?? row.projectId ?? null
     });
+  }
+
+  /** Opens the payments of one invoice (UX-04). */
+  openPayments(row: SupplierInvoice): void {
+    this.paymentsForInvoice.set(row);
+    this.paymentsDialogVisible = true;
+  }
+
+  closePayments(): void {
+    this.paymentsDialogVisible = false;
+    this.paymentsForInvoice.set(null);
+  }
+
+  /** A payment changes what is owed, so the table and the payables strip both reload. */
+  onPaymentsChanged(): void {
+    this.table.reload();
+    this.loadData();
+  }
+
+  settlementLabel(status?: SettlementStatus): string {
+    switch (status) {
+      case 'PAID': return 'Réglée';
+      case 'PARTIALLY_PAID': return 'Partielle';
+      default: return 'À régler';
+    }
+  }
+
+  settlementSeverity(row: SupplierInvoice): 'success' | 'warning' | 'danger' | 'secondary' {
+    if (row.status === 'PAID') return 'success';
+    if (row.overdue) return 'danger';
+    if (row.status === 'PARTIALLY_PAID') return 'warning';
+    return 'secondary';
   }
 
   remove(row: SupplierInvoice): void {
@@ -152,6 +207,7 @@ export class SupplierInvoicesComponent implements OnInit {
     this.form.reset({
       invoiceNumber: '',
       invoiceDate: '',
+      dueDate: '',
       amountHt: 0,
       vatRate: FALLBACK_VAT_RATE,
       detail: '',

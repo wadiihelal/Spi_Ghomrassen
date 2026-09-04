@@ -7,6 +7,39 @@
     <button pButton type="button" label="Nouvelle facture" icon="pi pi-plus" (click)="openCreateDialog()"></button>
   </div>
 
+  <section class="summary-grid">
+    <p-card styleClass="metric-card primary">
+      <div class="metric-head">
+        <span class="metric-label">Total facturé</span>
+        <i class="pi pi-receipt"></i>
+      </div>
+      <div class="metric-value">{{ payables()?.invoicedAmount ?? 0 | dinar:'short' }}</div>
+      <div class="kpi-foot">{{ payables()?.invoiceCount ?? 0 }} facture(s)</div>
+    </p-card>
+    <p-card styleClass="metric-card success">
+      <div class="metric-head">
+        <span class="metric-label">Déjà réglé</span>
+        <i class="pi pi-check-circle"></i>
+      </div>
+      <div class="metric-value">{{ payables()?.paidAmount ?? 0 | dinar:'short' }}</div>
+    </p-card>
+    <p-card styleClass="metric-card accent">
+      <div class="metric-head">
+        <span class="metric-label">Reste à payer</span>
+        <i class="pi pi-wallet"></i>
+      </div>
+      <div class="metric-value">{{ payables()?.dueAmount ?? 0 | dinar:'short' }}</div>
+    </p-card>
+    <p-card styleClass="metric-card danger">
+      <div class="metric-head">
+        <span class="metric-label">En retard</span>
+        <i class="pi pi-exclamation-circle"></i>
+      </div>
+      <div class="metric-value">{{ payables()?.overdueAmount ?? 0 | dinar:'short' }}</div>
+      <div class="kpi-foot">{{ payables()?.overdueCount ?? 0 }} facture(s) dépassée(s)</div>
+    </p-card>
+  </section>
+
   <p-card header="Liste des factures fournisseurs">
     <p-table [value]="table.rows()" [lazy]="true" (onLazyLoad)="table.onLazyLoad($event)" [loading]="table.loading()"
              [totalRecords]="table.totalRecords()" responsiveLayout="scroll" [paginator]="true" [rows]="table.pageSize"
@@ -16,6 +49,7 @@
         <div class="filter-grid">
           <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="projects()" optionLabel="name" optionValue="id" placeholder="Filtrer par projet"></p-dropdown>
           <p-dropdown [(ngModel)]="filters.supplierId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="suppliers()" optionLabel="name" optionValue="id" placeholder="Filtrer par fournisseur"></p-dropdown>
+          <p-dropdown [(ngModel)]="filters.settlement" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="settlementOptions" optionLabel="label" optionValue="value" placeholder="État du règlement"></p-dropdown>
           <input pInputText [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" placeholder="Recherche facture..." />
         </div>
       </ng-template>
@@ -27,6 +61,8 @@
           <th class="num-col">HT</th>
           <th class="num-col">TVA</th>
           <th class="num-col">TTC</th>
+          <th class="num-col">Reste</th>
+          <th>Règlement</th>
           <th>Actions</th>
         </tr>
       </ng-template>
@@ -34,14 +70,23 @@
         <tr>
           <td class="num-col">
             <div class="table-main">{{ row.invoiceNumber }}</div>
-            <div class="table-meta">{{ (row.invoiceDate | date:'dd/MM/yyyy') || '-' }} · HT {{ row.amountHt | dinar }}</div>
+            <div class="table-meta">{{ (row.invoiceDate | date:'dd/MM/yyyy') || '-' }}@if (row.dueDate) { · échéance {{ row.dueDate | date:'dd/MM/yyyy' }} } · HT {{ row.amountHt | dinar }}</div>
           </td>
           <td>{{ row.supplierName || '-' }}</td>
           <td>{{ row.projectName || '-' }}</td>
           <td class="num-col">{{ row.amountHt | dinar }}</td>
           <td class="num-col">{{ row.vatAmount | dinar }} ({{ (row.vatRate ?? 0) * 100 | percentShare }})</td>
           <td class="num-col">{{ row.amountTtc | dinar }}</td>
+          <td class="num-col">{{ row.remainingAmount | dinar }}</td>
+          <td>
+            <p-tag [value]="settlementLabel(row.status)" [severity]="settlementSeverity(row)"></p-tag>
+            @if (row.overdue) {
+              <div class="table-meta text-late">{{ row.daysLate }} j de retard</div>
+            }
+          </td>
           <td class="actions-cell">
+            <button pButton type="button" icon="pi pi-wallet" text aria-label="Règlements de la facture"
+                    (click)="openPayments(row)"></button>
             <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir facture" (click)="edit(row)"></button>
             <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>
           </td>
@@ -73,6 +118,10 @@
         <p-inputNumber formControlName="amountHt" mode="decimal"></p-inputNumber>
       </div>
       <div class="field">
+        <label>Échéance de paiement</label>
+        <input pInputText type="date" formControlName="dueDate" />
+      </div>
+      <div class="field">
         <label>Taux de TVA</label>
         <p-dropdown formControlName="vatRate" [options]="vatRates()" optionLabel="label" optionValue="rate" placeholder="Choisir le taux"></p-dropdown>
       </div>
@@ -99,3 +148,19 @@
     </form>
   </p-dialog>
 </section>
+
+<p-dialog header="Règlements de la facture" [(visible)]="paymentsDialogVisible" [modal]="true"
+          [style]="{ width: '48rem', maxWidth: '96vw' }" (onHide)="closePayments()">
+  @if (paymentsForInvoice(); as invoice) {
+    <div class="payments-dialog-head">
+      <div class="eyebrow">Facture</div>
+      <strong>{{ invoice.invoiceNumber }}</strong>
+      <span class="text-muted"> · {{ invoice.supplierName }}</span>
+    </div>
+    <app-supplier-payments
+      [invoiceId]="invoice.id ?? null"
+      [grossAmount]="invoice.amountTtc ?? 0"
+      (changed)="onPaymentsChanged()">
+    </app-supplier-payments>
+  }
+</p-dialog>

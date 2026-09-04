@@ -26,6 +26,9 @@ public class SupplierInvoice extends BaseEntity {
     @Column(nullable = false)
     private LocalDate invoiceDate;
 
+    /** When the supplier expects to be paid. Optional; without it nothing can be late (UX-04). */
+    private LocalDate dueDate;
+
     @Column(nullable = false, precision = 19, scale = 3)
     private BigDecimal amountHt;
 

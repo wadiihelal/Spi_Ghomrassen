@@ -1,0 +1,56 @@
+@if (!invoiceId()) {
+  <p class="attachments-hint">Enregistrez la facture, puis saisissez ses règlements ici.</p>
+} @else {
+  <div class="payments-panel">
+    <div class="payments-totals">
+      <span>Facture <strong>{{ grossAmount() | dinar }}</strong></span>
+      <span>Réglé <strong>{{ paidTotal() | dinar }}</strong></span>
+      <span [class.owed]="remaining() > 0">Reste <strong>{{ remaining() | dinar }}</strong></span>
+    </div>
+
+    @if (payments().length) {
+      <ul class="payments-list">
+        @for (payment of payments(); track payment.id) {
+          <li>
+            <span class="payment-date">{{ payment.paymentDate | date:'dd/MM/yyyy' }}</span>
+            <span class="payment-amount">{{ payment.amount | dinar }}</span>
+            <span class="text-muted">{{ methodLabel(payment.paymentMethod) }}</span>
+            <span class="payment-reference text-muted">{{ payment.reference || '' }}</span>
+            <button pButton type="button" icon="pi pi-trash" text severity="danger"
+                    aria-label="Supprimer le règlement" (click)="remove(payment)"></button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="attachments-hint">Aucun règlement enregistré sur cette facture.</p>
+    }
+
+    @if (remaining() > 0) {
+      <div class="payment-form">
+        <div class="field">
+          <label for="payDate">Date</label>
+          <input pInputText id="payDate" type="date" [(ngModel)]="draft.paymentDate" />
+        </div>
+        <div class="field">
+          <label for="payAmount">Montant</label>
+          <p-inputNumber inputId="payAmount" [(ngModel)]="draft.amount" mode="decimal"
+                         [minFractionDigits]="3" [maxFractionDigits]="3"></p-inputNumber>
+        </div>
+        <div class="field">
+          <label for="payMethod">Mode</label>
+          <p-dropdown inputId="payMethod" [(ngModel)]="draft.paymentMethod" [options]="methods"
+                      optionLabel="label" optionValue="value"></p-dropdown>
+        </div>
+        <div class="field">
+          <label for="payRef">Référence</label>
+          <input pInputText id="payRef" [(ngModel)]="draft.reference" placeholder="N° chèque, virement…" />
+        </div>
+        <div class="payment-form-actions">
+          <button pButton type="button" label="Solde" severity="secondary" (click)="payBalance()"></button>
+          <button pButton type="button" label="Enregistrer" icon="pi pi-check"
+                  [disabled]="busy()" (click)="add()"></button>
+        </div>
+      </div>
+    }
+  </div>
+}

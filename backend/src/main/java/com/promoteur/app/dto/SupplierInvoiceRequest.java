@@ -28,6 +28,11 @@ public class SupplierInvoiceRequest {
     private LocalDate invoiceDate;
 
     /**
+     * When the supplier expects payment. Optional; without it the invoice can never be late.
+     */
+    private LocalDate dueDate;
+
+    /**
      * Net amount excluding VAT.
      */
     @NotNull

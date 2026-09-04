@@ -5,6 +5,8 @@ import com.promoteur.app.dto.ClientAdvanceRequest;
 import com.promoteur.app.dto.ClientPurchaseRequest;
 import com.promoteur.app.dto.ExpenseRequest;
 import com.promoteur.app.dto.ScheduleTemplateRequest;
+import com.promoteur.app.dto.SupplierInvoiceRequest;
+import com.promoteur.app.dto.SupplierPaymentRequest;
 import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.response.ApartmentResponse;
 import com.promoteur.app.entity.Apartment;
@@ -28,6 +30,7 @@ import com.promoteur.app.service.ApartmentService;
 import com.promoteur.app.service.ClientAdvanceService;
 import com.promoteur.app.service.ClientPurchaseService;
 import com.promoteur.app.service.PaymentScheduleService;
+import com.promoteur.app.service.SupplierInvoiceService;
 import com.promoteur.app.service.ExpenseService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -95,6 +98,7 @@ public class DemoDataInitializer implements CommandLineRunner {
     private final ClientAdvanceService clientAdvanceService;
     private final ClientPurchaseService clientPurchaseService;
     private final PaymentScheduleService paymentScheduleService;
+    private final SupplierInvoiceService supplierInvoiceService;
     private final PaymentInstallmentRepository paymentInstallmentRepository;
     private final SupplierTypeOptionRepository supplierTypeOptionRepository;
 
@@ -129,6 +133,7 @@ public class DemoDataInitializer implements CommandLineRunner {
         seedApartments(clients, projects);
         seedClientAdvances(clients, projects);
         seedClientPurchases(clients, projects);
+        seedSupplierInvoices(suppliers, projects);
         ensureDemoResidenceData();
         seedPaymentSchedules();
     }
@@ -596,6 +601,79 @@ public class DemoDataInitializer implements CommandLineRunner {
         request.setProjectId(projectId);
         request.setApartmentId(findApartmentIdForSeed(clientId, projectId));
         clientPurchaseService.create(request);
+    }
+
+    /**
+     * Supplier invoices with due dates and part payments (UX-04).
+     *
+     * <p>Dates are relative to today so the payables view always shows the same shape: one
+     * settled, one part paid, two overdue and one still to fall due.</p>
+     */
+    private void seedSupplierInvoices(Map<String, Supplier> suppliers, Map<String, Project> projects) {
+        LocalDate today = LocalDate.now();
+        Long oasis = projects.get("Résidence Oasis Ghomrassen").getId();
+        Long jasmin = projects.get("Immeuble Jasmin").getId();
+
+        // Settled in full.
+        Long settled = createSupplierInvoice("FF-2026-014", today.minusMonths(3), today.minusMonths(2),
+                new BigDecimal("18400.000"), new BigDecimal("0.1900"),
+                suppliers.get("Comptoir des Matériaux du Sud").getId(), oasis,
+                "Fourniture de ciment et agrégats, lot A.");
+        paySupplierInvoice(settled, today.minusMonths(2), new BigDecimal("21896.000"), PaymentMethod.BANK_TRANSFER,
+                "VIR-2026-0141");
+
+        // Part paid, not yet due.
+        Long partial = createSupplierInvoice("FF-2026-021", today.minusMonths(1), today.plusMonths(1),
+                new BigDecimal("36000.000"), new BigDecimal("0.1900"),
+                suppliers.get("Entreprise Bâtir Ghomrassen").getId(), oasis,
+                "Situation de travaux n°3, gros oeuvre lot B.");
+        paySupplierInvoice(partial, today.minusDays(20), new BigDecimal("20000.000"), PaymentMethod.CHECK,
+                "CHQ-771204");
+
+        // Overdue, nothing paid.
+        createSupplierInvoice("FF-2026-024", today.minusMonths(2), today.minusMonths(1),
+                new BigDecimal("9800.000"), new BigDecimal("0.1300"),
+                suppliers.get("Équipements Électriques Sahara").getId(), oasis,
+                "Tableaux électriques et appareillage, bloc B.");
+
+        // Overdue, part paid.
+        Long latePartial = createSupplierInvoice("FF-2026-027", today.minusMonths(2), today.minusDays(15),
+                new BigDecimal("6500.000"), new BigDecimal("0.1900"),
+                suppliers.get("Bureau d'Études Ingénierie Tataouine").getId(), jasmin,
+                "Étude de structure, immeuble Jasmin.");
+        paySupplierInvoice(latePartial, today.minusDays(30), new BigDecimal("3000.000"), PaymentMethod.BANK_TRANSFER,
+                "VIR-2026-0188");
+
+        // Still to fall due.
+        createSupplierInvoice("FF-2026-031", today.minusDays(10), today.plusMonths(2),
+                new BigDecimal("4800.000"), new BigDecimal("0.0700"),
+                suppliers.get("Atelier Architecture El Medina").getId(), jasmin,
+                "Honoraires d'architecte, phase APS.");
+    }
+
+    private Long createSupplierInvoice(String invoiceNumber, LocalDate invoiceDate, LocalDate dueDate,
+                                       BigDecimal amountHt, BigDecimal vatRate, Long supplierId,
+                                       Long projectId, String detail) {
+        SupplierInvoiceRequest request = new SupplierInvoiceRequest();
+        request.setInvoiceNumber(invoiceNumber);
+        request.setInvoiceDate(invoiceDate);
+        request.setDueDate(dueDate);
+        request.setAmountHt(amountHt);
+        request.setVatRate(vatRate);
+        request.setSupplierId(supplierId);
+        request.setProjectId(projectId);
+        request.setDetail(detail);
+        return supplierInvoiceService.create(request).id();
+    }
+
+    private void paySupplierInvoice(Long invoiceId, LocalDate paymentDate, BigDecimal amount,
+                                    PaymentMethod method, String reference) {
+        SupplierPaymentRequest request = new SupplierPaymentRequest();
+        request.setPaymentDate(paymentDate);
+        request.setAmount(amount);
+        request.setPaymentMethod(method);
+        request.setReference(reference);
+        supplierInvoiceService.addPayment(invoiceId, request);
     }
 
     /**

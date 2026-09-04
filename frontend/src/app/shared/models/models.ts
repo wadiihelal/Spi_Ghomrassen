@@ -37,6 +37,8 @@ export interface ListFilter {
   apartmentId?: number | null;
   paymentStatus?: string | null;
   paymentMethod?: string | null;
+  /** Supplier-invoice settlement state, or `OVERDUE` for what is past due (UX-04). */
+  settlement?: string | null;
   dateFrom?: string | null;
   dateTo?: string | null;
   search?: string | null;
@@ -308,15 +310,48 @@ export interface Apartment {
   remainingToCollect?: number;
 }
 
+/** How far a supplier invoice has been settled (UX-04). */
+export type SettlementStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+
+/** A payment made against a supplier invoice. */
+export interface SupplierPayment {
+  id?: number;
+  invoiceId?: number;
+  invoiceNumber?: string;
+  paymentDate: string;
+  amount: number;
+  paymentMethod?: string;
+  reference?: string;
+  notes?: string;
+}
+
+/** What the promoter owes suppliers. */
+export interface PayablesSummary {
+  invoiceCount: number;
+  invoicedAmount: number;
+  paidAmount: number;
+  dueAmount: number;
+  overdueCount: number;
+  overdueAmount: number;
+}
+
 export interface SupplierInvoice {
   id?: number;
   invoiceNumber: string;
   invoiceDate: string;
+  /** When the supplier expects payment; without it the invoice can never be late. */
+  dueDate?: string | null;
   amountHt: number;
   /** VAT rate applied, as a fraction. Sent to the backend, which derives the amounts below. */
   vatRate: number;
   vatAmount?: number;
   amountTtc?: number;
+  /** Derived by the backend from the payments recorded against the invoice. */
+  paidAmount?: number;
+  remainingAmount?: number;
+  status?: SettlementStatus;
+  overdue?: boolean;
+  daysLate?: number;
   attachmentName?: string;
   attachmentUrl?: string;
   detail?: string;

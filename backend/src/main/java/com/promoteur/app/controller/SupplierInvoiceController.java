@@ -1,6 +1,10 @@
 package com.promoteur.app.controller;
 
 import com.promoteur.app.dto.ListFilter;
+import com.promoteur.app.dto.SupplierPaymentRequest;
+import com.promoteur.app.dto.response.PayablesSummaryResponse;
+import com.promoteur.app.dto.response.SupplierPaymentResponse;
+import com.promoteur.app.enums.SettlementFilter;
 import com.promoteur.app.dto.SupplierInvoiceRequest;
 import com.promoteur.app.dto.response.SupplierInvoiceResponse;
 import com.promoteur.app.service.SupplierInvoiceService;
@@ -52,9 +56,37 @@ public class SupplierInvoiceController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) SettlementFilter settlement,
             Pageable pageable) {
-        return supplierInvoiceService.findAll(new ListFilter(projectId, clientId, supplierId, categoryId, apartmentId,
-                paymentStatus, paymentMethod, dateFrom, dateTo, search), pageable);
+        return supplierInvoiceService.findBySettlement(new ListFilter(projectId, clientId, supplierId, categoryId,
+                apartmentId, paymentStatus, paymentMethod, dateFrom, dateTo, search), settlement, pageable);
+    }
+
+    @Operation(summary = "Ce qui reste dû aux fournisseurs, et ce qui est en retard")
+    @GetMapping("/payables-summary")
+    public PayablesSummaryResponse payablesSummary(@RequestParam(required = false) Long projectId) {
+        return supplierInvoiceService.payablesSummary(projectId);
+    }
+
+    @Operation(summary = "Règlements enregistrés sur la facture")
+    @GetMapping("/{id}/payments")
+    public java.util.List<SupplierPaymentResponse> findPayments(@PathVariable Long id) {
+        return supplierInvoiceService.findPayments(id);
+    }
+
+    @Operation(summary = "Enregistrement d’un règlement fournisseur")
+    @PostMapping("/{id}/payments")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SupplierPaymentResponse addPayment(@PathVariable Long id,
+                                              @Valid @RequestBody SupplierPaymentRequest request) {
+        return supplierInvoiceService.addPayment(id, request);
+    }
+
+    @Operation(summary = "Suppression d’un règlement fournisseur")
+    @DeleteMapping("/{id}/payments/{paymentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletePayment(@PathVariable Long id, @PathVariable Long paymentId) {
+        supplierInvoiceService.deletePayment(id, paymentId);
     }
 
     @Operation(summary = "Détail par identifiant")

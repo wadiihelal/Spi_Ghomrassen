@@ -14,3 +14,11 @@
 
 /* Montants dérivés par le backend : affichés en lecture seule, jamais saisis (CALC-01). */
 .computed-amount{padding:.6rem .75rem;border:1px solid #e7ecf3;border-radius:10px;background:#f7f9fc;color:#374151;font-variant-numeric:tabular-nums;}
+
+.text-late { color: var(--danger-600); font-weight: var(--weight-semibold); }
+.payments-dialog-head {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-base);
+}

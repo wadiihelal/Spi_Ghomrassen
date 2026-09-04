@@ -31,10 +31,12 @@ import {
   ListFilter,
   PageQuery,
   PagedResponse,
+  PayablesSummary,
   Project,
   ReportScopeParams,
   Supplier,
   SupplierInvoice,
+  SupplierPayment,
   SupplierTypeOption,
   VatRateOption
 } from '../../shared/models/models';
@@ -270,6 +272,29 @@ export class ApiService {
 
   deleteAdvance(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/client-advances/${id}`);
+  }
+
+  // --- Supplier settlement (UX-04) ------------------------------------------
+
+  /** What is still owed to suppliers, and how much of it is late. */
+  getPayablesSummary(projectId?: number | null): Observable<PayablesSummary> {
+    let params = new HttpParams();
+    if (projectId !== null && projectId !== undefined) {
+      params = params.set('projectId', projectId);
+    }
+    return this.http.get<PayablesSummary>(`${this.baseUrl}/supplier-invoices/payables-summary`, { params });
+  }
+
+  getSupplierPayments(invoiceId: number): Observable<SupplierPayment[]> {
+    return this.http.get<SupplierPayment[]>(`${this.baseUrl}/supplier-invoices/${invoiceId}/payments`);
+  }
+
+  addSupplierPayment(invoiceId: number, payment: SupplierPayment): Observable<SupplierPayment> {
+    return this.http.post<SupplierPayment>(`${this.baseUrl}/supplier-invoices/${invoiceId}/payments`, payment);
+  }
+
+  deleteSupplierPayment(invoiceId: number, paymentId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/supplier-invoices/${invoiceId}/payments/${paymentId}`);
   }
 
   // --- Payment schedules (UX-03) --------------------------------------------
