@@ -32,6 +32,8 @@ import {
   PageQuery,
   PagedResponse,
   PayablesSummary,
+  SalesBoard,
+  SalesStatus,
   Project,
   ReportScopeParams,
   Supplier,
@@ -272,6 +274,24 @@ export class ApiService {
 
   deleteAdvance(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/client-advances/${id}`);
+  }
+
+  // --- Sales board (UX-05) --------------------------------------------------
+
+  /** The commercial state of the stock, laid out by block and floor. */
+  getSalesBoard(projectId?: number | null): Observable<SalesBoard> {
+    let params = new HttpParams();
+    if (projectId !== null && projectId !== undefined) {
+      params = params.set('projectId', projectId);
+    }
+    return this.http.get<SalesBoard>(`${this.baseUrl}/apartments/sales-board`, { params });
+  }
+
+  /** Holds, sells or delivers one unit; the backend refuses a state the contract contradicts. */
+  changeSalesStatus(apartmentId: number, status: SalesStatus): Observable<Apartment> {
+    return this.http.patch<Apartment>(`${this.baseUrl}/apartments/${apartmentId}/sales-status`, null, {
+      params: new HttpParams().set('status', status)
+    });
   }
 
   // --- Supplier settlement (UX-04) ------------------------------------------

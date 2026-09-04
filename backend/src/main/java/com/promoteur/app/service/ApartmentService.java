@@ -3,6 +3,8 @@ package com.promoteur.app.service;
 import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.ApartmentRequest;
 import com.promoteur.app.dto.response.ApartmentResponse;
+import com.promoteur.app.dto.response.SalesBoardResponse;
+import com.promoteur.app.enums.SalesStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -40,4 +42,19 @@ public interface ApartmentService {
      * Returns apartments for a given project.
      */
     Page<ApartmentResponse> findByProject(Long projectId, Pageable pageable);
+
+    /**
+     * Moves one apartment to another commercial state (UX-05).
+     *
+     * <p>The contract decides what is allowed: a unit under contract cannot go back into stock,
+     * and one without a contract cannot be sold or delivered.</p>
+     */
+    ApartmentResponse changeSalesStatus(Long id, SalesStatus status);
+
+    /**
+     * The commercial state of the stock, by block and floor (UX-05).
+     *
+     * @param projectId project to report on, or null for every project
+     */
+    SalesBoardResponse salesBoard(Long projectId);
 }

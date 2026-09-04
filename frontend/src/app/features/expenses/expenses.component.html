@@ -16,7 +16,6 @@
         <div class="filter-grid">
           <input pInputText type="text" placeholder="Recherche..." [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" />
           <p-dropdown [(ngModel)]="filters.categoryId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="categories()" optionLabel="name" optionValue="id" placeholder="Catégorie"></p-dropdown>
-          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="projects()" optionLabel="name" optionValue="id" placeholder="Projet"></p-dropdown>
           <p-dropdown [(ngModel)]="filters.supplierId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="suppliers()" optionLabel="name" optionValue="id" placeholder="Fournisseur"></p-dropdown>
           <input pInputText type="date" [(ngModel)]="filters.dateFrom" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" />
           <input pInputText type="date" [(ngModel)]="filters.dateTo" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" />
@@ -27,7 +26,6 @@
           <th>Dépense</th>
           <th>Catégorie</th>
           <th>Fournisseur</th>
-          <th>Projet</th>
           <th class="num-col">TTC</th>
           <th>Paiement</th>
           <th>Actions</th>
@@ -41,7 +39,6 @@
           </td>
           <td>{{ getCategoryName(row) }}</td>
           <td>{{ getSupplierName(row) }}</td>
-          <td>{{ getProjectName(row) }}</td>
           <td class="num-col">{{ row.amountTtc | dinar }}</td>
           <td>{{ getPaymentMethodLabel(row.paymentMethod) }}</td>
           <td class="actions-cell">

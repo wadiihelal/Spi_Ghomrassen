@@ -289,8 +289,58 @@ export interface AuditLog {
   createdAt?: string;
 }
 
+/** Where a unit stands commercially (UX-05). */
+export type SalesStatus = 'AVAILABLE' | 'RESERVED' | 'SOLD' | 'DELIVERED';
+
+/** One unit as it appears on the sales board. */
+export interface SalesBoardUnit {
+  id: number;
+  apartmentNumber: string;
+  apartmentType: string;
+  totalSurface: number;
+  totalSalePrice: number;
+  salesStatus: SalesStatus;
+  acquirerName?: string;
+  contractedAmount: number;
+  collectedAmount: number;
+  remainingAmount: number;
+}
+
+export interface SalesBoardFloor {
+  floorNumber?: number | null;
+  label: string;
+  units: SalesBoardUnit[];
+}
+
+export interface SalesBoardBlock {
+  block: string;
+  unitCount: number;
+  availableCount: number;
+  floors: SalesBoardFloor[];
+}
+
+/** The commercial state of a project's stock. */
+export interface SalesBoard {
+  unitCount: number;
+  availableCount: number;
+  reservedCount: number;
+  soldCount: number;
+  deliveredCount: number;
+  inventoryValue: number;
+  placedValue: number;
+  availableValue: number;
+  contractedAmount: number;
+  collectedAmount: number;
+  remainingAmount: number;
+  blocks: SalesBoardBlock[];
+}
+
 export interface Apartment {
   id?: number;
+  /** Set by the backend; changed through its own endpoint, never through the form. */
+  salesStatus?: SalesStatus;
+  block?: string | null;
+  floorNumber?: number | null;
   apartmentNumber: string;
   apartmentType: string;
   totalSurface: number;

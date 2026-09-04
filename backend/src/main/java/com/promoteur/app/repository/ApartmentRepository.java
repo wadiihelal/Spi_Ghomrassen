@@ -35,6 +35,19 @@ public interface ApartmentRepository extends JpaRepository<Apartment, Long>, Jpa
     Page<Apartment> findByProjectId(Long projectId, Pageable pageable);
 
     /**
+     * Every unit of a project, acquirer joined, for the sales board (UX-05). The board shows the
+     * whole stock at once, so it is deliberately unpaginated but bounded by the project.
+     */
+    @EntityGraph(attributePaths = {"project", "acquirer"})
+    @Query("select a from Apartment a where a.project.id = :projectId")
+    List<Apartment> findByProjectIdForBoard(@Param("projectId") Long projectId);
+
+    /** The same board across every project. */
+    @EntityGraph(attributePaths = {"project", "acquirer"})
+    @Query("select a from Apartment a")
+    List<Apartment> findAllForBoard();
+
+    /**
      * Loads an apartment holding a write lock on its row, so a payment-ceiling check and the
      * write that follows it are atomic against a concurrent one (CONC-01).
      */

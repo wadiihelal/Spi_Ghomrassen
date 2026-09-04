@@ -31,7 +31,6 @@
         <div class="filter-grid">
           <input pInputText type="text" placeholder="Recherche..." [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" />
           <p-dropdown [(ngModel)]="filters.clientId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="projectClients" optionLabel="fullName" optionValue="id" placeholder="Client"></p-dropdown>
-          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="projects()" optionLabel="name" optionValue="id" placeholder="Projet"></p-dropdown>
           <p-dropdown [(ngModel)]="filters.paymentMethod" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="paymentMethods" optionLabel="label" optionValue="value" placeholder="Paiement"></p-dropdown>
           <input pInputText type="date" [(ngModel)]="filters.dateFrom" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" />
           <input pInputText type="date" [(ngModel)]="filters.dateTo" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" />

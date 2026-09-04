@@ -17,6 +17,7 @@ import com.promoteur.app.entity.Supplier;
 import com.promoteur.app.entity.SupplierTypeOption;
 import com.promoteur.app.enums.PaymentMethod;
 import com.promoteur.app.enums.ProjectStatus;
+import com.promoteur.app.enums.SalesStatus;
 import com.promoteur.app.repository.ApartmentRepository;
 import com.promoteur.app.repository.ClientAdvanceRepository;
 import com.promoteur.app.repository.ClientPurchaseRepository;
@@ -45,6 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,7 +72,7 @@ public class DemoDataInitializer implements CommandLineRunner {
     /** Apartments created on each floor of a demo residence. */
     private static final int DEMO_APARTMENTS_PER_FLOOR = 4;
     /** Maximum demo clients assigned as acquirers per residence. */
-    private static final int DEMO_CLIENTS_PER_RESIDENCE = 24;
+    private static final int DEMO_CLIENTS_PER_RESIDENCE = 15;
     /** Rotating given names for synthetic demo clients. */
     private static final String[] DEMO_FIRST_NAMES = {
             "Ahmed", "Amine", "Sami", "Youssef", "Mohamed", "Karim", "Walid", "Hatem",
@@ -135,6 +137,7 @@ public class DemoDataInitializer implements CommandLineRunner {
         seedClientPurchases(clients, projects);
         seedSupplierInvoices(suppliers, projects);
         ensureDemoResidenceData();
+        seedDemoResidenceSupplierInvoices(suppliers);
         seedPaymentSchedules();
     }
 
@@ -182,8 +185,27 @@ public class DemoDataInitializer implements CommandLineRunner {
                     if (client != null && apartment.getAcquirer() != null && client.getId().equals(apartment.getAcquirer().getId())) {
                         ensureDemoPurchaseAndAdvances(residence, project, client, apartment, globalSequence);
                     }
+                    applyDemoSalesStatus(project, apartment, apartmentSequence);
                 }
             }
+        }
+    }
+
+    /**
+     * Gives the demo board a believable spread (UX-05): units under contract are sold, and
+     * delivered once their residence is finished; part of the remaining stock is held.
+     */
+    private void applyDemoSalesStatus(Project project, Apartment apartment, int apartmentSequence) {
+        boolean contracted = clientPurchaseRepository.findByApartmentId(apartment.getId()).isPresent();
+        SalesStatus target;
+        if (contracted) {
+            target = project.getStatus() == ProjectStatus.COMPLETED ? SalesStatus.DELIVERED : SalesStatus.SOLD;
+        } else {
+            target = apartmentSequence % 3 == 0 ? SalesStatus.RESERVED : SalesStatus.AVAILABLE;
+        }
+        if (apartment.getSalesStatus() != target) {
+            apartment.setSalesStatus(target);
+            apartmentRepository.save(apartment);
         }
     }
 
@@ -278,7 +300,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                 profile.cellarCount(),
                 totalSalePrice,
                 project.getId(),
-                client != null ? client.getId() : null
+                client != null ? client.getId() : null,
+                "Bloc " + residence.block(),
+                floor
         ).id();
         Apartment apartment = apartmentRepository.findById(apartmentId)
                 .orElseThrow(() -> new IllegalStateException("Demo apartment " + apartmentId + " disappeared"));
@@ -491,7 +515,15 @@ public class DemoDataInitializer implements CommandLineRunner {
 
     /** Persists an apartment through {@link ApartmentService}. */
     private ApartmentResponse createApartment(String number, String type, String detail, BigDecimal totalSurface, BigDecimal gardenSurface, String parkingCount, Integer cellarCount, BigDecimal totalSalePrice, Long projectId, Long acquirerId) {
+        return createApartment(number, type, detail, totalSurface, gardenSurface, parkingCount, cellarCount,
+                totalSalePrice, projectId, acquirerId, null, null);
+    }
+
+    /** Same, with the block and floor the sales board lays out (UX-05). */
+    private ApartmentResponse createApartment(String number, String type, String detail, BigDecimal totalSurface, BigDecimal gardenSurface, String parkingCount, Integer cellarCount, BigDecimal totalSalePrice, Long projectId, Long acquirerId, String block, Integer floorNumber) {
         ApartmentRequest request = new ApartmentRequest();
+        request.setBlock(block);
+        request.setFloorNumber(floorNumber);
         request.setApartmentNumber(number);
         request.setApartmentType(type);
         request.setDetail(detail);
@@ -649,6 +681,55 @@ public class DemoDataInitializer implements CommandLineRunner {
                 new BigDecimal("4800.000"), new BigDecimal("0.0700"),
                 suppliers.get("Atelier Architecture El Medina").getId(), jasmin,
                 "Honoraires d'architecte, phase APS.");
+    }
+
+    /**
+     * Gives each demo residence its own supplier invoices (UX-04), so the « à payer » figures
+     * hold up whichever project the demo is shown on rather than only the narrative ones.
+     */
+    private void seedDemoResidenceSupplierInvoices(Map<String, Supplier> suppliers) {
+        LocalDate today = LocalDate.now();
+        List<String> supplierNames = List.of(
+                "Entreprise Bâtir Ghomrassen",
+                "Comptoir des Matériaux du Sud",
+                "Équipements Électriques Sahara",
+                "Bureau d'Études Ingénierie Tataouine");
+
+        List<Project> residences = projectRepository.findAll().stream()
+                .filter(project -> project.getCode() != null && project.getCode().startsWith("SPI-DEMO-RES-"))
+                .sorted(Comparator.comparing(Project::getCode))
+                .toList();
+
+        for (int index = 0; index < residences.size(); index++) {
+            Project residence = residences.get(index);
+            String block = residence.getCode().substring(residence.getCode().length() - 1);
+            Long supplierId = suppliers.get(supplierNames.get(index % supplierNames.size())).getId();
+            Long otherSupplierId = suppliers.get(supplierNames.get((index + 1) % supplierNames.size())).getId();
+
+            // Settled: nothing owed on it any more.
+            Long settled = createSupplierInvoice("FF-DEMO-" + block + "-01", today.minusMonths(4),
+                    today.minusMonths(3), new BigDecimal("24500.000"), new BigDecimal("0.1900"),
+                    supplierId, residence.getId(), "Situation de travaux n°1, gros oeuvre.");
+            paySupplierInvoice(settled, today.minusMonths(3), new BigDecimal("29155.000"),
+                    PaymentMethod.BANK_TRANSFER, "VIR-DEMO-" + block + "-01");
+
+            // Part paid and already late: the case the promoter needs to see.
+            Long late = createSupplierInvoice("FF-DEMO-" + block + "-02", today.minusMonths(2),
+                    today.minusDays(18 + index), new BigDecimal("31200.000"), new BigDecimal("0.1900"),
+                    supplierId, residence.getId(), "Situation de travaux n°2, maçonnerie et coffrage.");
+            paySupplierInvoice(late, today.minusMonths(1), new BigDecimal("12000.000"),
+                    PaymentMethod.CHECK, "CHQ-DEMO-" + block + "-02");
+
+            // Late with nothing paid.
+            createSupplierInvoice("FF-DEMO-" + block + "-03", today.minusMonths(2),
+                    today.minusDays(6 + index), new BigDecimal("8700.000"), new BigDecimal("0.1300"),
+                    otherSupplierId, residence.getId(), "Fourniture et pose d'appareillage électrique.");
+
+            // Still to fall due.
+            createSupplierInvoice("FF-DEMO-" + block + "-04", today.minusDays(8),
+                    today.plusDays(22), new BigDecimal("5400.000"), new BigDecimal("0.0700"),
+                    otherSupplierId, residence.getId(), "Mission de suivi technique du chantier.");
+        }
     }
 
     private Long createSupplierInvoice(String invoiceNumber, LocalDate invoiceDate, LocalDate dueDate,

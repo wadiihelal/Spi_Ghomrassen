@@ -1,0 +1,143 @@
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Commercialisation</span>
+    <h1>Plan de vente</h1>
+    <p class="page-sub">Tout le stock du projet, bloc par bloc. Cliquez sur un lot pour voir son
+      contrat et changer son statut.</p>
+  </div>
+</section>
+
+@if (loading()) {
+  <div class="loading-pane"><p-progressSpinner strokeWidth="4"></p-progressSpinner></div>
+}
+
+@if (!loading() && board(); as data) {
+  <section class="summary-grid">
+    <p-card styleClass="metric-card primary">
+      <div class="metric-head">
+        <span class="metric-label">Stock commercialisé</span>
+        <i class="pi pi-building"></i>
+      </div>
+      <div class="metric-value">{{ placedShare() }}%</div>
+      <div class="progress-track"><div class="progress-fill" [style.width.%]="placedShare()"></div></div>
+      <div class="kpi-foot">{{ data.unitCount - data.availableCount }} lot(s) placés sur {{ data.unitCount }}</div>
+    </p-card>
+    <p-card styleClass="metric-card accent">
+      <div class="metric-head">
+        <span class="metric-label">Reste en stock</span>
+        <i class="pi pi-tag"></i>
+      </div>
+      <div class="metric-value">{{ data.availableValue | dinar:'short' }}</div>
+      <div class="kpi-foot">{{ data.availableCount }} lot(s) à vendre</div>
+    </p-card>
+    <p-card styleClass="metric-card success">
+      <div class="metric-head">
+        <span class="metric-label">Encaissé sur contrats</span>
+        <i class="pi pi-wallet"></i>
+      </div>
+      <div class="metric-value">{{ data.collectedAmount | dinar:'short' }}</div>
+      <div class="progress-track"><div class="progress-fill" [style.width.%]="collectedShare()"></div></div>
+      <div class="kpi-foot">{{ collectedShare() }}% de {{ data.contractedAmount | dinar:'short' }} contractés</div>
+    </p-card>
+    <p-card styleClass="metric-card danger">
+      <div class="metric-head">
+        <span class="metric-label">Reste à encaisser</span>
+        <i class="pi pi-hourglass"></i>
+      </div>
+      <div class="metric-value">{{ data.remainingAmount | dinar:'short' }}</div>
+      <div class="kpi-foot">Sur les lots déjà vendus</div>
+    </p-card>
+  </section>
+
+  <div class="legend">
+    @for (meta of statusMeta; track meta.status) {
+      <span class="legend-item">
+        <span class="swatch" [class]="'tone-' + meta.tone"></span>
+        {{ meta.label }}
+        <strong>{{ countFor(meta.status) }}</strong>
+      </span>
+    }
+  </div>
+
+  @if (!data.blocks.length) {
+    <p-card>
+      <p class="empty-note">Aucun lot enregistré pour ce projet. Créez des appartements pour voir
+        apparaître le plan de vente.</p>
+    </p-card>
+  }
+
+  @for (block of data.blocks; track block.block) {
+    <p-card styleClass="block-card">
+      <div class="block-head">
+        <h2>{{ block.block }}</h2>
+        <span class="text-muted">{{ block.unitCount }} lot(s) · {{ block.availableCount }} disponible(s)</span>
+      </div>
+
+      @for (floor of block.floors; track floor.label) {
+        <div class="floor-row">
+          <div class="floor-label">{{ floor.label }}</div>
+          <div class="unit-strip">
+            @for (unit of floor.units; track unit.id) {
+              <button type="button" class="unit" [class]="'tone-' + statusTone(unit.salesStatus)"
+                      (click)="openUnit(unit)"
+                      [attr.aria-label]="'Lot ' + unit.apartmentNumber + ' — ' + statusLabel(unit.salesStatus)">
+                <span class="unit-number">{{ unit.apartmentNumber }}</span>
+                <span class="unit-type">{{ unit.apartmentType }}</span>
+                <span class="unit-price">{{ unit.totalSalePrice | dinar:'short' }}</span>
+                @if (unit.acquirerName) {
+                  <span class="unit-buyer">{{ unit.acquirerName }}</span>
+                }
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </p-card>
+  }
+}
+
+<p-dialog [header]="selectedUnit() ? 'Lot ' + selectedUnit()!.apartmentNumber : 'Lot'"
+          [(visible)]="unitDialogVisible" [modal]="true"
+          [style]="{ width: '34rem', maxWidth: '96vw' }">
+  @if (selectedUnit(); as unit) {
+    <div class="unit-detail">
+      <div class="unit-detail-head">
+        <div>
+          <div class="unit-detail-kind">{{ unit.apartmentType }} · {{ unit.totalSurface | number:'1.0-2' }} m²</div>
+          <h3>{{ unit.apartmentNumber }}</h3>
+        </div>
+        <p-tag [value]="statusLabel(unit.salesStatus)"
+               [severity]="unit.salesStatus === 'AVAILABLE' ? 'secondary'
+                 : unit.salesStatus === 'RESERVED' ? 'warning'
+                 : unit.salesStatus === 'SOLD' ? 'info' : 'success'"></p-tag>
+      </div>
+
+      <dl class="unit-facts">
+        <div><dt>Prix affiché</dt><dd>{{ unit.totalSalePrice | dinar }}</dd></div>
+        <div><dt>Acquéreur</dt><dd>{{ unit.acquirerName || 'Aucun' }}</dd></div>
+        <div><dt>Contrat</dt><dd>{{ unit.contractedAmount | dinar }}</dd></div>
+        <div><dt>Encaissé</dt><dd>{{ unit.collectedAmount | dinar }}</dd></div>
+        <div><dt>Reste dû</dt><dd>{{ unit.remainingAmount | dinar }}</dd></div>
+      </dl>
+
+      @if (unit.contractedAmount) {
+        <div class="progress-track">
+          <div class="progress-fill" [style.width.%]="unitCollectedShare(unit)"></div>
+        </div>
+        <p class="text-muted">{{ unitCollectedShare(unit) }}% du contrat encaissé.</p>
+      }
+
+      <div class="status-actions">
+        @for (meta of statusMeta; track meta.status) {
+          <button pButton type="button" [label]="meta.label"
+                  [severity]="unit.salesStatus === meta.status ? 'primary' : 'secondary'"
+                  [outlined]="unit.salesStatus !== meta.status"
+                  [disabled]="unit.salesStatus === meta.status"
+                  (click)="changeStatus(meta.status)"></button>
+        }
+      </div>
+      <p class="attachments-hint">« Vendu » et « livré » découlent du contrat de vente : ils ne
+        peuvent être posés qu'une fois le contrat enregistré.</p>
+    </div>
+  }
+</p-dialog>

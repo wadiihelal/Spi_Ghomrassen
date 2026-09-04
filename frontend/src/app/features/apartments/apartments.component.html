@@ -72,14 +72,13 @@
              [showCurrentPageReport]="true">
       <ng-template pTemplate="caption">
         <div class="filter-grid">
-          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="projects()" optionLabel="name" optionValue="id" placeholder="Filtrer par projet"></p-dropdown>
           <input pInputText [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" placeholder="Recherche numéro/type/client..." />
         </div>
       </ng-template>
       <ng-template pTemplate="header">
         <tr>
           <th>Appartement</th>
-          <th>Projet</th>
+          <th>Statut</th>
           <th>Acquéreur</th>
           <th class="num-col">Prix</th>
           <th class="num-col">Encaissé</th>
@@ -91,9 +90,12 @@
         <tr>
           <td class="num-col">
             <div class="table-main">{{ row.apartmentNumber }}</div>
-            <div class="table-meta">{{ row.apartmentType }} · {{ row.totalSurface | number:'1.0-2' }} m² · {{ getPricePerSquareMeter(row) | dinar:'short' }}/m²</div>
+            <div class="table-meta">{{ row.apartmentType }} · {{ row.totalSurface | number:'1.0-2' }} m² · {{ getPricePerSquareMeter(row) | dinar:'short' }}/m²@if (row.block) { · {{ row.block }} }</div>
           </td>
-          <td>{{ getProjectName(row) }}</td>
+          <td>
+            <p-tag [value]="salesStatusLabel(row.salesStatus)"
+                   [severity]="salesStatusSeverity(row.salesStatus)"></p-tag>
+          </td>
           <td>{{ getClientName(row) }}</td>
           <td class="num-col">{{ row.totalSalePrice | dinar }}</td>
           <td class="num-col">{{ getTotalCollected(row) | dinar }}</td>
@@ -116,6 +118,14 @@
       <div class="field">
         <label>Numéro appartement</label>
         <input pInputText formControlName="apartmentNumber" />
+      </div>
+      <div class="field">
+        <label>Bloc</label>
+        <input pInputText formControlName="block" placeholder="Bloc A" />
+      </div>
+      <div class="field">
+        <label>Étage</label>
+        <p-inputNumber formControlName="floorNumber" [min]="0" placeholder="0 pour le RDC"></p-inputNumber>
       </div>
       <div class="field">
         <label>Type</label>

@@ -98,6 +98,8 @@ export class SupplierInvoicesComponent implements OnInit {
       // The table and every project-scoped lookup must follow the header (PERF-02): the
       // first page is fetched before the context arrives, and the user can switch project.
       this.table.onFilterChange();
+      // The payables strip is scoped too, so it has to follow the header (UX-04).
+      this.loadPayables();
       if (!this.editingId) {
         this.form.patchValue({ projectId });
       }
@@ -119,8 +121,20 @@ export class SupplierInvoicesComponent implements OnInit {
     this.api.getSuppliers().subscribe({ next: (data) => this.suppliers.set(data) });
     this.api.getProjects().subscribe({ next: (data) => this.projects.set(data) });
     this.api.getVatRates().subscribe({ next: (data) => this.vatRates.set(data) });
-    this.api.getPayablesSummary(this.selectedProjectId())
-      .subscribe({ next: (data) => this.payables.set(data) });
+  }
+
+  /** What is owed to suppliers on the project in scope. */
+  private loadPayables(): void {
+    const requestedFor = this.selectedProjectId();
+    this.api.getPayablesSummary(requestedFor).subscribe({
+      next: (data) => {
+        // Two scopes can be in flight while the context settles at startup; the answer to the
+        // one we have already left must not overwrite the current figures.
+        if (this.selectedProjectId() === requestedFor) {
+          this.payables.set(data);
+        }
+      }
+    });
   }
 
   submit(): void {
@@ -170,7 +184,7 @@ export class SupplierInvoicesComponent implements OnInit {
   /** A payment changes what is owed, so the table and the payables strip both reload. */
   onPaymentsChanged(): void {
     this.table.reload();
-    this.loadData();
+    this.loadPayables();
   }
 
   settlementLabel(status?: SettlementStatus): string {

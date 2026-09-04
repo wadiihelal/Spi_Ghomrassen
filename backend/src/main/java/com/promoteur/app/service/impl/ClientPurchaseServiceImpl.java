@@ -6,6 +6,7 @@ import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.PurchaseTotals;
 import com.promoteur.app.dto.response.ClientPurchaseResponse;
 import com.promoteur.app.entity.Apartment;
+import com.promoteur.app.enums.SalesStatus;
 import com.promoteur.app.entity.Client;
 import com.promoteur.app.entity.ClientAdvance;
 import com.promoteur.app.entity.ClientPurchase;
@@ -74,6 +75,8 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
         final ClientPurchase purchase = new ClientPurchase();
         this.map(purchase, request);
         final ClientPurchase saved = this.clientPurchaseRepository.save(purchase);
+        // A signed contract is what makes a unit sold, so the board follows it (UX-05).
+        this.markSold(saved.getApartment());
         this.auditLogService.create("PURCHASE", saved.getId(), "CREATE",
                 this.messageService.get("audit.purchase.created", saved.getReference(), saved.getApartment().getApartmentNumber()));
         return this.toResponse(saved);
@@ -93,7 +96,13 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
     public void delete(final Long id) {
         final ClientPurchase purchase = this.entity(id);
         final String reference = purchase.getReference();
+        final Apartment apartment = purchase.getApartment();
         this.clientPurchaseRepository.delete(purchase);
+        // Without its contract the unit is no longer sold; an acquirer still on it means reserved.
+        if (apartment.getSalesStatus() == SalesStatus.SOLD || apartment.getSalesStatus() == SalesStatus.DELIVERED) {
+            apartment.setSalesStatus(apartment.getAcquirer() == null ? SalesStatus.AVAILABLE : SalesStatus.RESERVED);
+            this.apartmentRepository.save(apartment);
+        }
         this.auditLogService.create("PURCHASE", id, "DELETE",
                 this.messageService.get("audit.purchase.deleted", reference));
     }
@@ -152,6 +161,14 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
         purchase.setClient(client);
         purchase.setProject(project);
         purchase.setApartment(apartment);
+    }
+
+    /** Moves a unit to sold, leaving a delivered one alone: delivery is further along. */
+    private void markSold(final Apartment apartment) {
+        if (apartment.getSalesStatus() != SalesStatus.DELIVERED) {
+            apartment.setSalesStatus(SalesStatus.SOLD);
+            this.apartmentRepository.save(apartment);
+        }
     }
 
     private void validateUniqueApartmentPurchase(final Long currentPurchaseId, final Long apartmentId,

@@ -9,7 +9,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DropdownModule } from 'primeng/dropdown';
 import { DialogModule } from 'primeng/dialog';
-import { Apartment, Client, ListFilter, Project } from '../../shared/models/models';
+import { TagModule } from 'primeng/tag';
+import { Apartment, Client, ListFilter, Project, SalesStatus } from '../../shared/models/models';
 import { ApiService } from '../../core/services/api.service';
 import { DinarPipe } from '../../shared/pipes/dinar.pipe';
 import { UiService } from '../../core/services/ui.service';
@@ -20,7 +21,7 @@ import { forkJoin } from 'rxjs';
 @Component({
   selector: 'app-apartments',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, DinarPipe],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, DinarPipe, TagModule],
   templateUrl: './apartments.component.html',
   styleUrl: './apartments.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -74,6 +75,8 @@ export class ApartmentsComponent implements OnInit {
   form = this.fb.group({
     apartmentNumber: ['', [Validators.required]],
     apartmentType: ['S+2', [Validators.required]],
+    block: [''],
+    floorNumber: [null as number | null],
     totalSurface: [0, [Validators.required]],
     gardenSurface: [0],
     parkingCount: [''],
@@ -208,6 +211,10 @@ export class ApartmentsComponent implements OnInit {
           this.api.createApartment({
             apartmentNumber,
             apartmentType: payload.apartmentType ?? 'S+2',
+            // The sales board reads these, so the generator sets them rather than
+            // leaving every unit to fall into "Sans bloc" (UX-05).
+            block: `Bloc ${blockCode}`,
+            floorNumber: floor,
             totalSurface: payload.totalSurface ?? 0,
             gardenSurface: payload.gardenSurface ?? 0,
             parkingCount: payload.parkingCount ?? '',
@@ -230,12 +237,33 @@ export class ApartmentsComponent implements OnInit {
     });
   }
 
+  /** Same wording as the sales board, so the two screens read alike (UX-05). */
+  salesStatusLabel(status?: SalesStatus): string {
+    switch (status) {
+      case 'RESERVED': return 'Réservé';
+      case 'SOLD': return 'Vendu';
+      case 'DELIVERED': return 'Livré';
+      default: return 'Disponible';
+    }
+  }
+
+  salesStatusSeverity(status?: SalesStatus): 'success' | 'info' | 'warning' | 'secondary' {
+    switch (status) {
+      case 'RESERVED': return 'warning';
+      case 'SOLD': return 'info';
+      case 'DELIVERED': return 'success';
+      default: return 'secondary';
+    }
+  }
+
   edit(row: Apartment): void {
     this.editingId = row.id ?? null;
     this.dialogVisible = true;
     this.form.patchValue({
       apartmentNumber: row.apartmentNumber,
       apartmentType: row.apartmentType,
+      block: row.block ?? '',
+      floorNumber: row.floorNumber ?? null,
       totalSurface: row.totalSurface,
       gardenSurface: row.gardenSurface ?? 0,
       parkingCount: row.parkingCount ?? '',
@@ -266,6 +294,8 @@ export class ApartmentsComponent implements OnInit {
     this.form.reset({
       apartmentNumber: '',
       apartmentType: 'S+2',
+      block: '',
+      floorNumber: null,
       totalSurface: 0,
       gardenSurface: 0,
       parkingCount: '',

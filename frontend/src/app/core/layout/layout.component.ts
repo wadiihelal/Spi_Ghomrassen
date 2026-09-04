@@ -43,6 +43,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   dailyNavItems = [
     { label: 'Accueil', route: '/dashboard', icon: 'pi pi-home' },
+    { label: 'Plan de vente', route: '/sales-board', icon: 'pi pi-th-large' },
     { label: 'Stock appartements', route: '/apartments', icon: 'pi pi-building' },
     { label: 'Factures fournisseurs', route: '/supplier-invoices', icon: 'pi pi-receipt' },
     { label: 'Dépenses', route: '/expenses', icon: 'pi pi-wallet' },

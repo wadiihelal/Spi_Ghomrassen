@@ -1,5 +1,7 @@
 package com.promoteur.app.dto.response;
 
+import com.promoteur.app.enums.SalesStatus;
+
 import java.math.BigDecimal;
 
 public record ApartmentResponse(
@@ -12,6 +14,10 @@ public record ApartmentResponse(
         Integer cellarCount,
         BigDecimal totalSalePrice,
         String detail,
+        /** Commercial state of the unit (UX-05). */
+        SalesStatus salesStatus,
+        String block,
+        Integer floorNumber,
         Long projectId,
         String projectName,
         Long acquirerId,

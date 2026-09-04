@@ -62,6 +62,17 @@ public class ApartmentRequest {
     private String detail;
 
     /**
+     * Building or block the unit belongs to, used to lay out the sales board (UX-05).
+     */
+    private String block;
+
+    /**
+     * Floor, ground floor being zero.
+     */
+    @PositiveOrZero
+    private Integer floorNumber;
+
+    /**
      * Owning project identifier.
      */
     @NotNull

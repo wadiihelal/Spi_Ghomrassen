@@ -47,7 +47,6 @@
              [showCurrentPageReport]="true">
       <ng-template pTemplate="caption">
         <div class="filter-grid">
-          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="projects()" optionLabel="name" optionValue="id" placeholder="Filtrer par projet"></p-dropdown>
           <p-dropdown [(ngModel)]="filters.supplierId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="suppliers()" optionLabel="name" optionValue="id" placeholder="Filtrer par fournisseur"></p-dropdown>
           <p-dropdown [(ngModel)]="filters.settlement" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="settlementOptions" optionLabel="label" optionValue="value" placeholder="État du règlement"></p-dropdown>
           <input pInputText [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" placeholder="Recherche facture..." />
@@ -57,8 +56,6 @@
         <tr>
           <th>Facture</th>
           <th>Fournisseur</th>
-          <th>Projet</th>
-          <th class="num-col">HT</th>
           <th class="num-col">TVA</th>
           <th class="num-col">TTC</th>
           <th class="num-col">Reste</th>
@@ -73,8 +70,6 @@
             <div class="table-meta">{{ (row.invoiceDate | date:'dd/MM/yyyy') || '-' }}@if (row.dueDate) { · échéance {{ row.dueDate | date:'dd/MM/yyyy' }} } · HT {{ row.amountHt | dinar }}</div>
           </td>
           <td>{{ row.supplierName || '-' }}</td>
-          <td>{{ row.projectName || '-' }}</td>
-          <td class="num-col">{{ row.amountHt | dinar }}</td>
           <td class="num-col">{{ row.vatAmount | dinar }} ({{ (row.vatRate ?? 0) * 100 | percentShare }})</td>
           <td class="num-col">{{ row.amountTtc | dinar }}</td>
           <td class="num-col">{{ row.remainingAmount | dinar }}</td>

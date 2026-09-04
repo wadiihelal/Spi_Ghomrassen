@@ -1,7 +1,10 @@
 package com.promoteur.app.entity;
 
+import com.promoteur.app.enums.SalesStatus;
 import jakarta.persistence.Column;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -40,6 +43,18 @@ public class Apartment extends BaseEntity {
 
     @Column(length = 2000)
     private String detail;
+
+    /** Where the unit stands commercially (UX-05); every apartment starts in stock. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private SalesStatus salesStatus = SalesStatus.AVAILABLE;
+
+    /** Building or block, for the sales board layout. */
+    @Column(length = 50)
+    private String block;
+
+    /** Floor, ground floor being zero. */
+    private Integer floorNumber;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_id")

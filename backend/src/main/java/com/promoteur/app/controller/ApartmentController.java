@@ -3,6 +3,8 @@ package com.promoteur.app.controller;
 import com.promoteur.app.dto.ApartmentRequest;
 import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.response.ApartmentResponse;
+import com.promoteur.app.dto.response.SalesBoardResponse;
+import com.promoteur.app.enums.SalesStatus;
 import com.promoteur.app.service.ApartmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -55,6 +58,19 @@ public class ApartmentController {
             Pageable pageable) {
         return apartmentService.findAll(new ListFilter(projectId, clientId, supplierId, categoryId, apartmentId,
                 paymentStatus, paymentMethod, dateFrom, dateTo, search), pageable);
+    }
+
+    @Operation(summary = "Plan de commercialisation du stock, par bloc et par étage")
+    @GetMapping("/sales-board")
+    public SalesBoardResponse salesBoard(@RequestParam(required = false) Long projectId) {
+        return apartmentService.salesBoard(projectId);
+    }
+
+    @Operation(summary = "Changer le statut commercial d'un appartement")
+    @PatchMapping("/{id}/sales-status")
+    public ApartmentResponse changeSalesStatus(@PathVariable Long id,
+                                               @RequestParam SalesStatus status) {
+        return apartmentService.changeSalesStatus(id, status);
     }
 
     @Operation(summary = "Détail par identifiant")
