@@ -32,11 +32,8 @@ export class ReportsComponent implements OnInit {
   readonly projects = signal<Project[]>([]);
   readonly selectedProjectId = signal<number | null>(null);
   selectedYear = new Date().getFullYear();
-  /**
-   * Null means the whole year, which is what the screen opens on: a promoter's month can be
-   * quiet, and a page of zeros reads as a broken report rather than an empty month.
-   */
-  selectedMonth: number | null = null;
+  /** The screen opens on the current month; « Toute l'année » widens it to the whole year. */
+  selectedMonth: number | null = new Date().getMonth() + 1;
   /** Five years back, plus the current one: enough for a promoter's archive. */
   readonly years = ReportsComponent.recentYears();
   readonly months = ReportsComponent.frenchMonths();

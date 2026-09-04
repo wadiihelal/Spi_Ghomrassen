@@ -112,7 +112,7 @@
     </p-table>
   </p-card>
 
-  <p-card header="Situation des acquéreurs" class="full-span">
+  <p-card header="Mouvements des acquéreurs sur la période" class="full-span">
     <p-table [value]="clientStatements()">
       <ng-template pTemplate="header">
         <tr>
@@ -131,7 +131,7 @@
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="4">Aucun acquéreur sur la période.</td></tr>
+        <tr><td colspan="4">Aucun mouvement d'acquéreur sur la période.</td></tr>
       </ng-template>
     </p-table>
   </p-card>
