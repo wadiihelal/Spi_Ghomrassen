@@ -82,8 +82,25 @@ Le journal d'audit (`audit_logs`) enregistre `actor = system` tant qu'il n'y a p
   `UNPAID` / `PARTIALLY_PAID` / `PAID` dérivé, jamais stocké.
 - **Références** : `DEP-2026-00042`, `ACC-2026-00042`, attribuées par séquence avant le premier
   enregistrement.
+- **Échéanciers** : un contrat porte un plan d'échéances (`payment_installments`). Ce que chaque
+  ligne a reçu se calcule en cascade — l'argent encaissé sur le contrat couvre les échéances dans
+  l'ordre — donc rien n'est stocké sur la ligne. Le statut `PAID` / `PARTIALLY_PAID` / `OVERDUE` /
+  `UPCOMING` en découle. Un plan qui ne couvre pas le total du contrat est refusé.
+- **Règlements fournisseurs** : ce qui a été payé sur une facture est la somme de ses règlements
+  (`supplier_payments`) ; l'état et le retard s'en déduisent. Un règlement qui dépasserait le TTC
+  est refusé. Sans `due_date`, une facture n'est jamais en retard.
+- **Statut commercial d'un lot** : `sales_status` vaut `AVAILABLE`, `RESERVED`, `SOLD` ou
+  `DELIVERED`. « Vendu » suit le contrat de vente, posé à sa création et repris à sa suppression ;
+  « réservé » et « livré » sont des décisions du promoteur, donc stockées. Un lot sous contrat ne
+  peut pas repasser en stock, un lot sans contrat ne peut pas être vendu.
 - **Rapports** : tout rapport est filtré par `projectId` (absent = projet actif, `ALL` = tous) et
   par `year` / `month`. Les exports indiquent leur périmètre en en-tête.
+- **Documents imprimés** : reçu de paiement, situation de compte et récapitulatif de TVA sont
+  produits en lecture seule à partir des chiffres enregistrés (`DocumentService`). Le reçu porte
+  le montant en chiffres et en lettres (`AmountInWordsService`) et la référence de l'encaissement,
+  pas une nouvelle séquence : un reçu réimprimé reste le même document. L'en-tête vient de
+  `app.company.*`. Les ventes étant enregistrées TTC, le document de TVA ne couvre que la TVA
+  déductible et le précise.
 
 ## Pièces jointes
 
@@ -136,6 +153,10 @@ prochaine version.
 | Pièces jointes | `/api/attachments?ownerType&ownerId`, `/api/attachments/{id}` |
 | Journal d'audit | `/api/audit-logs?entityType&actor&dateFrom&dateTo`, `/api/audit-logs/by-entity/{type}/{id}` |
 | Tableau de bord | `/api/dashboard/summary?projectId` |
+| Plan de vente | `/api/apartments/sales-board?projectId`, `PATCH /api/apartments/{id}/sales-status?status` |
+| Échéanciers | `/api/client-purchases/{id}/schedule` (`GET`, `PUT`, `POST /generate`), `/api/installments`, `/api/installments/summary` |
+| Règlements fournisseurs | `/api/supplier-invoices/{id}/payments` (`GET`, `POST`, `DELETE /{paymentId}`), `/api/supplier-invoices/payables-summary` |
+| Documents PDF | `/api/documents/advances/{id}/receipt`, `/api/documents/clients/{id}/statement`, `/api/documents/vat/{year}/{month}?projectId` |
 | Rapports | `/api/reports/expenses/by-category`, `/by-project`, `/by-month`, `/api/reports/purchases/by-project`, `/api/reports/advances/by-payment-method`, `/api/reports/clients/statements`, `/api/reports/clients/{id}/statement`, `/api/reports/export/excel`, `/export/pdf` |
 
 ### Exemple — créer une dépense

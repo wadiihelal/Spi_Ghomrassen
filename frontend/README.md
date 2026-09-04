@@ -32,23 +32,34 @@ Toute la console est rattachée à un projet. `ProjectContextService` (`core/ser
 projet sélectionné sous forme de signal (`selectedProjectId`), le charge au démarrage depuis
 `GET /api/projects/active-context` et le change via `PUT /api/projects/active-context/{id}` —
 le choix est donc persisté côté serveur, pas dans le navigateur. Le sélecteur est dans l'en-tête
-(`core/layout`). Les écrans réagissent au changement en relançant leurs requêtes avec
-`projectId`.
+(`core/layout`).
+
+**Un écran charge ses données sur `scope$`, jamais sur `selectedProjectId` directement.** Le
+signal vaut `null` jusqu'à ce que le contexte enregistré revienne du serveur ; une requête
+lancée sur ce `null` porte sur tous les projets et peut répondre après la bonne, affichant les
+chiffres de tous les projets sous le nom d'un seul. `scope$` n'émet qu'une fois le contexte
+résolu, puis à chaque changement.
 
 ## Écrans
 
 | Route | Composant | Contenu |
 |---|---|---|
-| `/dashboard` | `features/dashboard` | agrégats du projet actif (`/api/dashboard/summary`, `/api/reports/*`) et cinq dépenses récentes |
+| `/dashboard` | `features/dashboard` | situation du projet actif : encaissé, décaissé, retards, échéances du mois, reste à vendre, tendance des dépenses |
+| `/sales-board` | `features/sales-board` | plan de commercialisation : tout le stock par bloc et par étage, statut modifiable |
 | `/apartments` | `features/apartments` | stock d'appartements, génération par bloc, contrat/encaissé/reste par ligne (calculés par le serveur) |
-| `/supplier-invoices` | `features/supplier-invoices` | factures fournisseurs, TVA par taux |
+| `/supplier-invoices` | `features/supplier-invoices` | factures fournisseurs, TVA par taux, règlements et impayés |
 | `/expenses` | `features/expenses` | dépenses, TVA par taux, catégories |
 | `/purchases` | `features/purchases` | contrats de vente : un par appartement, statut de paiement dérivé |
 | `/advances` | `features/advances` | acomptes, plafonnés par le contrat ou le prix de vente |
-| `/reports` | `features/reports` | rapports par projet et période, exports Excel / PDF |
+| `/schedules` | `features/schedules` | échéanciers des contrats et échéances à relancer |
+| `/reports` | `features/reports` | rapports par projet et période, exports Excel / PDF, récapitulatif de TVA |
 | `/projects`, `/projects/:id`, `/clients`, `/suppliers` | paramétrage | référentiels |
 
 Toutes les routes sont chargées à la demande (`loadComponent`).
+
+Les documents imprimables (reçu, situation de compte, récapitulatif de TVA) sont de simples
+liens vers l'API : le lecteur PDF du navigateur les ouvre et propose l'impression. Pas de blob
+à gérer côté client, et le lien reste ouvrable dans un nouvel onglet.
 
 ## Tables paginées côté serveur
 
