@@ -149,7 +149,8 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public Page<AmountByLabelDto> expensesByMonth(ReportFilter filter, Pageable pageable) {
         ReportScope scope = resolveScope(filter);
-        return expenseRepository.sumByMonth(scope.projectId(), scope.dateFrom(), scope.dateTo(), pageable);
+        return expenseRepository.sumByMonth(scope.projectId(), scope.dateFrom(), scope.dateTo(), pageable)
+                .map(row -> new AmountByLabelDto(row.label(), row.amount()));
     }
 
     @Override

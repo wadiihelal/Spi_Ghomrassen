@@ -2,6 +2,7 @@ package com.promoteur.app.repository;
 
 import com.promoteur.app.dto.report.AmountByLabelDto;
 import com.promoteur.app.dto.report.CountAndTotal;
+import com.promoteur.app.dto.report.MonthlyAmount;
 import com.promoteur.app.entity.Expense;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -117,13 +118,12 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
 
     /**
      * Expense totals per calendar month, for the dashboard's trend bars. Grouped by the database
-     * so the browser never needs the underlying rows (PERF-02).
+     * so the browser never needs the underlying rows (PERF-02). Year and month are projected as
+     * they are grouped: a formatted label in the select list is rejected by PostgreSQL and H2.
      */
     @Query(value = """
-            select new com.promoteur.app.dto.report.AmountByLabelDto(
-                concat(cast(year(e.expenseDate) as string), '-',
-                       lpad(cast(month(e.expenseDate) as string), 2, '0')),
-                sum(e.amountTtc))
+            select new com.promoteur.app.dto.report.MonthlyAmount(
+                year(e.expenseDate), month(e.expenseDate), sum(e.amountTtc))
             from Expense e
             where (:projectId is null or e.project.id = :projectId)
               and (:from is null or e.expenseDate >= :from)
@@ -132,15 +132,15 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
             order by year(e.expenseDate), month(e.expenseDate)
             """,
             countQuery = """
-            select count(distinct concat(year(e.expenseDate), month(e.expenseDate)))
+            select count(distinct concat(year(e.expenseDate), '-', month(e.expenseDate)))
             from Expense e
             where (:projectId is null or e.project.id = :projectId)
               and (:from is null or e.expenseDate >= :from)
               and (:to is null or e.expenseDate <= :to)
             """)
-    Page<AmountByLabelDto> sumByMonth(@Param("projectId") Long projectId,
-                                      @Param("from") LocalDate from,
-                                      @Param("to") LocalDate to,
-                                      Pageable pageable);
+    Page<MonthlyAmount> sumByMonth(@Param("projectId") Long projectId,
+                                   @Param("from") LocalDate from,
+                                   @Param("to") LocalDate to,
+                                   Pageable pageable);
 
 }
