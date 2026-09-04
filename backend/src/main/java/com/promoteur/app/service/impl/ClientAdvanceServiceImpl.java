@@ -126,8 +126,6 @@ public class ClientAdvanceServiceImpl implements ClientAdvanceService {
         clientAdvance.setAdvanceDate(request.getAdvanceDate());
         clientAdvance.setAmount(request.getAmount());
         clientAdvance.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : com.promoteur.app.enums.PaymentMethod.OTHER);
-        clientAdvance.setAttachmentName(request.getAttachmentName());
-        clientAdvance.setAttachmentUrl(request.getAttachmentUrl());
         clientAdvance.setNotes(request.getNotes());
         clientAdvance.setClient(client);
         clientAdvance.setProject(project);

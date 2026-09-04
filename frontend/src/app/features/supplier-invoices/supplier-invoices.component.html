@@ -84,13 +84,9 @@
         <label>Montant TTC</label>
         <div class="computed-amount">{{ computedAmountTtc | number:'1.3-3' }} DT</div>
       </div>
-      <div class="field">
-        <label>Nom pièce jointe</label>
-        <input pInputText formControlName="attachmentName" />
-      </div>
-      <div class="field">
-        <label>Lien pièce jointe</label>
-        <input pInputText formControlName="attachmentUrl" />
+      <div class="field full-width">
+        <label>Pièces jointes</label>
+        <app-attachments-panel ownerType="SUPPLIER_INVOICE" [ownerId]="editingId"></app-attachments-panel>
       </div>
       <div class="field full-width">
         <label>Détail</label>

@@ -65,6 +65,7 @@ Au premier démarrage, Flyway applique `V1__baseline.sql` et crée les 11 tables
 | `DB_PASSWORD` | dev, prod | `spi` en dev, obligatoire en prod |
 | `DATABASE_URL` | prod | obligatoire |
 | `APP_CORS_ALLOWED_ORIGINS` | prod | obligatoire |
+| `ATTACHMENTS_ROOT` | prod | obligatoire — dossier des pièces jointes, hors du dossier de l'application |
 
 ## Données de démonstration — profil `demo`
 
@@ -115,6 +116,30 @@ Sur un serveur public, la protection doit donc venir du réseau :
 - à défaut, ajouter une authentification HTTP basique dans nginx
   (`auth_basic` + `auth_basic_user_file`), ce qui protège l'API sans écran de connexion dans
   l'application.
+
+## Pièces jointes
+
+Les bordereaux de virement, scans de chèque et pages de contrat sont de vrais fichiers
+(`file_attachments`, `POST /api/attachments` en multipart, `GET /api/attachments/{id}` en flux).
+Formats acceptés : PDF, JPEG, PNG ; 10 Mo maximum par fichier. Les fichiers sont écrits sur le
+système de fichiers local sous `app.storage.root` :
+
+| Profil | Racine |
+|---|---|
+| `dev` | `~/.spi-ghomrassen/attachments` |
+| `prod` | `${ATTACHMENTS_ROOT}` — le `docker-compose.yml` monte le volume `spi-attachments` |
+| `test` | un dossier temporaire |
+
+Les anciennes colonnes `attachment_name` / `attachment_url` restent lisibles pour les lignes
+historiques mais ne sont plus alimentées.
+
+### Sauvegardes — lacune assumée
+
+**Aucune sauvegarde automatisée n'est en place** pour le volume PostgreSQL ni pour le volume
+des pièces jointes (décision du 4 septembre 2026 : à traiter plus tard). Le dump de la base ne
+contient pas les fichiers : une sauvegarde complète doit couvrir `spi-postgres-data` **et**
+`spi-attachments`. Tant que ce n'est pas fait, la perte du serveur emporte la comptabilité et
+ses justificatifs.
 
 ## Endpoints principaux
 ### CRUD de base

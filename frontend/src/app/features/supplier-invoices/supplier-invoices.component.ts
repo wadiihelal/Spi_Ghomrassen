@@ -15,13 +15,14 @@ import { ListFilter, Project, Supplier, SupplierInvoice, VatRateOption } from '.
 const FALLBACK_VAT_RATE = 0.19;
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
+import { AttachmentsPanelComponent } from '../../shared/attachments/attachments-panel.component';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { LazyTable } from '../../core/services/lazy-table';
 
 @Component({
   selector: 'app-supplier-invoices',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, AttachmentsPanelComponent],
   templateUrl: './supplier-invoices.component.html',
   styleUrl: './supplier-invoices.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -64,8 +65,6 @@ export class SupplierInvoicesComponent implements OnInit {
     invoiceDate: ['', [Validators.required]],
     amountHt: [0, [Validators.required]],
     vatRate: [FALLBACK_VAT_RATE, [Validators.required]],
-    attachmentName: [''],
-    attachmentUrl: [''],
     detail: [''],
     supplierId: [null as number | null, [Validators.required]],
     projectId: [null as number | null, [Validators.required]]
@@ -126,8 +125,6 @@ export class SupplierInvoicesComponent implements OnInit {
       invoiceDate: row.invoiceDate,
       amountHt: row.amountHt,
       vatRate: row.vatRate ?? FALLBACK_VAT_RATE,
-      attachmentName: row.attachmentName ?? '',
-      attachmentUrl: row.attachmentUrl ?? '',
       detail: row.detail ?? '',
       supplierId: row.supplierId ?? null,
       projectId: this.selectedProjectId() ?? row.projectId ?? null
@@ -155,8 +152,6 @@ export class SupplierInvoicesComponent implements OnInit {
       invoiceDate: '',
       amountHt: 0,
       vatRate: FALLBACK_VAT_RATE,
-      attachmentName: '',
-      attachmentUrl: '',
       detail: '',
       supplierId: null,
       projectId: this.selectedProjectId()

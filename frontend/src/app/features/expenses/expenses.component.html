@@ -102,13 +102,9 @@
         <label>Numéro document</label>
         <input pInputText formControlName="documentNumber" />
       </div>
-      <div class="field">
-        <label>Nom justificatif</label>
-        <input pInputText formControlName="attachmentName" placeholder="Facture avril.pdf" />
-      </div>
-      <div class="field">
-        <label>Lien justificatif</label>
-        <input pInputText formControlName="attachmentUrl" placeholder="https://..." />
+      <div class="field full-width">
+        <label>Pièces jointes</label>
+        <app-attachments-panel ownerType="EXPENSE" [ownerId]="editingId"></app-attachments-panel>
       </div>
       <div class="field">
         <label>Fournisseur</label>

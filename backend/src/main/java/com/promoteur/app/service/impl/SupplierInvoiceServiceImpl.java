@@ -113,8 +113,6 @@ public class SupplierInvoiceServiceImpl implements SupplierInvoiceService {
         invoice.setVatRate(request.getVatRate());
         invoice.setVatAmount(amounts.vatAmount());
         invoice.setAmountTtc(amounts.amountTtc());
-        invoice.setAttachmentName(request.getAttachmentName());
-        invoice.setAttachmentUrl(request.getAttachmentUrl());
         invoice.setDetail(request.getDetail());
         invoice.setSupplier(supplier);
         invoice.setProject(project);

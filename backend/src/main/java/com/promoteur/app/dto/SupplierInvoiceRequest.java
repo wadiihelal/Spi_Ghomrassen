@@ -55,15 +55,7 @@ public class SupplierInvoiceRequest {
     @Positive
     private BigDecimal amountTtc;
 
-    /**
-     * Original attachment file name if available.
-     */
-    private String attachmentName;
 
-    /**
-     * Attachment URL stored by the frontend or storage layer.
-     */
-    private String attachmentUrl;
 
     /**
      * Optional invoice details shown in the UI.

@@ -11,6 +11,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { DialogModule } from 'primeng/dialog';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
+import { AttachmentsPanelComponent } from '../../shared/attachments/attachments-panel.component';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { LazyTable } from '../../core/services/lazy-table';
 import { Expense, ExpenseCategory, ListFilter, Project, Supplier, VatRateOption } from '../../shared/models/models';
@@ -21,7 +22,7 @@ const FALLBACK_VAT_RATE = 0.19;
 @Component({
   selector: 'app-expenses',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, AttachmentsPanelComponent],
   templateUrl: './expenses.component.html',
   styleUrl: './expenses.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -74,8 +75,6 @@ export class ExpensesComponent implements OnInit {
     vatRate: [FALLBACK_VAT_RATE, [Validators.required]],
     paymentMethod: ['OTHER'],
     documentNumber: [''],
-    attachmentName: [''],
-    attachmentUrl: [''],
     notes: [''],
     categoryId: [null as number | null, [Validators.required]],
     projectId: [null as number | null, [Validators.required]],
@@ -180,8 +179,6 @@ export class ExpensesComponent implements OnInit {
       vatRate: expense.vatRate ?? FALLBACK_VAT_RATE,
       paymentMethod: expense.paymentMethod ?? 'OTHER',
       documentNumber: expense.documentNumber ?? '',
-      attachmentName: expense.attachmentName ?? '',
-      attachmentUrl: expense.attachmentUrl ?? '',
       notes: expense.notes ?? '',
       categoryId: expense.categoryId ?? null,
       projectId: expense.projectId ?? null,
@@ -214,8 +211,6 @@ export class ExpensesComponent implements OnInit {
       vatRate: FALLBACK_VAT_RATE,
       paymentMethod: 'OTHER',
       documentNumber: '',
-      attachmentName: '',
-      attachmentUrl: '',
       notes: '',
       supplierId: null,
       categoryId: null,

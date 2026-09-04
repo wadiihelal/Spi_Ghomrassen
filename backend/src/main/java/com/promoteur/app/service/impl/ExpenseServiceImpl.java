@@ -130,8 +130,6 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setAmountTtc(amounts.amountTtc());
         expense.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : com.promoteur.app.enums.PaymentMethod.OTHER);
         expense.setDocumentNumber(request.getDocumentNumber());
-        expense.setAttachmentName(request.getAttachmentName());
-        expense.setAttachmentUrl(request.getAttachmentUrl());
         expense.setNotes(request.getNotes());
         expense.setCategory(category);
         expense.setProject(project);

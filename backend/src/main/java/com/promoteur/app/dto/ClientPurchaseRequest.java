@@ -51,15 +51,7 @@ public class ClientPurchaseRequest {
     @PositiveOrZero
     private BigDecimal paidAmount;
 
-    /**
-     * Original file name of the supporting attachment.
-     */
-    private String attachmentName;
 
-    /**
-     * Attachment URL stored by the frontend or storage layer.
-     */
-    private String attachmentUrl;
 
     /**
      * Additional comments related to the purchase.

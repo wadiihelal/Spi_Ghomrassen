@@ -197,6 +197,21 @@ export interface AmountByLabel {
 
 export type PurchasePaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
 
+/** The documents a proof file can be attached to (FE-05). */
+export type AttachmentOwnerType = 'EXPENSE' | 'CLIENT_ADVANCE' | 'CLIENT_PURCHASE' | 'SUPPLIER_INVOICE';
+
+/** A stored proof file. Its bytes are served by GET /api/attachments/{id}. */
+export interface Attachment {
+  id: number;
+  originalName: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedBy: string;
+  uploadedAt: string;
+  ownerType: AttachmentOwnerType;
+  ownerId: number;
+}
+
 export interface AuditLog {
   id: number;
   entityType: string;

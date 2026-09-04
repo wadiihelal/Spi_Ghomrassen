@@ -161,13 +161,9 @@
       <div class="inline-warning full-width" *ngIf="isCurrentAdvanceOverLimit">
         Cet acompte dépasse le reste à encaisser. Vérifie le montant ou modifie l’achat lié.
       </div>
-      <div class="field">
-        <label>Nom justificatif</label>
-        <input pInputText formControlName="attachmentName" />
-      </div>
-      <div class="field">
-        <label>Lien justificatif</label>
-        <input pInputText formControlName="attachmentUrl" placeholder="https://..." />
+      <div class="field full-width">
+        <label>Pièces jointes</label>
+        <app-attachments-panel ownerType="CLIENT_ADVANCE" [ownerId]="editingId"></app-attachments-panel>
       </div>
       <div class="field info-field">
         <label>Client lié</label>

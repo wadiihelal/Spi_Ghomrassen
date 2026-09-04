@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -60,6 +61,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleOptimisticLocking(final OptimisticLockingFailureException ex) {
         LOGGER.warn("Optimistic locking conflict", ex);
         return this.buildResponse(HttpStatus.CONFLICT, this.messageService.get("error.optimisticLock"));
+    }
+
+    /** The servlet layer rejects the upload before the service sees it (FE-05). */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleUploadTooLarge(final MaxUploadSizeExceededException ex) {
+        return this.buildResponse(HttpStatus.PAYLOAD_TOO_LARGE, this.messageService.get("error.uploadTooLarge"));
     }
 
     @ExceptionHandler(Exception.class)

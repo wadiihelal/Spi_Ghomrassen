@@ -71,15 +71,7 @@ public class ExpenseRequest {
      */
     private String documentNumber;
 
-    /**
-     * Original file name for the supporting document.
-     */
-    private String attachmentName;
 
-    /**
-     * Attachment URL stored by the frontend or storage layer.
-     */
-    private String attachmentUrl;
 
     /**
      * Free-form operational notes.

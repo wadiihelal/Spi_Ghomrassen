@@ -148,8 +148,6 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
         purchase.setAssetDescription(request.getAssetDescription());
         purchase.setTotalAmount(request.getTotalAmount());
         purchase.setPaidAmount(paidAmount);
-        purchase.setAttachmentName(request.getAttachmentName());
-        purchase.setAttachmentUrl(request.getAttachmentUrl());
         purchase.setNotes(request.getNotes());
         purchase.setClient(client);
         purchase.setProject(project);

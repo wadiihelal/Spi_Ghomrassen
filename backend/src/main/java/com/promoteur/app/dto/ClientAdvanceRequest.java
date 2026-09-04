@@ -37,15 +37,7 @@ public class ClientAdvanceRequest {
      */
     private PaymentMethod paymentMethod;
 
-    /**
-     * Original file name of the uploaded proof if available.
-     */
-    private String attachmentName;
 
-    /**
-     * Accessible attachment URL if a proof file exists.
-     */
-    private String attachmentUrl;
 
     /**
      * Free-form operational notes.

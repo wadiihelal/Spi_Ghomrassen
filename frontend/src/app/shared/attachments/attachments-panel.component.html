@@ -1,0 +1,38 @@
+<div class="attachments-panel">
+  @if (!ownerId()) {
+    <p class="attachments-hint">Enregistrez d’abord le document, puis ajoutez ses pièces jointes ici.</p>
+  } @else {
+    <p-fileUpload
+      mode="basic"
+      chooseLabel="Ajouter un fichier"
+      chooseIcon="pi pi-paperclip"
+      [customUpload]="true"
+      [auto]="true"
+      [multiple]="true"
+      [accept]="acceptedTypes"
+      [maxFileSize]="maxSizeBytes"
+      [disabled]="uploading()"
+      invalidFileSizeMessageSummary="{0} : fichier trop volumineux,"
+      invalidFileSizeMessageDetail="la taille maximale est de {0}."
+      invalidFileTypeMessageSummary="{0} : type de fichier non pris en charge,"
+      invalidFileTypeMessageDetail="formats acceptés : PDF, JPEG, PNG."
+      (uploadHandler)="onUpload($event)">
+    </p-fileUpload>
+
+    @if (attachments().length) {
+      <ul class="attachments-list">
+        @for (item of attachments(); track item.id) {
+          <li class="attachment-row">
+            <a class="attachment-link" href="javascript:void(0)" (click)="open(item)">
+              <i class="pi pi-file"></i> {{ item.originalName }}
+            </a>
+            <span class="attachment-meta">{{ formatSize(item.sizeBytes) }} · {{ item.uploadedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+            <button pButton type="button" icon="pi pi-trash" text severity="danger" aria-label="Supprimer la pièce jointe" (click)="remove(item)"></button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="attachments-hint">Aucune pièce jointe. PDF, JPEG ou PNG, 10 Mo maximum.</p>
+    }
+  }
+</div>

@@ -118,13 +118,9 @@
         <label>Montant payé direct</label>
         <p-inputNumber formControlName="paidAmount" mode="decimal" [min]="0"></p-inputNumber>
       </div>
-      <div class="field">
-        <label>Nom justificatif</label>
-        <input pInputText formControlName="attachmentName" />
-      </div>
-      <div class="field">
-        <label>Lien justificatif</label>
-        <input pInputText formControlName="attachmentUrl" placeholder="https://..." />
+      <div class="field full-width">
+        <label>Pièces jointes</label>
+        <app-attachments-panel ownerType="CLIENT_PURCHASE" [ownerId]="editingId"></app-attachments-panel>
       </div>
       <div class="field full-width">
         <label>Bien / description</label>

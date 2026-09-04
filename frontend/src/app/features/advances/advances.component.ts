@@ -12,6 +12,7 @@ import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
+import { AttachmentsPanelComponent } from '../../shared/attachments/attachments-panel.component';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { LazyTable } from '../../core/services/lazy-table';
 import {
@@ -28,7 +29,7 @@ import {
 @Component({
   selector: 'app-advances',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, TagModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, TagModule, AttachmentsPanelComponent],
   templateUrl: './advances.component.html',
   styleUrl: './advances.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -210,8 +211,6 @@ export class AdvancesComponent implements OnInit {
     advanceDate: ['', [Validators.required]],
     amount: [0, [Validators.required]],
     paymentMethod: ['BANK_TRANSFER', [Validators.required]],
-    attachmentName: [''],
-    attachmentUrl: [''],
     notes: [''],
     apartmentId: [null as number | null, [Validators.required]]
   });
@@ -296,8 +295,6 @@ export class AdvancesComponent implements OnInit {
       advanceDate: advance.advanceDate ?? '',
       amount: advance.amount,
       paymentMethod: advance.paymentMethod ?? 'BANK_TRANSFER',
-      attachmentName: advance.attachmentName ?? '',
-      attachmentUrl: advance.attachmentUrl ?? '',
       notes: advance.notes ?? '',
       apartmentId: advance.apartmentId ?? null
     });
@@ -326,8 +323,6 @@ export class AdvancesComponent implements OnInit {
       advanceDate: '',
       amount: 0,
       paymentMethod: 'BANK_TRANSFER',
-      attachmentName: '',
-      attachmentUrl: '',
       notes: '',
       apartmentId: null
     });

@@ -11,6 +11,8 @@ import { environment } from '../../../environments/environment';
 const REFERENCE_LIST_SIZE = 500;
 import {
   AmountByLabel,
+  Attachment,
+  AttachmentOwnerType,
   Client,
   ClientAdvance,
   AuditLog,
@@ -262,6 +264,28 @@ export class ApiService {
 
   deleteAdvance(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/client-advances/${id}`);
+  }
+
+  /** Proof files attached to one document, most recent first (FE-05). */
+  getAttachments(ownerType: AttachmentOwnerType, ownerId: number): Observable<Attachment[]> {
+    const params = new HttpParams().set('ownerType', ownerType).set('ownerId', ownerId);
+    return this.http.get<Attachment[]>(`${this.baseUrl}/attachments`, { params });
+  }
+
+  uploadAttachment(ownerType: AttachmentOwnerType, ownerId: number, file: File): Observable<Attachment> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    const params = new HttpParams().set('ownerType', ownerType).set('ownerId', ownerId);
+    return this.http.post<Attachment>(`${this.baseUrl}/attachments`, body, { params });
+  }
+
+  deleteAttachment(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/attachments/${id}`);
+  }
+
+  /** URL the browser can open to view or save the file. */
+  attachmentUrl(id: number): string {
+    return `${this.baseUrl}/attachments/${id}`;
   }
 
   getClientStatements(scope?: ReportScopeParams): Observable<ClientStatement[]> {

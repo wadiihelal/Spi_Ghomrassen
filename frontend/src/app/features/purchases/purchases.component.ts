@@ -12,6 +12,7 @@ import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
+import { AttachmentsPanelComponent } from '../../shared/attachments/attachments-panel.component';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { LazyTable } from '../../core/services/lazy-table';
 import {
@@ -28,7 +29,7 @@ import {
 @Component({
   selector: 'app-purchases',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, TagModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, TagModule, AttachmentsPanelComponent],
   templateUrl: './purchases.component.html',
   styleUrl: './purchases.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -214,8 +215,6 @@ export class PurchasesComponent implements OnInit {
     totalAmount: [0, [Validators.required]],
     paidAmount: [0],
     assetDescription: ['', [Validators.required]],
-    attachmentName: [''],
-    attachmentUrl: [''],
     notes: [''],
     clientId: [null as number | null, [Validators.required]],
     apartmentId: [null as number | null, [Validators.required]],
@@ -308,8 +307,6 @@ export class PurchasesComponent implements OnInit {
       totalAmount: purchase.totalAmount,
       paidAmount: purchase.paidAmount ?? 0,
       assetDescription: purchase.assetDescription,
-      attachmentName: purchase.attachmentName ?? '',
-      attachmentUrl: purchase.attachmentUrl ?? '',
       notes: purchase.notes ?? '',
       clientId: purchase.clientId ?? null,
       apartmentId: purchase.apartmentId ?? null,
@@ -341,8 +338,6 @@ export class PurchasesComponent implements OnInit {
       totalAmount: 0,
       paidAmount: 0,
       assetDescription: '',
-      attachmentName: '',
-      attachmentUrl: '',
       notes: '',
       clientId: null,
       apartmentId: null,
