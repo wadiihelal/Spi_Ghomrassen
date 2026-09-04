@@ -4,6 +4,7 @@ import com.promoteur.app.dto.ApartmentRequest;
 import com.promoteur.app.dto.ClientAdvanceRequest;
 import com.promoteur.app.dto.ClientPurchaseRequest;
 import com.promoteur.app.dto.ExpenseRequest;
+import com.promoteur.app.dto.ScheduleTemplateRequest;
 import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.response.ApartmentResponse;
 import com.promoteur.app.entity.Apartment;
@@ -17,6 +18,7 @@ import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.repository.ApartmentRepository;
 import com.promoteur.app.repository.ClientAdvanceRepository;
 import com.promoteur.app.repository.ClientPurchaseRepository;
+import com.promoteur.app.repository.PaymentInstallmentRepository;
 import com.promoteur.app.repository.ClientRepository;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
 import com.promoteur.app.repository.ProjectRepository;
@@ -25,6 +27,7 @@ import com.promoteur.app.repository.SupplierTypeOptionRepository;
 import com.promoteur.app.service.ApartmentService;
 import com.promoteur.app.service.ClientAdvanceService;
 import com.promoteur.app.service.ClientPurchaseService;
+import com.promoteur.app.service.PaymentScheduleService;
 import com.promoteur.app.service.ExpenseService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -91,6 +94,8 @@ public class DemoDataInitializer implements CommandLineRunner {
     private final ApartmentService apartmentService;
     private final ClientAdvanceService clientAdvanceService;
     private final ClientPurchaseService clientPurchaseService;
+    private final PaymentScheduleService paymentScheduleService;
+    private final PaymentInstallmentRepository paymentInstallmentRepository;
     private final SupplierTypeOptionRepository supplierTypeOptionRepository;
 
     /**
@@ -106,6 +111,7 @@ public class DemoDataInitializer implements CommandLineRunner {
 
         if (shouldSkipBusinessSeed()) {
             ensureDemoResidenceData();
+            seedPaymentSchedules();
             return;
         }
 
@@ -124,6 +130,7 @@ public class DemoDataInitializer implements CommandLineRunner {
         seedClientAdvances(clients, projects);
         seedClientPurchases(clients, projects);
         ensureDemoResidenceData();
+        seedPaymentSchedules();
     }
 
     /**
@@ -589,6 +596,41 @@ public class DemoDataInitializer implements CommandLineRunner {
         request.setProjectId(projectId);
         request.setApartmentId(findApartmentIdForSeed(clientId, projectId));
         clientPurchaseService.create(request);
+    }
+
+    /**
+     * Gives every demo contract a staged payment plan (UX-03).
+     *
+     * <p>The dates are relative to today and the template starts in the past, so the échéancier
+     * always shows a realistic mix: early instalments settled by the payments already seeded,
+     * one or two overdue, and the balance still ahead.</p>
+     */
+    private void seedPaymentSchedules() {
+        // Five steps two months apart, starting eight months back, so the last one always falls
+        // in the current month: the demo shows both real arrears and a live "this month" figure.
+        LocalDate firstDueDate = LocalDate.now().minusMonths(8);
+
+        clientPurchaseRepository.findAll().forEach(purchase -> {
+            if (!paymentInstallmentRepository.findByPurchaseIdOrderBySequenceNoAsc(purchase.getId()).isEmpty()) {
+                return;
+            }
+            ScheduleTemplateRequest template = new ScheduleTemplateRequest();
+            template.setFirstDueDate(firstDueDate);
+            template.setIntervalMonths(2);
+            template.setLines(List.of(
+                    templateLine("20"),
+                    templateLine("20"),
+                    templateLine("20"),
+                    templateLine("20"),
+                    templateLine("20")));
+            paymentScheduleService.generate(purchase.getId(), template);
+        });
+    }
+
+    private ScheduleTemplateRequest.TemplateLine templateLine(String percentage) {
+        ScheduleTemplateRequest.TemplateLine line = new ScheduleTemplateRequest.TemplateLine();
+        line.setPercentage(new BigDecimal(percentage));
+        return line;
     }
 
     /** Static definition of one SPI demo residence (code, marketing data, budget, dates). */

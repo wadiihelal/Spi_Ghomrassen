@@ -1,0 +1,77 @@
+.schedule-editor { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.template-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-soft);
+}
+.template-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3); }
+.template-controls .field { display: flex; flex-direction: column; gap: 0.375rem; }
+
+.percentages { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.percentage-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.25rem 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+}
+.percentage-chip :host ::ng-deep .p-inputnumber-input { width: 5.5rem; border: 0; box-shadow: none; min-height: 30px; }
+.percentage-index {
+  display: grid;
+  place-items: center;
+  width: 18px; height: 18px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-soft);
+  color: var(--navy-700);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+}
+
+.template-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.template-total { color: var(--text-muted); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+.template-total.total-bad { color: var(--danger-600); }
+
+.schedule-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.schedule-totals { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; font-size: var(--text-sm); color: var(--text-muted); }
+.schedule-totals strong { color: var(--text); font-weight: var(--weight-semibold); }
+.schedule-buttons { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-left: auto; }
+
+.gap-warning { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--danger-600); font-weight: var(--weight-semibold); }
+
+.settlement {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.settlement-summary { display: flex; gap: var(--space-4); flex-wrap: wrap; font-size: var(--text-sm); color: var(--text-muted); }
+.settlement-summary strong { color: var(--text); }
+.settlement-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+.settlement-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.375rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+}
+.settlement-list li:last-child { border-bottom: 0; }
+.settlement-label { flex: 1; font-weight: var(--weight-medium); }
+.settlement-figures { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+:host ::ng-deep .schedule-table .p-inputtext,
+:host ::ng-deep .schedule-table .p-inputnumber-input { min-height: 32px; font-size: var(--text-sm); }

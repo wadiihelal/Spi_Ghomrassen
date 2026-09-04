@@ -48,6 +48,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     { label: 'Dépenses', route: '/expenses', icon: 'pi pi-wallet' },
     { label: 'Ventes clients', route: '/purchases', icon: 'pi pi-shopping-cart' },
     { label: 'Paiements clients', route: '/advances', icon: 'pi pi-credit-card' },
+    { label: 'Échéancier', route: '/schedules', icon: 'pi pi-calendar-clock' },
     { label: 'Rapports', route: '/reports', icon: 'pi pi-file' }
   ];
 

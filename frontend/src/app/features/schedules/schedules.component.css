@@ -1,0 +1,18 @@
+/* A late row is tinted, not shouted: the status chip already carries the signal. */
+:host ::ng-deep tr.row-overdue > td { background: var(--danger-050); }
+:host ::ng-deep tr.row-overdue:hover > td { background: #fde3e0; }
+
+.text-late { color: var(--danger-600); font-weight: var(--weight-semibold); }
+
+:host ::ng-deep .footer-label {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+:host ::ng-deep .footer-total {
+  color: var(--text);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}

@@ -15,6 +15,7 @@ import {
   ClientStatement,
   DashboardSummary,
   Expense,
+  InstallmentSummary,
   Project,
   ReportScopeParams
 } from '../../shared/models/models';
@@ -52,6 +53,8 @@ export class DashboardComponent implements OnInit {
   readonly statements = signal<ClientStatement[]>([]);
   readonly projects = signal<Project[]>([]);
   readonly recentExpenses = signal<Expense[]>([]);
+  /** What is late and what falls due this month (UX-03). */
+  readonly installments = signal<InstallmentSummary | undefined>(undefined);
   readonly selectedProjectId = signal<number | null>(null);
 
   /** Expense totals per project, keyed by project name, as aggregated by the backend. */
@@ -79,7 +82,7 @@ export class DashboardComponent implements OnInit {
    */
   private load(): void {
     const scope: ReportScopeParams = { projectId: this.selectedProjectId() };
-    let pending = 6;
+    let pending = 7;
     const done = () => {
       pending -= 1;
       if (pending <= 0) {
@@ -107,6 +110,12 @@ export class DashboardComponent implements OnInit {
 
     this.api.getPurchasesByProject(scope).subscribe({
       next: (data) => (this.purchasesByProject.set(DashboardComponent.byLabel(data))),
+      error: done,
+      complete: done
+    });
+
+    this.api.getInstallmentSummary(this.selectedProjectId()).subscribe({
+      next: (data) => this.installments.set(data),
       error: done,
       complete: done
     });
@@ -155,6 +164,13 @@ export class DashboardComponent implements OnInit {
   get documentCount(): number {
     return (this.summary()?.expenses ?? 0) + (this.summary()?.clientPurchases ?? 0)
       + (this.summary()?.clientAdvances ?? 0);
+  }
+
+  /** Share of the planned money already settled, for the collection gauge. */
+  get scheduleProgress(): number {
+    const scheduled = this.installments()?.scheduledAmount ?? 0;
+    if (!scheduled) return 0;
+    return Math.min(100, Math.round(((this.installments()?.collectedAmount ?? 0) / scheduled) * 100));
   }
 
   get totalCashIn(): number {

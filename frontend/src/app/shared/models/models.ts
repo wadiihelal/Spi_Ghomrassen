@@ -197,6 +197,70 @@ export interface AmountByLabel {
 
 export type PurchasePaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
 
+/** State of one instalment, derived by the backend from its due date and what was collected. */
+export type InstallmentStatus = 'PAID' | 'PARTIALLY_PAID' | 'OVERDUE' | 'UPCOMING';
+
+/** One line of a contract's payment schedule (UX-03). */
+export interface PaymentInstallment {
+  id: number;
+  purchaseId: number;
+  purchaseReference?: string;
+  clientId?: number;
+  clientName?: string;
+  projectId?: number;
+  projectName?: string;
+  apartmentId?: number;
+  apartmentNumber?: string;
+  sequenceNo: number;
+  label: string;
+  dueDate: string;
+  amount: number;
+  /** Share of the money collected on the contract that this line absorbs. */
+  settledAmount: number;
+  remainingAmount: number;
+  status: InstallmentStatus;
+  daysLate: number;
+  notes?: string;
+}
+
+/** A contract's schedule set against the money actually received. */
+export interface PaymentSchedule {
+  purchaseId: number;
+  purchaseReference?: string;
+  contractAmount: number;
+  scheduledAmount: number;
+  /** Contract total minus what the plan covers; zero for a complete plan. */
+  unscheduledAmount: number;
+  collectedAmount: number;
+  overdueAmount: number;
+  installments: PaymentInstallment[];
+}
+
+/** One line submitted when saving a schedule by hand. */
+export interface InstallmentLine {
+  label: string;
+  dueDate: string;
+  amount: number;
+  notes?: string;
+}
+
+/** Percentage template used to generate a schedule. */
+export interface ScheduleTemplate {
+  firstDueDate: string;
+  intervalMonths: number;
+  lines: { label?: string; percentage: number }[];
+}
+
+/** What is late and what falls due this month. */
+export interface InstallmentSummary {
+  overdueCount: number;
+  overdueAmount: number;
+  dueThisMonthCount: number;
+  dueThisMonthAmount: number;
+  scheduledAmount: number;
+  collectedAmount: number;
+}
+
 /** The documents a proof file can be attached to (FE-05). */
 export type AttachmentOwnerType = 'EXPENSE' | 'CLIENT_ADVANCE' | 'CLIENT_PURCHASE' | 'SUPPLIER_INVOICE';
 

@@ -1,0 +1,134 @@
+<section class="page-grid">
+  <div class="section-header">
+    <div>
+      <h2 class="page-title">Échéancier</h2>
+      <p class="page-subtitle">
+        Ce qui est attendu des acquéreurs, contrat par contrat. Les encaissements règlent les
+        échéances dans l’ordre du plan.
+      </p>
+    </div>
+    <div class="table-toolbar">
+      <button pButton type="button" label="Retards" icon="pi pi-exclamation-circle"
+              severity="secondary" (click)="showOverdueOnly()"></button>
+      <button pButton type="button" label="Ce mois" icon="pi pi-calendar"
+              severity="secondary" (click)="showThisMonth()"></button>
+    </div>
+  </div>
+
+  <section class="summary-grid">
+    <p-card styleClass="metric-card danger">
+      <div class="metric-head">
+        <span class="metric-label">En retard</span>
+        <i class="pi pi-exclamation-circle"></i>
+      </div>
+      <div class="metric-value">{{ summary()?.overdueAmount ?? 0 | dinar:'short' }}</div>
+      <div class="kpi-foot">{{ summary()?.overdueCount ?? 0 }} échéance(s) dépassée(s)</div>
+    </p-card>
+
+    <p-card styleClass="metric-card accent">
+      <div class="metric-head">
+        <span class="metric-label">À encaisser ce mois</span>
+        <i class="pi pi-calendar-clock"></i>
+      </div>
+      <div class="metric-value">{{ summary()?.dueThisMonthAmount ?? 0 | dinar:'short' }}</div>
+      <div class="kpi-foot">{{ summary()?.dueThisMonthCount ?? 0 }} échéance(s) ce mois</div>
+    </p-card>
+
+    <p-card styleClass="metric-card primary">
+      <div class="metric-head">
+        <span class="metric-label">Total planifié</span>
+        <i class="pi pi-list"></i>
+      </div>
+      <div class="metric-value">{{ summary()?.scheduledAmount ?? 0 | dinar:'short' }}</div>
+      <div class="kpi-foot">Sur l’ensemble des contrats du projet</div>
+    </p-card>
+
+    <p-card styleClass="metric-card success">
+      <div class="metric-head">
+        <span class="metric-label">Déjà réglé</span>
+        <i class="pi pi-check-circle"></i>
+      </div>
+      <div class="metric-value">{{ summary()?.collectedAmount ?? 0 | dinar:'short' }}</div>
+      <div class="kpi-foot">Imputé sur les échéances</div>
+    </p-card>
+  </section>
+
+  <p-card header="Échéances">
+    <p-table [value]="installments()" [loading]="loading()" responsiveLayout="scroll"
+             [paginator]="true" [rows]="25" [rowsPerPageOptions]="[25, 50, 100]"
+             currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}"
+             [showCurrentPageReport]="true">
+      <ng-template pTemplate="caption">
+        <div class="filter-grid">
+          <p-dropdown [(ngModel)]="filters.status" [ngModelOptions]="{ standalone: true }"
+                      (ngModelChange)="reload()" [options]="statusOptions"
+                      optionLabel="label" optionValue="value" placeholder="Statut"></p-dropdown>
+          <p-dropdown [(ngModel)]="filters.clientId" [ngModelOptions]="{ standalone: true }"
+                      (ngModelChange)="reload()" [options]="clients()" optionLabel="fullName"
+                      optionValue="id" placeholder="Client" [showClear]="true"></p-dropdown>
+          <input pInputText type="date" [(ngModel)]="filters.dueFrom"
+                 [ngModelOptions]="{ standalone: true }" (ngModelChange)="reload()" />
+          <input pInputText type="date" [(ngModel)]="filters.dueTo"
+                 [ngModelOptions]="{ standalone: true }" (ngModelChange)="reload()" />
+          <button pButton type="button" label="Réinitialiser" icon="pi pi-filter-slash"
+                  severity="secondary" (click)="resetFilters()"></button>
+        </div>
+      </ng-template>
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Échéance</th>
+          <th>Client</th>
+          <th>Appartement</th>
+          <th>Exigible</th>
+          <th class="num-col">Montant</th>
+          <th class="num-col">Réglé</th>
+          <th class="num-col">Reste</th>
+          <th>Statut</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr [class.row-overdue]="row.status === 'OVERDUE'">
+          <td>
+            <div class="table-main">{{ row.label }}</div>
+            <div class="table-meta">{{ row.purchaseReference }} · échéance {{ row.sequenceNo }}</div>
+          </td>
+          <td>{{ row.clientName || '-' }}</td>
+          <td>{{ row.apartmentNumber || '-' }}</td>
+          <td>
+            <div>{{ row.dueDate | date:'dd/MM/yyyy' }}</div>
+            @if (row.daysLate > 0) {
+              <div class="table-meta text-late">{{ latenessLabel(row) }}</div>
+            }
+          </td>
+          <td class="num-col">{{ row.amount | dinar }}</td>
+          <td class="num-col">{{ row.settledAmount | dinar }}</td>
+          <td class="num-col">{{ row.remainingAmount | dinar }}</td>
+          <td>
+            <p-tag [value]="statusLabel(row.status)" [severity]="statusSeverity(row.status)"></p-tag>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              Aucune échéance ne correspond à ce filtre. Un contrat de vente reçoit son plan de
+              paiement depuis l’écran « Ventes clients ».
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="footer">
+        <tr>
+          <td colspan="6" class="align-end footer-label">Reste à encaisser sur les lignes affichées</td>
+          <td class="num-col footer-total">{{ displayedRemaining() | dinar }}</td>
+          <td></td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+</section>

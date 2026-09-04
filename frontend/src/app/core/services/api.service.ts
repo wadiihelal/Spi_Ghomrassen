@@ -15,6 +15,12 @@ import {
   AttachmentOwnerType,
   Client,
   ClientAdvance,
+  InstallmentLine,
+  InstallmentStatus,
+  InstallmentSummary,
+  PaymentSchedule,
+  PaymentInstallment,
+  ScheduleTemplate,
   AuditLog,
   Apartment,
   ClientPurchase,
@@ -264,6 +270,53 @@ export class ApiService {
 
   deleteAdvance(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/client-advances/${id}`);
+  }
+
+  // --- Payment schedules (UX-03) --------------------------------------------
+
+  /** The schedule of one contract, with each line's settlement resolved by the backend. */
+  getSchedule(purchaseId: number): Observable<PaymentSchedule> {
+    return this.http.get<PaymentSchedule>(`${this.baseUrl}/client-purchases/${purchaseId}/schedule`);
+  }
+
+  /** Replaces the whole schedule; the backend refuses a plan that misses the contract total. */
+  saveSchedule(purchaseId: number, lines: InstallmentLine[]): Observable<PaymentSchedule> {
+    return this.http.put<PaymentSchedule>(
+      `${this.baseUrl}/client-purchases/${purchaseId}/schedule`, { lines });
+  }
+
+  generateSchedule(purchaseId: number, template: ScheduleTemplate): Observable<PaymentSchedule> {
+    return this.http.post<PaymentSchedule>(
+      `${this.baseUrl}/client-purchases/${purchaseId}/schedule/generate`, template);
+  }
+
+  clearSchedule(purchaseId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/client-purchases/${purchaseId}/schedule`);
+  }
+
+  /** Instalments across every contract, for the échéancier screen. */
+  getInstallments(filter: {
+    projectId?: number | null;
+    clientId?: number | null;
+    status?: InstallmentStatus | null;
+    dueFrom?: string | null;
+    dueTo?: string | null;
+  }): Observable<PaymentInstallment[]> {
+    let params = new HttpParams();
+    Object.entries(filter).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        params = params.set(key, String(value));
+      }
+    });
+    return this.http.get<PaymentInstallment[]>(`${this.baseUrl}/installments`, { params });
+  }
+
+  getInstallmentSummary(projectId?: number | null): Observable<InstallmentSummary> {
+    let params = new HttpParams();
+    if (projectId !== null && projectId !== undefined) {
+      params = params.set('projectId', projectId);
+    }
+    return this.http.get<InstallmentSummary>(`${this.baseUrl}/installments/summary`, { params });
   }
 
   /** Proof files attached to one document, most recent first (FE-05). */

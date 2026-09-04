@@ -76,6 +76,7 @@
             <p-tag [value]="getPaymentStatusLabel(row.paymentStatus)" [severity]="getPaymentStatusSeverity(row.paymentStatus)"></p-tag>
           </td>
           <td class="actions-cell">
+            <button pButton type="button" icon="pi pi-calendar-clock" text aria-label="Échéancier de la vente" (click)="openSchedule(row)"></button>
             <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir vente" (click)="edit(row)"></button>
             <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>
           </td>
@@ -162,3 +163,21 @@
     </form>
   </p-dialog>
 </section>
+
+<p-dialog header="Échéancier du contrat" [(visible)]="scheduleDialogVisible" [modal]="true"
+          [style]="{ width: '62rem', maxWidth: '96vw' }" (onHide)="closeSchedule()">
+  @if (scheduleForPurchase(); as purchase) {
+    <div class="schedule-dialog-head">
+      <div>
+        <div class="eyebrow">Contrat</div>
+        <strong>{{ purchase.reference }}</strong>
+        <span class="text-muted"> · {{ purchase.clientName }} · {{ purchase.apartmentNumber }}</span>
+      </div>
+    </div>
+    <app-schedule-editor
+      [purchaseId]="purchase.id ?? null"
+      [contractAmount]="purchase.totalAmount ?? 0"
+      (changed)="onScheduleChanged()">
+    </app-schedule-editor>
+  }
+</p-dialog>

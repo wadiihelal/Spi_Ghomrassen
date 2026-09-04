@@ -1,64 +1,77 @@
 @if (loading()) {
   <div class="centered"><p-progressSpinner ariaLabel="loading"></p-progressSpinner></div>
 } @else {
-  <section class="hero-card">
-    <div class="hero-copy">
-      <div class="hero-eyebrow">Mode simple</div>
-      <h2>Stock, factures, dépenses et paiements au même endroit</h2>
-      <p>Le flow principal: créer le stock appartements, saisir les factures ou dépenses, puis rattacher ventes et paiements au bon appartement.</p>
+  <!-- The situation of the selected project, in one band: what came in, what went out,
+       what is late. The four onboarding cards became the action row below. -->
+  <section class="hero">
+    <div class="hero-main">
+      <span class="hero-eyebrow">Situation du projet</span>
+      <h2>{{ summary()?.projectLabel ?? 'Tous les projets' }}</h2>
+      <div class="hero-figures">
+        <div>
+          <span>Encaissé</span>
+          <strong>{{ totalCashIn | dinar:'short' }}</strong>
+        </div>
+        <div>
+          <span>Décaissé</span>
+          <strong>{{ totalCashOut | dinar:'short' }}</strong>
+        </div>
+        <div>
+          <span>Solde net</span>
+          <strong [class.negative]="balance < 0">{{ balance | dinar:'short' }}</strong>
+        </div>
+      </div>
     </div>
-    <div class="hero-balance" [class.positive]="balance >= 0" [class.negative]="balance < 0">
-      <span>Solde net</span>
-      <strong>{{ balance | dinar }}</strong>
-      <small>{{ totalCashIn | dinar }} encaissés • {{ totalCashOut | dinar }} décaissés</small>
-    </div>
+
+    @if ((installments()?.overdueCount ?? 0) > 0) {
+      <a class="hero-alert" routerLink="/schedules">
+        <i class="pi pi-exclamation-circle"></i>
+        <span class="hero-alert-label">Retards de paiement</span>
+        <strong>{{ installments()!.overdueAmount | dinar:'short' }}</strong>
+        <span class="hero-alert-meta">{{ installments()!.overdueCount }} échéance(s) à relancer</span>
+      </a>
+    } @else {
+      <div class="hero-alert hero-alert-clear">
+        <i class="pi pi-check-circle"></i>
+        <span class="hero-alert-label">Aucun retard</span>
+        <span class="hero-alert-meta">Toutes les échéances exigibles sont réglées</span>
+      </div>
+    }
   </section>
 
-  <section class="workflow-grid">
-    <p-card styleClass="workflow-card">
-      <div class="workflow-icon"><i class="pi pi-building"></i></div>
-      <div>
-        <span class="workflow-step">1. Stock</span>
-        <h3>Entrer les appartements</h3>
-        <p>Créer les blocs, étages, appartements, surfaces, prix et acquéreur.</p>
+  <nav class="action-row" aria-label="Actions rapides">
+    <a routerLink="/apartments"><i class="pi pi-building"></i> Stock appartements</a>
+    <a routerLink="/supplier-invoices"><i class="pi pi-receipt"></i> Facture fournisseur</a>
+    <a routerLink="/expenses"><i class="pi pi-wallet"></i> Dépense</a>
+    <a routerLink="/purchases"><i class="pi pi-shopping-cart"></i> Vente</a>
+    <a routerLink="/advances"><i class="pi pi-credit-card"></i> Paiement client</a>
+    <a routerLink="/reports"><i class="pi pi-file"></i> Rapports</a>
+  </nav>
+
+  <!-- The échéancier headline: what is late, and what is expected this month (UX-03). -->
+  <section class="kpi-grid collection-row">
+    <p-card styleClass="metric-card accent">
+      <div class="metric-head">
+        <span class="kpi-label">À encaisser ce mois</span>
+        <i class="pi pi-calendar-clock"></i>
       </div>
-      <a pButton routerLink="/apartments" label="Ouvrir stock" icon="pi pi-arrow-right" iconPos="right"></a>
+      <div class="kpi-value">{{ installments()?.dueThisMonthAmount ?? 0 | dinar:'short' }}</div>
+      <div class="kpi-foot">{{ installments()?.dueThisMonthCount ?? 0 }} échéance(s) ce mois</div>
     </p-card>
 
-    <p-card styleClass="workflow-card">
-      <div class="workflow-icon"><i class="pi pi-receipt"></i></div>
-      <div>
-        <span class="workflow-step">2. Charges</span>
-        <h3>Factures et dépenses</h3>
-        <p>Saisir les factures fournisseurs, ou une dépense simple du projet.</p>
+    <p-card>
+      <div class="metric-head">
+        <span class="kpi-label">Avancement du plan</span>
+        <i class="pi pi-chart-line"></i>
       </div>
-      <div class="workflow-actions">
-        <a pButton routerLink="/supplier-invoices" label="Facture" icon="pi pi-receipt"></a>
-        <a pButton routerLink="/expenses" label="Dépense" severity="secondary" icon="pi pi-wallet"></a>
+      <div class="kpi-value">{{ scheduleProgress }} %</div>
+      <div class="progress-shell">
+        <div class="progress-fill" [style.width.%]="scheduleProgress"></div>
       </div>
-    </p-card>
-
-    <p-card styleClass="workflow-card">
-      <div class="workflow-icon"><i class="pi pi-link"></i></div>
-      <div>
-        <span class="workflow-step">3. Liaison</span>
-        <h3>Vente et paiement</h3>
-        <p>Lier client + appartement, puis enregistrer les paiements et acomptes.</p>
+      <div class="kpi-foot">
+        {{ installments()?.collectedAmount ?? 0 | dinar:'short' }} réglés sur
+        {{ installments()?.scheduledAmount ?? 0 | dinar:'short' }} planifiés
       </div>
-      <div class="workflow-actions">
-        <a pButton routerLink="/purchases" label="Vente" icon="pi pi-shopping-cart"></a>
-        <a pButton routerLink="/advances" label="Paiement" severity="secondary" icon="pi pi-credit-card"></a>
-      </div>
-    </p-card>
-
-    <p-card styleClass="workflow-card soft">
-      <div class="workflow-icon"><i class="pi pi-file"></i></div>
-      <div>
-        <span class="workflow-step">4. Contrôle</span>
-        <h3>Voir la situation</h3>
-        <p>Suivre le reste à encaisser, les charges, la marge et les exports.</p>
-      </div>
-      <a pButton routerLink="/reports" label="Rapports" severity="secondary" icon="pi pi-arrow-right" iconPos="right"></a>
     </p-card>
   </section>
 

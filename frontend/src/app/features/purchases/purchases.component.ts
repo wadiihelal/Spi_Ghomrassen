@@ -17,6 +17,7 @@ import { UiService } from '../../core/services/ui.service';
 import { AttachmentsPanelComponent } from '../../shared/attachments/attachments-panel.component';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { LazyTable } from '../../core/services/lazy-table';
+import { ScheduleEditorComponent } from '../../shared/schedule/schedule-editor.component';
 import {
   Apartment,
   Client,
@@ -31,7 +32,7 @@ import {
 @Component({
   selector: 'app-purchases',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, TagModule, AttachmentsPanelComponent, DinarPipe, PercentSharePipe],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, TagModule, AttachmentsPanelComponent, DinarPipe, PercentSharePipe, ScheduleEditorComponent],
   templateUrl: './purchases.component.html',
   styleUrl: './purchases.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -56,6 +57,10 @@ export class PurchasesComponent implements OnInit {
   readonly apartments = signal<Apartment[]>([]);
   /** Advances on the apartment currently chosen in the form, loaded on demand. */
   readonly selectedApartmentAdvances = signal<ClientAdvance[]>([]);
+  /** Contract whose payment schedule is open in the dialog, and its total. */
+  readonly scheduleForPurchase = signal<ClientPurchase | null>(null);
+  scheduleDialogVisible = false;
+
   /** Scope-wide aggregate behind the KPI strip. */
   readonly summary = signal<DashboardSummary | undefined>(undefined);
   /** Contracts fully collected in scope, counted by the server. */
@@ -314,6 +319,22 @@ export class PurchasesComponent implements OnInit {
       apartmentId: purchase.apartmentId ?? null,
       projectId: this.selectedProjectId() ?? purchase.projectId ?? null
     });
+  }
+
+  /** Opens the payment schedule of one contract (UX-03). */
+  openSchedule(row: ClientPurchase): void {
+    this.scheduleForPurchase.set(row);
+    this.scheduleDialogVisible = true;
+  }
+
+  closeSchedule(): void {
+    this.scheduleDialogVisible = false;
+    this.scheduleForPurchase.set(null);
+  }
+
+  /** A plan change moves the collected/remaining figures, so the page reloads. */
+  onScheduleChanged(): void {
+    this.table.reload();
   }
 
   remove(row: ClientPurchase): void {
