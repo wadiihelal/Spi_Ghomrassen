@@ -22,11 +22,13 @@ import com.promoteur.app.repository.ProjectRepository;
 import com.promoteur.app.service.AuditLogService;
 import com.promoteur.app.service.ClientPurchaseCalculationService;
 import com.promoteur.app.service.ClientPurchaseService;
+import com.promoteur.app.service.ReferenceGeneratorService;
 import com.promoteur.app.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -45,6 +47,7 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
     private final ClientRepository clientRepository;
     private final ProjectRepository projectRepository;
     private final ApartmentRepository apartmentRepository;
+    private final ReferenceGeneratorService referenceGeneratorService;
     private final AuditLogService auditLogService;
     private final MessageService messageService;
     private final ClientPurchaseCalculationService clientPurchaseCalculationService;
@@ -151,7 +154,7 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
 
         apartment.setAcquirer(client);
 
-        purchase.setReference(request.getReference());
+        purchase.setReference(this.resolveReference(purchase, request));
         purchase.setPurchaseDate(request.getPurchaseDate());
         purchase.setContractDate(request.getContractDate());
         purchase.setAssetDescription(request.getAssetDescription());
@@ -161,6 +164,20 @@ public class ClientPurchaseServiceImpl implements ClientPurchaseService {
         purchase.setClient(client);
         purchase.setProject(project);
         purchase.setApartment(apartment);
+    }
+
+    /**
+     * Resolves the reference before the first save: the caller's own when given, the existing
+     * one on an update, otherwise a freshly allocated sequential number (UX-09).
+     */
+    private String resolveReference(final ClientPurchase purchase, final ClientPurchaseRequest request) {
+        if (StringUtils.hasText(request.getReference())) {
+            return request.getReference().trim();
+        }
+        if (StringUtils.hasText(purchase.getReference())) {
+            return purchase.getReference();
+        }
+        return this.referenceGeneratorService.nextPurchaseReference(request.getPurchaseDate());
     }
 
     /** Moves a unit to sold, leaving a delivered one alone: delivery is further along. */

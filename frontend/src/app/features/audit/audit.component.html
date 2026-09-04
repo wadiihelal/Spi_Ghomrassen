@@ -1,0 +1,58 @@
+<section class="page-grid">
+  <div class="section-header">
+    <div>
+      <h2 class="page-title">Journal des opérations</h2>
+      <p class="page-subtitle">Chaque création, modification et suppression, avec sa date. Ce
+        journal couvre toute la société, pas seulement le projet de travail.</p>
+    </div>
+  </div>
+
+  <p-card header="Historique">
+    <p-table [value]="table.rows()" [lazy]="true" (onLazyLoad)="table.onLazyLoad($event)"
+             [loading]="table.loading()" [totalRecords]="table.totalRecords()" [paginator]="true"
+             [rows]="table.pageSize" [rowsPerPageOptions]="[25, 50, 100]"
+             currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}"
+             [showCurrentPageReport]="true">
+      <ng-template pTemplate="caption">
+        <div class="filter-grid">
+          <p-dropdown [(ngModel)]="filters.entityType" (ngModelChange)="table.onFilterChange()"
+                      [options]="entityOptions" optionLabel="label" optionValue="value"
+                      placeholder="Type d'objet"></p-dropdown>
+          <input pInputText type="date" [(ngModel)]="filters.dateFrom" (ngModelChange)="table.onFilterChange()"
+                 aria-label="Du" />
+          <input pInputText type="date" [(ngModel)]="filters.dateTo" (ngModelChange)="table.onFilterChange()"
+                 aria-label="Au" />
+          <button pButton type="button" label="Réinitialiser" icon="pi pi-filter-slash" severity="secondary"
+                  outlined (click)="resetFilters()"></button>
+        </div>
+      </ng-template>
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Quand</th>
+          <th>Objet</th>
+          <th>Action</th>
+          <th>Détail</th>
+          <th>Par</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td class="audit-when">
+            <div class="table-main">{{ row.createdAt | date:'dd/MM/yyyy' }}</div>
+            <div class="table-meta">{{ row.createdAt | date:'HH:mm:ss' }}</div>
+          </td>
+          <td>
+            <div class="table-main">{{ entityLabel(row.entityType) }}</div>
+            <div class="table-meta">n° {{ row.entityId }}</div>
+          </td>
+          <td><p-tag [value]="actionLabel(row.action)" [severity]="actionSeverity(row.action)"></p-tag></td>
+          <td class="audit-summary">{{ row.summary }}</td>
+          <td class="text-muted">{{ row.actor || 'system' }}</td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="5">Aucune opération sur la période choisie.</td></tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+</section>

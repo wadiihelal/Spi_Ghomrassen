@@ -278,6 +278,22 @@ export interface Attachment {
   ownerId: number;
 }
 
+/** One hit of the global search (UX-08). */
+export interface SearchHit {
+  type: 'CLIENT' | 'APARTMENT' | 'PURCHASE' | 'SUPPLIER' | 'SUPPLIER_INVOICE';
+  id: number;
+  label: string;
+  detail?: string;
+}
+
+/** Filters of the audit journal; the journal is company-wide, not project-scoped. */
+export interface AuditFilter {
+  entityType?: string | null;
+  actor?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+}
+
 export interface AuditLog {
   id: number;
   entityType: string;

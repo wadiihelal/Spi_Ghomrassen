@@ -80,8 +80,9 @@ Le journal d'audit (`audit_logs`) enregistre `actor = system` tant qu'il n'y a p
   conflit).
 - **Contrats** : un seul par appartement ; encaissé = paiement direct + acomptes ; statut
   `UNPAID` / `PARTIALLY_PAID` / `PAID` dérivé, jamais stocké.
-- **Références** : `DEP-2026-00042`, `ACC-2026-00042`, attribuées par séquence avant le premier
-  enregistrement.
+- **Références** : `DEP-2026-00042`, `ACC-2026-00042`, `ACH-2026-00042`, attribuées par séquence
+  avant le premier enregistrement ; une référence saisie est conservée (reprise d'un contrat
+  antérieur). Le numéro d'une facture fournisseur vient du fournisseur et reste saisi.
 - **Échéanciers** : un contrat porte un plan d'échéances (`payment_installments`). Ce que chaque
   ligne a reçu se calcule en cascade — l'argent encaissé sur le contrat couvre les échéances dans
   l'ordre — donc rien n'est stocké sur la ligne. Le statut `PAID` / `PARTIALLY_PAID` / `OVERDUE` /
@@ -151,6 +152,7 @@ prochaine version.
 | Contrats de vente | `/api/client-purchases` |
 | Acomptes | `/api/client-advances` |
 | Pièces jointes | `/api/attachments?ownerType&ownerId`, `/api/attachments/{id}` |
+| Recherche globale | `/api/search?q&projectId` — cinq résultats au plus par type |
 | Journal d'audit | `/api/audit-logs?entityType&actor&dateFrom&dateTo`, `/api/audit-logs/by-entity/{type}/{id}` |
 | Tableau de bord | `/api/dashboard/summary?projectId` |
 | Plan de vente | `/api/apartments/sales-board?projectId`, `PATCH /api/apartments/{id}/sales-status?status` |

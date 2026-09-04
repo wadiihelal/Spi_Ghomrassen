@@ -11,7 +11,8 @@
     <p-table #dt [value]="suppliers()" responsiveLayout="scroll" [globalFilterFields]="['name', 'phone', 'email', 'type']" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
       <ng-template pTemplate="caption">
         <div class="table-toolbar">
-          <input pInputText type="text" placeholder="Rechercher un fournisseur..." (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
+          <input pInputText type="text" placeholder="Rechercher un fournisseur..." [ngModel]="searchTerm"
+                 (ngModelChange)="searchTerm = $event; dt.filterGlobal($event, 'contains')" />
         </div>
       </ng-template>
       <ng-template pTemplate="header">

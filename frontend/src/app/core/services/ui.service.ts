@@ -20,7 +20,7 @@ export class UiService {
 
   confirmDelete(message: string, accept: () => void): void {
     this.confirmations.confirm({
-      header: 'Confirmation',
+      header: 'Êtes-vous sûr ?',
       message,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Oui, supprimer',

@@ -1,15 +1,11 @@
 package com.promoteur.app.service.impl;
 
 import com.lowagie.text.Document;
-import com.lowagie.text.DocumentException;
-import com.lowagie.text.Font;
-import com.lowagie.text.FontFactory;
+import com.lowagie.text.Element;
 import com.lowagie.text.PageSize;
-import com.lowagie.text.Paragraph;
-import com.lowagie.text.Phrase;
-import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.promoteur.app.config.CompanyProperties;
 import com.promoteur.app.dto.report.AmountByLabelDto;
 import com.promoteur.app.dto.report.ClientStatementDto;
 import com.promoteur.app.dto.report.CountAndTotal;
@@ -64,6 +60,7 @@ public class ReportServiceImpl implements ReportService {
     private final ExpenseRepository expenseRepository;
     private final ClientAdvanceRepository clientAdvanceRepository;
     private final ClientPurchaseRepository clientPurchaseRepository;
+    private final CompanyProperties company;
 
     @Override
     public ReportScope resolveScope(ReportFilter filter) {
@@ -252,32 +249,30 @@ public class ReportServiceImpl implements ReportService {
         List<ClientStatementDto> statements = allStatements(scope);
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            Document document = new Document(PageSize.A4.rotate(), 24, 24, 24, 24);
+            Document document = new Document(PageSize.A4, 42f, 42f, 42f, 42f);
             PdfWriter.getInstance(document, outputStream);
             document.open();
 
-            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
-            Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
-            Font textFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
+            // Same letterhead as the receipt and the statement (UX-06): one company, one paper.
+            // The scope labels carry their own « Projet : » / « Période : » lead-ins for the
+            // Excel header; the letterhead's fact column already names them.
+            PdfLetterhead.open(document, company, "Rapport de gestion", stripLeadIn(scope.periodLabel()));
+            document.add(PdfLetterhead.facts(new String[][]{
+                    {"Périmètre", stripLeadIn(scope.projectLabel())},
+                    {"Période", stripLeadIn(scope.periodLabel())}
+            }));
 
-            document.add(new Paragraph("SP Immobilière GHOMRASSEN - Rapport", titleFont));
-            document.add(new Paragraph(scope.projectLabel(), sectionFont));
-            document.add(new Paragraph(scope.periodLabel(), sectionFont));
-            document.add(new Paragraph("Date d'édition : " + LocalDate.now(), textFont));
-            document.add(new Paragraph(" "));
+            document.add(PdfLetterhead.heading("Dépenses par catégorie"));
+            document.add(buildTwoColumnPdfTable(byCategory, "Catégorie", "Total"));
 
-            document.add(new Paragraph("Dépenses par catégorie", sectionFont));
-            document.add(buildTwoColumnPdfTable(byCategory, "Catégorie", "Total (DT)"));
-            document.add(new Paragraph(" "));
+            document.add(PdfLetterhead.heading("Dépenses par projet"));
+            document.add(buildTwoColumnPdfTable(byProject, "Projet", "Total"));
 
-            document.add(new Paragraph("Dépenses par projet", sectionFont));
-            document.add(buildTwoColumnPdfTable(byProject, "Projet", "Total (DT)"));
-            document.add(new Paragraph(" "));
-
-            document.add(new Paragraph("Situation clients", sectionFont));
+            document.add(PdfLetterhead.heading("Mouvements des acquéreurs sur la période"));
             document.add(buildClientsPdfTable(statements));
-            document.add(new Paragraph(" "));
 
+            document.add(PdfLetterhead.note(
+                    "Chiffres arrêtés à la date d'édition sur les écritures enregistrées pour la période."));
             document.close();
             return outputStream.toByteArray();
         } catch (Exception ex) {
@@ -319,44 +314,65 @@ public class ReportServiceImpl implements ReportService {
         autosize(sheet, 4);
     }
 
-    private PdfPTable buildTwoColumnPdfTable(List<AmountByLabelDto> rows, String firstHeader, String secondHeader) throws DocumentException {
+    /** « Projet : X » becomes « X »: the label is printed once, by the fact column. */
+    private static String stripLeadIn(String label) {
+        if (label == null) {
+            return "-";
+        }
+        int colon = label.indexOf(':');
+        return colon >= 0 && colon < 12 ? label.substring(colon + 1).trim() : label;
+    }
+
+    private PdfPTable buildTwoColumnPdfTable(List<AmountByLabelDto> rows, String firstHeader, String secondHeader) {
         PdfPTable table = new PdfPTable(new float[]{4f, 2f});
         table.setWidthPercentage(100);
-        table.addCell(headerCell(firstHeader));
-        table.addCell(headerCell(secondHeader));
+        table.addCell(PdfLetterhead.headerCell(firstHeader));
+        table.addCell(PdfLetterhead.headerCell(secondHeader));
+        BigDecimal total = BigDecimal.ZERO;
         for (AmountByLabelDto row : rows) {
-            table.addCell(bodyCell(defaultString(row.getLabel())));
-            table.addCell(bodyCell(formatMoney(row.getAmount())));
+            table.addCell(PdfLetterhead.bodyCell(defaultString(row.getLabel())));
+            table.addCell(PdfLetterhead.amountCell(PdfLetterhead.money(row.getAmount())));
+            total = total.add(safe(row.getAmount()));
         }
+        if (rows.isEmpty()) {
+            table.addCell(PdfLetterhead.bodyCell("Aucune écriture sur la période"));
+            table.addCell(PdfLetterhead.amountCell(PdfLetterhead.money(BigDecimal.ZERO)));
+        }
+        table.addCell(PdfLetterhead.totalCell("Total", Element.ALIGN_LEFT));
+        table.addCell(PdfLetterhead.totalCell(PdfLetterhead.money(total), Element.ALIGN_RIGHT));
         return table;
     }
 
-    private PdfPTable buildClientsPdfTable(List<ClientStatementDto> rows) throws DocumentException {
+    private PdfPTable buildClientsPdfTable(List<ClientStatementDto> rows) {
         PdfPTable table = new PdfPTable(new float[]{4f, 2f, 2f, 2f});
         table.setWidthPercentage(100);
-        table.addCell(headerCell("Client"));
-        table.addCell(headerCell("Achats (DT)"));
-        table.addCell(headerCell("Paiements (DT)"));
-        table.addCell(headerCell("Reste (DT)"));
+        table.addCell(PdfLetterhead.headerCell("Client"));
+        table.addCell(PdfLetterhead.headerCell("Contracté"));
+        table.addCell(PdfLetterhead.headerCell("Encaissé"));
+        table.addCell(PdfLetterhead.headerCell("Reste à payer"));
+        BigDecimal contracted = BigDecimal.ZERO;
+        BigDecimal collected = BigDecimal.ZERO;
+        BigDecimal remaining = BigDecimal.ZERO;
         for (ClientStatementDto row : rows) {
-            table.addCell(bodyCell(defaultString(row.getClientName())));
-            table.addCell(bodyCell(formatMoney(row.getTotalPurchases())));
-            table.addCell(bodyCell(formatMoney(row.getTotalAdvances())));
-            table.addCell(bodyCell(formatMoney(row.getRemainingToPay())));
+            table.addCell(PdfLetterhead.bodyCell(defaultString(row.getClientName())));
+            table.addCell(PdfLetterhead.amountCell(PdfLetterhead.money(row.getTotalPurchases())));
+            table.addCell(PdfLetterhead.amountCell(PdfLetterhead.money(row.getTotalAdvances())));
+            table.addCell(PdfLetterhead.amountCell(PdfLetterhead.money(row.getRemainingToPay())));
+            contracted = contracted.add(safe(row.getTotalPurchases()));
+            collected = collected.add(safe(row.getTotalAdvances()));
+            remaining = remaining.add(safe(row.getRemainingToPay()));
         }
+        if (rows.isEmpty()) {
+            table.addCell(PdfLetterhead.bodyCell("Aucun mouvement d'acquéreur sur la période"));
+            table.addCell(PdfLetterhead.amountCell(PdfLetterhead.money(BigDecimal.ZERO)));
+            table.addCell(PdfLetterhead.amountCell(PdfLetterhead.money(BigDecimal.ZERO)));
+            table.addCell(PdfLetterhead.amountCell(PdfLetterhead.money(BigDecimal.ZERO)));
+        }
+        table.addCell(PdfLetterhead.totalCell("Total", Element.ALIGN_LEFT));
+        table.addCell(PdfLetterhead.totalCell(PdfLetterhead.money(contracted), Element.ALIGN_RIGHT));
+        table.addCell(PdfLetterhead.totalCell(PdfLetterhead.money(collected), Element.ALIGN_RIGHT));
+        table.addCell(PdfLetterhead.totalCell(PdfLetterhead.money(remaining), Element.ALIGN_RIGHT));
         return table;
-    }
-
-    private PdfPCell headerCell(String value) {
-        PdfPCell cell = new PdfPCell(new Phrase(value, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9)));
-        cell.setPadding(6f);
-        return cell;
-    }
-
-    private PdfPCell bodyCell(String value) {
-        PdfPCell cell = new PdfPCell(new Phrase(value, FontFactory.getFont(FontFactory.HELVETICA, 8)));
-        cell.setPadding(5f);
-        return cell;
     }
 
     /** A whole export is not paginated: the aggregate is read in one page. */
@@ -392,9 +408,6 @@ public class ReportServiceImpl implements ReportService {
         return value == null ? BigDecimal.ZERO : value;
     }
 
-    private String formatMoney(BigDecimal value) {
-        return safe(value).setScale(3, java.math.RoundingMode.HALF_UP).toPlainString();
-    }
 
     private String defaultString(String value) {
         return value == null ? "-" : value;

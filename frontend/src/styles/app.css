@@ -323,3 +323,6 @@ body .p-card.metric-card.danger::before  { background: var(--danger-600); }
   body .p-datatable .p-datatable-tbody > tr > td { padding: 0.625rem 0.75rem; }
   .form-actions .p-button { flex: 1; justify-content: center; }
 }
+
+/* One quiet line under a field, for the rule the field follows. */
+.field-hint { display: block; margin-top: 0.25rem; color: var(--text-muted); font-size: var(--text-xs); }

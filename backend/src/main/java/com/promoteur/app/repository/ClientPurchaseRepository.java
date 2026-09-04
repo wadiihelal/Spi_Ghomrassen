@@ -110,4 +110,14 @@ public interface ClientPurchaseRepository extends JpaRepository<ClientPurchase, 
                                         @Param("to") LocalDate to,
                                         Pageable pageable);
 
+
+    /** Global search (UX-08): by contract reference, within the project in scope. */
+    @EntityGraph(attributePaths = {"client", "apartment"})
+    @Query("""
+            select p from ClientPurchase p
+            where (:projectId is null or p.project.id = :projectId)
+              and lower(p.reference) like :pattern
+            order by p.purchaseDate desc
+            """)
+    List<ClientPurchase> search(@Param("pattern") String pattern, @Param("projectId") Long projectId, Pageable limit);
 }

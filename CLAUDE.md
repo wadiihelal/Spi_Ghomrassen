@@ -40,13 +40,17 @@ Application interne d'un promoteur immobilier tunisien. `backend/` Spring Boot 3
 - **Sauvegardes : lacune assumée** pour l'instant, documentée dans `backend/README.md`.
 - **La TVA collectée n'est pas suivie** : les ventes sont enregistrées TTC. Le document de TVA
   ne couvre donc que la TVA déductible et le dit noir sur blanc.
+- **Une référence de contrat de vente est attribuée par séquence** (`ACH-2026-00042`), comme
+  celles des dépenses et des acomptes. Saisie à la main, elle est conservée : c'est la reprise
+  d'un contrat antérieur à l'application. Le numéro d'une facture fournisseur, lui, vient du
+  fournisseur et reste saisi.
 - **Le reçu ne consomme pas de séquence** : il porte la référence de l'encaissement, pour qu'un
   reçu réimprimé reste le même document.
 
 ## Vérifier avant de livrer
 
 ```bash
-cd backend && mvn -q verify        # 140 tests, H2 + Flyway
+cd backend && mvn -q verify        # 152 tests, H2 + Flyway
 cd frontend && npx ng build        # TypeScript strict + strictTemplates
 ```
 
@@ -71,7 +75,8 @@ Le profil `demo` charge des acquéreurs fictifs : jamais en production.
 | TVA | `service/impl/VatCalculationServiceImpl`, table `vat_rate_options` |
 | Rapports et périmètre | `dto/report/ReportFilter`, `service/impl/ReportServiceImpl` |
 | Filtres des listes | `dto/ListFilter`, `repository/specification/*` |
-| Références de documents | `service/impl/ReferenceGeneratorServiceImpl`, séquences V6 |
+| Références de documents | `service/impl/ReferenceGeneratorServiceImpl`, séquences V6 (DEP, ACC) et V12 (ACH) |
+| Recherche globale | `service/impl/SearchServiceImpl`, requêtes `search(...)` des dépôts |
 | Pièces jointes | `service/impl/AttachmentServiceImpl`, `LocalFileSystemStorageService` |
 | Messages français | `src/main/resources/messages_fr.properties` |
 | OpenAPI | `/swagger-ui.html` en dev et test uniquement |

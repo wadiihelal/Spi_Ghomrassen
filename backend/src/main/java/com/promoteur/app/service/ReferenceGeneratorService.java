@@ -21,4 +21,11 @@ public interface ReferenceGeneratorService {
      * @return the next unused advance reference, e.g. {@code ACC-2026-00042}
      */
     String nextAdvanceReference(LocalDate date);
+
+    /**
+     * Next sale contract reference, e.g. {@code ACH-2026-00042} (UX-09).
+     *
+     * @param date date the reference year is taken from; today when null
+     */
+    String nextPurchaseReference(LocalDate date);
 }

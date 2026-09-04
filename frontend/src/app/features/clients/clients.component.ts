@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ViewChild, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { TableModule } from 'primeng/table';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Table, TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -15,7 +16,7 @@ import { Client, Project } from '../../shared/models/models';
 @Component({
   selector: 'app-clients',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, DialogModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, DialogModule],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -26,6 +27,7 @@ export class ClientsComponent implements OnInit {
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
 
   /** Signals, so the view refreshes under OnPush when an HTTP response lands (PERF-04). */
   readonly clients = signal<Client[]>([]);
@@ -54,7 +56,13 @@ export class ClientsComponent implements OnInit {
     projectId: [null as number | null, [Validators.required]]
   });
 
+  /** Text in the list's search box; prefilled by the global search's ?search= (UX-08). */
+  searchTerm = '';
+  @ViewChild('dt') private table?: Table;
+
   ngOnInit(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => (this.searchTerm = params.get('search') ?? this.searchTerm));
     this.projectContext.scope$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
       this.selectedProjectId.set(projectId);
       if (!this.editingId) {
@@ -66,7 +74,10 @@ export class ClientsComponent implements OnInit {
 
   loadClients(): void {
     this.api.getClients(this.selectedProjectId()).subscribe({
-      next: (data) => this.clients.set(data)
+      next: (data) => {
+        this.clients.set(data);
+        this.applySearchTerm();
+      }
     });
     this.api.getProjects().subscribe({ next: (data) => (this.projects.set(data)) });
   }
@@ -148,5 +159,13 @@ export class ClientsComponent implements OnInit {
   openCreateDialog(): void {
     this.resetForm();
     this.dialogVisible = true;
+  }
+
+  /** Pushes a prefilled search term into the table: PrimeNG filters only on the input event. */
+  private applySearchTerm(): void {
+    if (this.searchTerm) {
+      // The table renders its rows on the next tick; filtering before that finds nothing.
+      setTimeout(() => this.table?.filterGlobal(this.searchTerm, 'contains'));
+    }
   }
 }

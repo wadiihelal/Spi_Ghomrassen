@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { TableModule } from 'primeng/table';
+import { ActivatedRoute } from '@angular/router';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Table, TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -14,7 +16,7 @@ import { Supplier, SupplierTypeOption, VatRateOption } from '../../shared/models
 @Component({
   selector: 'app-suppliers',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, DropdownModule, DialogModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, DropdownModule, DialogModule],
   templateUrl: './suppliers.component.html',
   styleUrl: './suppliers.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -23,6 +25,8 @@ export class SuppliersComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly fb = inject(FormBuilder);
   private readonly ui = inject(UiService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
 
   readonly suppliers = signal<Supplier[]>([]);
   editingId: number | null = null;
@@ -47,7 +51,13 @@ export class SuppliersComponent implements OnInit {
     active: [true]
   });
 
+  /** Text in the list's search box; prefilled by the global search's ?search= (UX-08). */
+  searchTerm = '';
+  @ViewChild('dt') private table?: Table;
+
   ngOnInit(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => (this.searchTerm = params.get('search') ?? this.searchTerm));
     this.loadSuppliers();
     this.loadSupplierTypes();
     this.api.getVatRates().subscribe({ next: (data) => this.vatRates.set(data) });
@@ -55,7 +65,10 @@ export class SuppliersComponent implements OnInit {
 
   loadSuppliers(): void {
     this.api.getSuppliers().subscribe({
-      next: (data) => this.suppliers.set(data)
+      next: (data) => {
+        this.suppliers.set(data);
+        this.applySearchTerm();
+      }
     });
   }
 
@@ -163,5 +176,13 @@ export class SuppliersComponent implements OnInit {
         this.closeSupplierTypeDialog();
       }
     });
+  }
+
+  /** Pushes a prefilled search term into the table: PrimeNG filters only on the input event. */
+  private applySearchTerm(): void {
+    if (this.searchTerm) {
+      // The table renders its rows on the next tick; filtering before that finds nothing.
+      setTimeout(() => this.table?.filterGlobal(this.searchTerm, 'contains'));
+    }
   }
 }

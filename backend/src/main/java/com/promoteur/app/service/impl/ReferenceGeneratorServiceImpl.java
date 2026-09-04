@@ -1,6 +1,7 @@
 package com.promoteur.app.service.impl;
 
 import com.promoteur.app.repository.ClientAdvanceRepository;
+import com.promoteur.app.repository.ClientPurchaseRepository;
 import com.promoteur.app.repository.ExpenseRepository;
 import com.promoteur.app.service.ReferenceGeneratorService;
 import jakarta.persistence.EntityManager;
@@ -18,6 +19,7 @@ public class ReferenceGeneratorServiceImpl implements ReferenceGeneratorService 
 
     private static final String EXPENSE_SEQUENCE = "expense_ref_seq";
     private static final String ADVANCE_SEQUENCE = "advance_ref_seq";
+    private static final String PURCHASE_SEQUENCE = "purchase_ref_seq";
 
     /**
      * Guards against an endless loop if every candidate were somehow taken. A reference is
@@ -31,6 +33,7 @@ public class ReferenceGeneratorServiceImpl implements ReferenceGeneratorService 
 
     private final ExpenseRepository expenseRepository;
     private final ClientAdvanceRepository clientAdvanceRepository;
+    private final ClientPurchaseRepository clientPurchaseRepository;
 
     @Override
     public String nextExpenseReference(final LocalDate date) {
@@ -42,6 +45,12 @@ public class ReferenceGeneratorServiceImpl implements ReferenceGeneratorService 
     public String nextAdvanceReference(final LocalDate date) {
         return this.nextReference("ACC", ADVANCE_SEQUENCE, date,
                 reference -> this.clientAdvanceRepository.findByReference(reference).isPresent());
+    }
+
+    @Override
+    public String nextPurchaseReference(final LocalDate date) {
+        return this.nextReference("ACH", PURCHASE_SEQUENCE, date,
+                reference -> this.clientPurchaseRepository.findByReference(reference).isPresent());
     }
 
     /**

@@ -92,7 +92,10 @@
       </div>
       <div class="field">
         <label>Référence</label>
-        <input pInputText formControlName="reference" />
+        <input pInputText formControlName="reference"
+               placeholder="Attribuée automatiquement (ACH-2026-00001)" />
+        <small class="field-hint">Laissez vide : le numéro suit la séquence. Saisissez-en une seulement
+          pour reprendre un contrat antérieur à l'application.</small>
       </div>
       <div class="field">
         <label>Client</label>

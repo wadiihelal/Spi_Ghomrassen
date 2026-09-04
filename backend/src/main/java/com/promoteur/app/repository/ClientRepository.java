@@ -64,4 +64,15 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
                                         @Param("to") LocalDate to,
                                         Pageable pageable);
 
+
+    /** Global search (UX-08): name, identity number or phone, within the project in scope. */
+    @Query("""
+            select c from Client c
+            where (:projectId is null or c.project.id = :projectId)
+              and (lower(c.fullName) like :pattern
+                   or lower(c.cinOrFiscalId) like :pattern
+                   or c.phone like :pattern)
+            order by c.fullName
+            """)
+    List<Client> search(@Param("pattern") String pattern, @Param("projectId") Long projectId, Pageable limit);
 }

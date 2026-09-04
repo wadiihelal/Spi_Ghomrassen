@@ -1,0 +1,29 @@
+<div class="search" [class.open]="open()">
+  <i class="pi search-icon" [class.pi-search]="!searching()" [class.pi-spin]="searching()"
+     [class.pi-spinner]="searching()"></i>
+  <input type="search" class="search-input" [ngModel]="query()" (ngModelChange)="onInput($event)"
+         (focus)="onFocus()" (keydown)="onKeydown($event)"
+         placeholder="Rechercher un client, un lot, une référence…" aria-label="Recherche globale"
+         autocomplete="off" />
+
+  @if (open()) {
+    <div class="search-panel" role="listbox">
+      @if (!groups().length) {
+        <div class="search-empty">Aucun résultat pour « {{ query().trim() }} » dans ce projet.</div>
+      }
+      @for (group of groups(); track group.type) {
+        <div class="search-group">
+          <div class="search-group-label"><i [class]="group.meta.icon"></i> {{ group.meta.label }}</div>
+          @for (hit of group.items; track hit.id) {
+            <button type="button" class="search-hit" role="option"
+                    [class.active]="flatIndex(hit) === active()"
+                    (mouseenter)="active.set(flatIndex(hit))" (click)="select(hit)">
+              <span class="search-hit-label">{{ hit.label }}</span>
+              @if (hit.detail) { <span class="search-hit-detail">{{ hit.detail }}</span> }
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

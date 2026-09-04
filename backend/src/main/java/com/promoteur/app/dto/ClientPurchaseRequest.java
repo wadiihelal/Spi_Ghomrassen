@@ -16,9 +16,9 @@ import java.time.LocalDate;
 public class ClientPurchaseRequest {
 
     /**
-     * Purchase reference coming from the sales workflow.
+     * Contract reference. Left blank, it is allocated by sequence (UX-09); given, it is kept,
+     * which is how references from before the application are carried over.
      */
-    @NotBlank
     private String reference;
 
     /**

@@ -50,4 +50,14 @@ public interface SupplierInvoiceRepository extends JpaRepository<SupplierInvoice
     List<VatByRate> sumVatByRate(@Param("projectId") Long projectId,
                                  @Param("year") int year,
                                  @Param("month") int month);
+
+    /** Global search (UX-08): by invoice number, within the project in scope. */
+    @EntityGraph(attributePaths = {"supplier", "project"})
+    @Query("""
+            select i from SupplierInvoice i
+            where (:projectId is null or i.project.id = :projectId)
+              and lower(i.invoiceNumber) like :pattern
+            order by i.invoiceDate desc
+            """)
+    List<SupplierInvoice> search(@Param("pattern") String pattern, @Param("projectId") Long projectId, Pageable limit);
 }

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnDestroy, OnInit, inje
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { GlobalSearchComponent } from './global-search.component';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -18,7 +19,7 @@ const CLOCK_INTERVAL_MS = 60_000;
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, ButtonModule, ToastModule, ConfirmDialogModule, DropdownModule],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, ButtonModule, ToastModule, ConfirmDialogModule, DropdownModule, GlobalSearchComponent],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -54,7 +55,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   settingsNavItems = [
     { label: 'Projets', route: '/projects', icon: 'pi pi-briefcase' },
     { label: 'Clients', route: '/clients', icon: 'pi pi-users' },
-    { label: 'Fournisseurs', route: '/suppliers', icon: 'pi pi-id-card' }
+    { label: 'Fournisseurs', route: '/suppliers', icon: 'pi pi-id-card' },
+    { label: 'Journal', route: '/audit', icon: 'pi pi-history' }
   ];
 
   get selectedProject(): Project | null {

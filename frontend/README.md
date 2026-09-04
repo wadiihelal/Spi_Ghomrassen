@@ -54,8 +54,12 @@ résolu, puis à chaque changement.
 | `/schedules` | `features/schedules` | échéanciers des contrats et échéances à relancer |
 | `/reports` | `features/reports` | rapports par projet et période, exports Excel / PDF, récapitulatif de TVA |
 | `/projects`, `/projects/:id`, `/clients`, `/suppliers` | paramétrage | référentiels |
+| `/audit` | `features/audit` | journal des opérations, toute la société, filtré par objet et par dates |
 
 Toutes les routes sont chargées à la demande (`loadComponent`).
+
+La recherche globale (`core/layout/global-search`) interroge `/api/search` dès deux caractères et
+ouvre la liste concernée avec `?search=<libellé>` ; les listes lisent ce paramètre au chargement.
 
 Les documents imprimables (reçu, situation de compte, récapitulatif de TVA) sont de simples
 liens vers l'API : le lecteur PDF du navigateur les ouvre et propose l'impression. Pas de blob

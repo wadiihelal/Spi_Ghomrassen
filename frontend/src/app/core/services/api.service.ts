@@ -30,10 +30,12 @@ import {
   ExpenseCategory,
   ListFilter,
   PageQuery,
+  AuditFilter,
   PagedResponse,
   PayablesSummary,
   SalesBoard,
   SalesStatus,
+  SearchHit,
   Project,
   ReportScopeParams,
   Supplier,
@@ -274,6 +276,33 @@ export class ApiService {
 
   deleteAdvance(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/client-advances/${id}`);
+  }
+
+  // --- Global search (UX-08) ------------------------------------------------
+
+  /** A few typed characters against clients, lots, contracts, suppliers and invoices. */
+  search(query: string, projectId?: number | null): Observable<SearchHit[]> {
+    let params = new HttpParams().set('q', query);
+    if (projectId !== null && projectId !== undefined) {
+      params = params.set('projectId', projectId);
+    }
+    return this.http.get<SearchHit[]>(`${this.baseUrl}/search`, { params });
+  }
+
+  // --- Audit journal --------------------------------------------------------
+
+  /** One page of the audit trail, newest first unless the caller sorts otherwise. */
+  getAuditJournal(filter: AuditFilter, query: PageQuery): Observable<PagedResponse<AuditLog>> {
+    let params = new HttpParams()
+      .set('page', query.page)
+      .set('size', query.size)
+      .set('sort', query.sort ?? 'createdAt,desc');
+    Object.entries(filter).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        params = params.set(key, String(value));
+      }
+    });
+    return this.http.get<PagedResponse<AuditLog>>(`${this.baseUrl}/audit-logs`, { params });
   }
 
   // --- Printed documents (UX-06) --------------------------------------------

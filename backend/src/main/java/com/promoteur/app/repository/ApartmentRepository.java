@@ -54,4 +54,14 @@ public interface ApartmentRepository extends JpaRepository<Apartment, Long>, Jpa
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from Apartment a where a.id = :id")
     Optional<Apartment> findByIdForUpdate(@Param("id") Long id);
+
+    /** Global search (UX-08): by lot number, within the project in scope. */
+    @EntityGraph(attributePaths = {"project"})
+    @Query("""
+            select a from Apartment a
+            where (:projectId is null or a.project.id = :projectId)
+              and lower(a.apartmentNumber) like :pattern
+            order by a.apartmentNumber
+            """)
+    List<Apartment> search(@Param("pattern") String pattern, @Param("projectId") Long projectId, Pageable limit);
 }

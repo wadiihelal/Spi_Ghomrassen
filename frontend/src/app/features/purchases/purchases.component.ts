@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -43,6 +44,7 @@ export class PurchasesComponent implements OnInit {
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
 
   /** One page of contracts, filtered and counted by the server (PERF-02). */
   readonly table = new LazyTable<ClientPurchase>(
@@ -214,7 +216,7 @@ export class PurchasesComponent implements OnInit {
   }
 
   form = this.fb.group({
-    reference: ['', [Validators.required]],
+    reference: [''],
     purchaseDate: ['', [Validators.required]],
     contractDate: [''],
     totalAmount: [0, [Validators.required]],
@@ -227,6 +229,14 @@ export class PurchasesComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // A hit picked in the global search lands here as ?search= (UX-08); the list opens on it.
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const search = params.get('search');
+      if (search !== null && search !== this.filters.search) {
+        this.filters.search = search;
+        this.table.onFilterChange();
+      }
+    });
     this.projectContext.scope$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
       this.selectedProjectId.set(projectId);
       this.filters.projectId = projectId;
