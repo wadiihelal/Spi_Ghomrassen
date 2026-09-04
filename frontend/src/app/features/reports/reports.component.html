@@ -10,7 +10,7 @@
             <ng-template pTemplate="body" let-row>
                 <tr>
                     <td>{{ row.label }}</td>
-                    <td>{{ row.amount | number:'1.0-2' }} DT</td>
+                    <td>{{ row.amount | dinar }}</td>
                 </tr>
             </ng-template>
         </p-table>
@@ -27,7 +27,7 @@
             <ng-template pTemplate="body" let-row>
                 <tr>
                     <td>{{ row.label }}</td>
-                    <td>{{ row.amount | number:'1.0-2' }} DT</td>
+                    <td>{{ row.amount | dinar }}</td>
                 </tr>
             </ng-template>
         </p-table>
@@ -64,9 +64,9 @@
             <ng-template pTemplate="body" let-row>
                 <tr>
                     <td>{{ row.clientName }}</td>
-                    <td>{{ row.totalPurchases | number:'1.0-2' }} DT</td>
-                    <td>{{ row.totalAdvances | number:'1.0-2' }} DT</td>
-                    <td>{{ row.remainingToPay | number:'1.0-2' }} DT</td>
+                    <td>{{ row.totalPurchases | dinar }}</td>
+                    <td>{{ row.totalAdvances | dinar }}</td>
+                    <td>{{ row.remainingToPay | dinar }}</td>
                 </tr>
             </ng-template>
         </p-table>

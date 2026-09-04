@@ -91,13 +91,13 @@
         <tr>
           <td>
             <div class="table-main">{{ row.apartmentNumber }}</div>
-            <div class="table-meta">{{ row.apartmentType }} · {{ row.totalSurface | number:'1.0-2' }} m² · {{ getPricePerSquareMeter(row) | number:'1.0-0' }} DT/m²</div>
+            <div class="table-meta">{{ row.apartmentType }} · {{ row.totalSurface | number:'1.0-2' }} m² · {{ getPricePerSquareMeter(row) | dinar:'short' }}/m²</div>
           </td>
           <td>{{ getProjectName(row) }}</td>
           <td>{{ getClientName(row) }}</td>
-          <td>{{ row.totalSalePrice | number:'1.0-2' }} DT</td>
-          <td>{{ getTotalCollected(row) | number:'1.0-2' }} DT</td>
-          <td>{{ getRemainingToCollect(row) | number:'1.0-2' }} DT</td>
+          <td>{{ row.totalSalePrice | dinar }}</td>
+          <td>{{ getTotalCollected(row) | dinar }}</td>
+          <td>{{ getRemainingToCollect(row) | dinar }}</td>
           <td class="actions-cell">
             <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir appartement" (click)="edit(row)"></button>
             <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>

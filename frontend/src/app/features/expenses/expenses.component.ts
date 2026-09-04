@@ -10,6 +10,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { DropdownModule } from 'primeng/dropdown';
 import { DialogModule } from 'primeng/dialog';
 import { ApiService } from '../../core/services/api.service';
+import { DinarPipe } from '../../shared/pipes/dinar.pipe';
 import { UiService } from '../../core/services/ui.service';
 import { AttachmentsPanelComponent } from '../../shared/attachments/attachments-panel.component';
 import { ProjectContextService } from '../../core/services/project-context.service';
@@ -22,7 +23,7 @@ const FALLBACK_VAT_RATE = 0.19;
 @Component({
   selector: 'app-expenses',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, AttachmentsPanelComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, AttachmentsPanelComponent, DinarPipe],
   templateUrl: './expenses.component.html',
   styleUrl: './expenses.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

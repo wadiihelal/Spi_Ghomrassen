@@ -14,15 +14,15 @@
     </p-card>
     <p-card>
       <div class="metric-label">Montant déclaré</div>
-      <div class="metric-value">{{ filteredDeclaredTotal | number:'1.0-0' }} DT</div>
+      <div class="metric-value">{{ filteredDeclaredTotal | dinar:'short' }}</div>
     </p-card>
     <p-card>
       <div class="metric-label">Total encaissé</div>
-      <div class="metric-value">{{ filteredCollectedTotal | number:'1.0-0' }} DT</div>
+      <div class="metric-value">{{ filteredCollectedTotal | dinar:'short' }}</div>
     </p-card>
     <p-card>
       <div class="metric-label">Reste à encaisser</div>
-      <div class="metric-value">{{ filteredRemainingTotal | number:'1.0-0' }} DT</div>
+      <div class="metric-value">{{ filteredRemainingTotal | dinar:'short' }}</div>
     </p-card>
     <p-card>
       <div class="metric-label">Soldés</div>
@@ -62,16 +62,16 @@
         <tr>
           <td>
             <div class="table-main">{{ row.reference || '-' }}</div>
-            <div class="table-meta">{{ row.purchaseDate || '-' }}</div>
+            <div class="table-meta">{{ (row.purchaseDate | date:'dd/MM/yyyy') || '-' }}</div>
           </td>
           <td>
             <div class="table-main">{{ getApartmentName(row.apartmentId) }}</div>
             <div class="table-meta">{{ row.assetDescription || '-' }}</div>
           </td>
           <td>{{ getClientName(row.clientId) }}</td>
-          <td>{{ row.totalAmount | number:'1.0-2' }} DT</td>
-          <td>{{ getPurchaseCollectedAmount(row) | number:'1.0-2' }} DT</td>
-          <td>{{ getPurchaseRemainingAmount(row) | number:'1.0-2' }} DT</td>
+          <td>{{ row.totalAmount | dinar }}</td>
+          <td>{{ getPurchaseCollectedAmount(row) | dinar }}</td>
+          <td>{{ getPurchaseRemainingAmount(row) | dinar }}</td>
           <td>
             <p-tag [value]="getPaymentStatusLabel(row.paymentStatus)" [severity]="getPaymentStatusSeverity(row.paymentStatus)"></p-tag>
           </td>
@@ -129,19 +129,19 @@
       <div class="summary-grid full-width">
         <div class="field">
           <label>Acomptes liés</label>
-          <div class="value-box">{{ currentAdvanceAmount | number:'1.0-2' }} DT</div>
+          <div class="value-box">{{ currentAdvanceAmount | dinar }}</div>
         </div>
         <div class="field">
           <label>Total encaissé</label>
-          <div class="value-box" [class.value-danger]="isCurrentPurchaseOverLimit">{{ currentCollectedAmount | number:'1.0-2' }} DT</div>
+          <div class="value-box" [class.value-danger]="isCurrentPurchaseOverLimit">{{ currentCollectedAmount | dinar }}</div>
         </div>
         <div class="field">
           <label>Reste</label>
-          <div class="value-box">{{ currentRemainingAmount | number:'1.0-2' }} DT</div>
+          <div class="value-box">{{ currentRemainingAmount | dinar }}</div>
         </div>
         <div class="field">
           <label>Avancement</label>
-          <div class="value-box">{{ currentCompletionPercentage | number:'1.0-1' }}%</div>
+          <div class="value-box">{{ currentCompletionPercentage | percentShare }}</div>
         </div>
         <div class="field">
           <label>Statut</label>

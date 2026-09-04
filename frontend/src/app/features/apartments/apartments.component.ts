@@ -11,6 +11,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { DialogModule } from 'primeng/dialog';
 import { Apartment, Client, ListFilter, Project } from '../../shared/models/models';
 import { ApiService } from '../../core/services/api.service';
+import { DinarPipe } from '../../shared/pipes/dinar.pipe';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { LazyTable } from '../../core/services/lazy-table';
@@ -19,7 +20,7 @@ import { forkJoin } from 'rxjs';
 @Component({
   selector: 'app-apartments',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, DinarPipe],
   templateUrl: './apartments.component.html',
   styleUrl: './apartments.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

@@ -9,13 +9,14 @@ import { DropdownModule } from 'primeng/dropdown';
 import { DialogModule } from 'primeng/dialog';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
+import { DinarPipe } from '../../shared/pipes/dinar.pipe';
 import { UiService } from '../../core/services/ui.service';
 import { Project } from '../../shared/models/models';
 
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, DropdownModule, DialogModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, DropdownModule, DialogModule, RouterLink, DinarPipe],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

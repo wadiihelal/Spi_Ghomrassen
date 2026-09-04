@@ -14,11 +14,11 @@
     </p-card>
     <p-card>
       <div class="metric-label">Total encaissé</div>
-      <div class="metric-value">{{ filteredAdvanceTotal | number:'1.0-0' }} DT</div>
+      <div class="metric-value">{{ filteredAdvanceTotal | dinar:'short' }}</div>
     </p-card>
     <p-card>
       <div class="metric-label">Virements</div>
-      <div class="metric-value">{{ filteredBankTransferTotal | number:'1.0-0' }} DT</div>
+      <div class="metric-value">{{ filteredBankTransferTotal | dinar:'short' }}</div>
     </p-card>
   </div>
 
@@ -53,7 +53,7 @@
         <tr>
           <td>
             <div class="table-main">{{ row.reference || '-' }}</div>
-            <div class="table-meta">{{ row.advanceDate || '-' }} · {{ getProjectName(row) }}</div>
+            <div class="table-meta">{{ (row.advanceDate | date:'dd/MM/yyyy') || '-' }} · {{ getProjectName(row) }}</div>
           </td>
           <td>
             <div class="table-main">{{ getApartmentName(row) }}</div>
@@ -65,10 +65,10 @@
             </div>
           </td>
           <td>{{ getClientName(row) }}</td>
-          <td>{{ row.amount | number:'1.0-2' }} DT</td>
+          <td>{{ row.amount | dinar }}</td>
           <td>{{ getPaymentMethodLabel(row.paymentMethod) }}</td>
           <td>
-            <span *ngIf="getRemainingForAdvance(row) !== null">{{ getRemainingForAdvance(row) | number:'1.0-2' }} DT</span>
+            <span *ngIf="getRemainingForAdvance(row) !== null">{{ getRemainingForAdvance(row) | dinar }}</span>
             <span *ngIf="getRemainingForAdvance(row) === null">-</span>
           </td>
           <td class="actions-cell">
@@ -132,27 +132,27 @@
       <div class="summary-grid full-width">
         <div class="field">
           <label>Montant déclaré</label>
-          <div class="value-box">{{ selectedDeclaredAmount | number:'1.0-2' }} DT</div>
+          <div class="value-box">{{ selectedDeclaredAmount | dinar }}</div>
         </div>
         <div class="field">
           <label>Payé direct</label>
-          <div class="value-box">{{ selectedDirectPaidAmount | number:'1.0-2' }} DT</div>
+          <div class="value-box">{{ selectedDirectPaidAmount | dinar }}</div>
         </div>
         <div class="field">
           <label>Acomptes existants</label>
-          <div class="value-box">{{ selectedExistingAdvancesAmount | number:'1.0-2' }} DT</div>
+          <div class="value-box">{{ selectedExistingAdvancesAmount | dinar }}</div>
         </div>
         <div class="field">
           <label>Reste actuel</label>
-          <div class="value-box">{{ selectedRemainingBeforeAmount | number:'1.0-2' }} DT</div>
+          <div class="value-box">{{ selectedRemainingBeforeAmount | dinar }}</div>
         </div>
         <div class="field">
           <label>Reste après saisie</label>
-          <div class="value-box" [class.value-danger]="isCurrentAdvanceOverLimit">{{ selectedProjectedRemainingAmount | number:'1.0-2' }} DT</div>
+          <div class="value-box" [class.value-danger]="isCurrentAdvanceOverLimit">{{ selectedProjectedRemainingAmount | dinar }}</div>
         </div>
         <div class="field">
           <label>Avancement après</label>
-          <div class="value-box" [class.value-danger]="isCurrentAdvanceOverLimit">{{ selectedProjectedPercentage | number:'1.0-1' }}%</div>
+          <div class="value-box" [class.value-danger]="isCurrentAdvanceOverLimit">{{ selectedProjectedPercentage | percentShare }}</div>
         </div>
       </div>
       <div class="inline-warning full-width" *ngIf="!selectedApartmentPurchase && selectedApartment">

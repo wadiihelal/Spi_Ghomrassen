@@ -6,6 +6,7 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
 import { ApiService } from '../../core/services/api.service';
+import { DinarPipe } from '../../shared/pipes/dinar.pipe';
 import { AuditLog, ClientAdvance, ClientPurchase, DashboardSummary, Expense, Project } from '../../shared/models/models';
 
 /** Rows shown in each of the detail tables; this screen is a summary, not a register. */
@@ -14,7 +15,7 @@ const DETAIL_ROWS = 25;
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, CardModule, TableModule, TagModule, ButtonModule],
+  imports: [CommonModule, RouterLink, CardModule, TableModule, TagModule, ButtonModule, DinarPipe],
   templateUrl: './project-detail.component.html',
   styleUrl: './project-detail.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

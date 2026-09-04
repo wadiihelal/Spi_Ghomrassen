@@ -13,19 +13,19 @@
   <section class="kpi-grid">
     <p-card>
       <div class="kpi-label">Budget projet</div>
-      <div class="kpi-value">{{ project()!.budget ?? 0 | number:'1.0-2' }} DT</div>
+      <div class="kpi-value">{{ project()!.budget ?? 0 | dinar }}</div>
     </p-card>
     <p-card>
       <div class="kpi-label">Dépenses engagées</div>
-      <div class="kpi-value">{{ totalExpenses | number:'1.0-2' }} DT</div>
+      <div class="kpi-value">{{ totalExpenses | dinar }}</div>
     </p-card>
     <p-card>
       <div class="kpi-label">Achats enregistrés</div>
-      <div class="kpi-value">{{ totalPurchases | number:'1.0-2' }} DT</div>
+      <div class="kpi-value">{{ totalPurchases | dinar }}</div>
     </p-card>
     <p-card>
       <div class="kpi-label">Reste à encaisser</div>
-      <div class="kpi-value">{{ remainingToCollect | number:'1.0-2' }} DT</div>
+      <div class="kpi-value">{{ remainingToCollect | dinar }}</div>
     </p-card>
   </section>
 
@@ -41,11 +41,11 @@
         </div>
         <div class="metric-row">
           <span>Marge estimée</span>
-          <strong>{{ estimatedMargin | number:'1.0-2' }} DT</strong>
+          <strong>{{ estimatedMargin | dinar }}</strong>
         </div>
         <div class="metric-row">
           <span>Total encaissé</span>
-          <strong>{{ totalAdvances | number:'1.0-2' }} DT</strong>
+          <strong>{{ totalAdvances | dinar }}</strong>
         </div>
         <div class="metric-row">
           <span>Dernière mise à jour</span>
@@ -68,7 +68,7 @@
           <tr>
             <td>{{ row.expenseDate | date:'dd/MM/yyyy' }}</td>
             <td>{{ row.description }}</td>
-            <td>{{ row.amountTtc | number:'1.0-2' }} DT</td>
+            <td>{{ row.amountTtc | dinar }}</td>
             <td>
               <a *ngIf="row.attachmentUrl" [href]="row.attachmentUrl" target="_blank" rel="noreferrer">
                 {{ row.attachmentName || 'Ouvrir' }}
@@ -93,7 +93,7 @@
           <tr>
             <td>{{ row.reference || '-' }}</td>
             <td>{{ row.assetDescription }}</td>
-            <td>{{ row.totalAmount | number:'1.0-2' }} DT</td>
+            <td>{{ row.totalAmount | dinar }}</td>
           </tr>
         </ng-template>
       </p-table>
@@ -112,7 +112,7 @@
           <tr>
             <td>{{ row.reference || '-' }}</td>
             <td>{{ row.advanceDate | date:'dd/MM/yyyy' }}</td>
-            <td>{{ row.amount | number:'1.0-2' }} DT</td>
+            <td>{{ row.amount | dinar }}</td>
           </tr>
         </ng-template>
       </p-table>

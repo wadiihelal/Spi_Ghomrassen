@@ -14,6 +14,8 @@ import { ListFilter, Project, Supplier, SupplierInvoice, VatRateOption } from '.
 /** Rate proposed when the supplier has none of its own. */
 const FALLBACK_VAT_RATE = 0.19;
 import { ApiService } from '../../core/services/api.service';
+import { DinarPipe } from '../../shared/pipes/dinar.pipe';
+import { PercentSharePipe } from '../../shared/pipes/percent-share.pipe';
 import { UiService } from '../../core/services/ui.service';
 import { AttachmentsPanelComponent } from '../../shared/attachments/attachments-panel.component';
 import { ProjectContextService } from '../../core/services/project-context.service';
@@ -22,7 +24,7 @@ import { LazyTable } from '../../core/services/lazy-table';
 @Component({
   selector: 'app-supplier-invoices',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, AttachmentsPanelComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, AttachmentsPanelComponent, DinarPipe, PercentSharePipe],
   templateUrl: './supplier-invoices.component.html',
   styleUrl: './supplier-invoices.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

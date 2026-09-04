@@ -37,12 +37,12 @@
         <tr>
           <td>
             <div class="table-main">{{ row.reference || row.documentNumber || '-' }}</div>
-            <div class="table-meta">{{ row.description }} · {{ row.expenseDate || '-' }}</div>
+            <div class="table-meta">{{ row.description }} · {{ (row.expenseDate | date:'dd/MM/yyyy') || '-' }}</div>
           </td>
           <td>{{ getCategoryName(row) }}</td>
           <td>{{ getSupplierName(row) }}</td>
           <td>{{ getProjectName(row) }}</td>
-          <td>{{ row.amountTtc | number:'1.0-2' }} DT</td>
+          <td>{{ row.amountTtc | dinar }}</td>
           <td>{{ getPaymentMethodLabel(row.paymentMethod) }}</td>
           <td class="actions-cell">
             <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir dépense" (click)="edit(row)"></button>
@@ -81,11 +81,11 @@
       </div>
       <div class="field">
         <label>TVA</label>
-        <div class="computed-amount">{{ computedVatAmount | number:'1.3-3' }} DT</div>
+        <div class="computed-amount">{{ computedVatAmount | dinar }}</div>
       </div>
       <div class="field">
         <label>Montant TTC</label>
-        <div class="computed-amount">{{ computedAmountTtc | number:'1.3-3' }} DT</div>
+        <div class="computed-amount">{{ computedAmountTtc | dinar }}</div>
       </div>
       <div class="field">
         <label>Catégorie</label>

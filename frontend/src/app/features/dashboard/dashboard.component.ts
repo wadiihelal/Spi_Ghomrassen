@@ -8,6 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/services/api.service';
+import { DinarPipe } from '../../shared/pipes/dinar.pipe';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import {
   AmountByLabel,
@@ -33,7 +34,7 @@ const TOP_DEBTORS = 5;
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, CardModule, ButtonModule, ProgressSpinnerModule, TableModule, TagModule],
+  imports: [CommonModule, RouterLink, CardModule, ButtonModule, ProgressSpinnerModule, TableModule, TagModule, DinarPipe],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

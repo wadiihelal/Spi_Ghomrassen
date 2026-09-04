@@ -7,13 +7,14 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ApiService } from '../../core/services/api.service';
+import { DinarPipe } from '../../shared/pipes/dinar.pipe';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { AmountByLabel, ClientStatement, Project, ReportScopeParams } from '../../shared/models/models';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, TableModule, ButtonModule, CheckboxModule],
+  imports: [CommonModule, FormsModule, CardModule, TableModule, ButtonModule, CheckboxModule, DinarPipe],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

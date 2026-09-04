@@ -34,13 +34,13 @@
         <tr>
           <td>
             <div class="table-main">{{ row.invoiceNumber }}</div>
-            <div class="table-meta">{{ row.invoiceDate || '-' }} · HT {{ row.amountHt | number:'1.0-2' }} DT</div>
+            <div class="table-meta">{{ (row.invoiceDate | date:'dd/MM/yyyy') || '-' }} · HT {{ row.amountHt | dinar }}</div>
           </td>
           <td>{{ row.supplierName || '-' }}</td>
           <td>{{ row.projectName || '-' }}</td>
-          <td>{{ row.amountHt | number:'1.0-2' }} DT</td>
-          <td>{{ row.vatAmount | number:'1.0-2' }} DT ({{ (row.vatRate ?? 0) * 100 | number:'1.0-2' }}%)</td>
-          <td>{{ row.amountTtc | number:'1.0-2' }} DT</td>
+          <td>{{ row.amountHt | dinar }}</td>
+          <td>{{ row.vatAmount | dinar }} ({{ (row.vatRate ?? 0) * 100 | percentShare }})</td>
+          <td>{{ row.amountTtc | dinar }}</td>
           <td class="actions-cell">
             <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir facture" (click)="edit(row)"></button>
             <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>
@@ -78,11 +78,11 @@
       </div>
       <div class="field">
         <label>TVA</label>
-        <div class="computed-amount">{{ computedVatAmount | number:'1.3-3' }} DT</div>
+        <div class="computed-amount">{{ computedVatAmount | dinar }}</div>
       </div>
       <div class="field">
         <label>Montant TTC</label>
-        <div class="computed-amount">{{ computedAmountTtc | number:'1.3-3' }} DT</div>
+        <div class="computed-amount">{{ computedAmountTtc | dinar }}</div>
       </div>
       <div class="field full-width">
         <label>Pièces jointes</label>

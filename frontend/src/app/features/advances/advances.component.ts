@@ -11,6 +11,8 @@ import { DropdownModule } from 'primeng/dropdown';
 import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
 import { ApiService } from '../../core/services/api.service';
+import { DinarPipe } from '../../shared/pipes/dinar.pipe';
+import { PercentSharePipe } from '../../shared/pipes/percent-share.pipe';
 import { UiService } from '../../core/services/ui.service';
 import { AttachmentsPanelComponent } from '../../shared/attachments/attachments-panel.component';
 import { ProjectContextService } from '../../core/services/project-context.service';
@@ -29,7 +31,7 @@ import {
 @Component({
   selector: 'app-advances',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, TagModule, AttachmentsPanelComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, TagModule, AttachmentsPanelComponent, DinarPipe, PercentSharePipe],
   templateUrl: './advances.component.html',
   styleUrl: './advances.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

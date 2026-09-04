@@ -9,8 +9,8 @@
     </div>
     <div class="hero-balance" [class.positive]="balance >= 0" [class.negative]="balance < 0">
       <span>Solde net</span>
-      <strong>{{ balance | number:'1.0-2' }} DT</strong>
-      <small>{{ totalCashIn | number:'1.0-2' }} DT encaissés • {{ totalCashOut | number:'1.0-2' }} DT décaissés</small>
+      <strong>{{ balance | dinar }}</strong>
+      <small>{{ totalCashIn | dinar }} encaissés • {{ totalCashOut | dinar }} décaissés</small>
     </div>
   </section>
 
@@ -68,7 +68,7 @@
         <span class="kpi-label">Total dépenses</span>
         <i class="pi pi-wallet"></i>
       </div>
-      <div class="kpi-value">{{ summary()?.totalExpenses ?? 0 | number:'1.0-2' }} DT</div>
+      <div class="kpi-value">{{ summary()?.totalExpenses ?? 0 | dinar }}</div>
       <div class="kpi-foot">Sorties financières globales</div>
     </p-card>
 
@@ -77,7 +77,7 @@
         <span class="kpi-label">Total encaissé</span>
         <i class="pi pi-credit-card"></i>
       </div>
-      <div class="kpi-value">{{ summary()?.totalAdvances ?? 0 | number:'1.0-2' }} DT</div>
+      <div class="kpi-value">{{ summary()?.totalAdvances ?? 0 | dinar }}</div>
       <div class="kpi-foot">Encaissements reçus des clients</div>
     </p-card>
 
@@ -86,7 +86,7 @@
         <span class="kpi-label">Total achats</span>
         <i class="pi pi-shopping-cart"></i>
       </div>
-      <div class="kpi-value">{{ summary()?.totalPurchases ?? 0 | number:'1.0-2' }} DT</div>
+      <div class="kpi-value">{{ summary()?.totalPurchases ?? 0 | dinar }}</div>
       <div class="kpi-foot">Ventes et achats enregistrés</div>
     </p-card>
 
@@ -115,13 +115,13 @@
 
     <p-card>
       <div class="mini-stat-title">Reste à encaisser</div>
-      <div class="mini-stat-value">{{ totalReceivables | number:'1.0-2' }} DT</div>
+      <div class="mini-stat-value">{{ totalReceivables | dinar }}</div>
       <div class="mini-stat-meta">Montant encore attendu des clients</div>
     </p-card>
 
     <p-card>
       <div class="mini-stat-title">Marge estimée</div>
-      <div class="mini-stat-value">{{ estimatedMargin | number:'1.0-2' }} DT</div>
+      <div class="mini-stat-value">{{ estimatedMargin | dinar }}</div>
       <div class="mini-stat-meta">Achats moins dépenses engagées</div>
     </p-card>
 
@@ -148,7 +148,7 @@
           <tr>
             <td>{{ row.expenseDate | date:'dd/MM/yyyy' }}</td>
             <td>{{ row.description }}</td>
-            <td>{{ row.amountTtc | number:'1.0-2' }} DT</td>
+            <td>{{ row.amountTtc | dinar }}</td>
           </tr>
         </ng-template>
       </p-table>
@@ -160,7 +160,7 @@
           <div class="bar-item">
             <div class="bar-top">
               <span>{{ item.label }}</span>
-              <strong>{{ item.amount | number:'1.0-2' }} DT</strong>
+              <strong>{{ item.amount | dinar }}</strong>
             </div>
             <div class="bar-track">
               <div class="bar-fill" [style.width.%]="item.width"></div>
@@ -185,7 +185,7 @@
               <div class="project-meta">{{ project.location || 'Localisation non renseignée' }}</div>
             </div>
             <div class="project-side">
-              <div class="project-amount">{{ getProjectExpenseAmount(project) | number:'1.0-2' }} DT</div>
+              <div class="project-amount">{{ getProjectExpenseAmount(project) | dinar }}</div>
               <div class="project-budget-line">
                 <span>Budget consommé</span>
                 <strong>{{ getProjectBudgetUsage(project) }}%</strong>
@@ -194,8 +194,8 @@
                 <div class="progress-fill" [style.width.%]="getProjectBudgetUsage(project)"></div>
               </div>
               <div class="project-finance-row">
-                <span>Budget {{ getProjectBudget(project) | number:'1.0-2' }} DT</span>
-                <span>Reste {{ getProjectBudgetRemaining(project) | number:'1.0-2' }} DT</span>
+                <span>Budget {{ getProjectBudget(project) | dinar }}</span>
+                <span>Reste {{ getProjectBudgetRemaining(project) | dinar }}</span>
               </div>
             </div>
           </div>
@@ -212,9 +212,9 @@
           <div class="debtor-row">
             <div>
               <strong>{{ client.clientName }}</strong>
-              <div class="debtor-meta">Achats {{ client.totalPurchases | number:'1.0-2' }} DT • Paiements {{ client.totalAdvances | number:'1.0-2' }} DT</div>
+              <div class="debtor-meta">Achats {{ client.totalPurchases | dinar }} • Paiements {{ client.totalAdvances | dinar }}</div>
             </div>
-            <div class="debtor-amount">{{ client.remainingToPay | number:'1.0-2' }} DT</div>
+            <div class="debtor-amount">{{ client.remainingToPay | dinar }}</div>
           </div>
         }
         @if (!topDebtors.length) {
@@ -228,7 +228,7 @@
         @for (project of bestProjects; track project.name) {
           <div class="debtor-row">
             <strong>{{ project.name }}</strong>
-            <div class="debtor-amount">{{ project.margin | number:'1.0-2' }} DT</div>
+            <div class="debtor-amount">{{ project.margin | dinar }}</div>
           </div>
         }
         @if (!bestProjects.length) {
@@ -251,9 +251,9 @@
       <ng-template pTemplate="body" let-row>
         <tr>
           <td>{{ row.clientName }}</td>
-          <td>{{ row.totalPurchases | number:'1.0-2' }} DT</td>
-          <td>{{ row.totalAdvances | number:'1.0-2' }} DT</td>
-          <td [class.negative-cell]="row.remainingToPay > 0">{{ row.remainingToPay | number:'1.0-2' }} DT</td>
+          <td>{{ row.totalPurchases | dinar }}</td>
+          <td>{{ row.totalAdvances | dinar }}</td>
+          <td [class.negative-cell]="row.remainingToPay > 0">{{ row.remainingToPay | dinar }}</td>
         </tr>
       </ng-template>
     </p-table>
