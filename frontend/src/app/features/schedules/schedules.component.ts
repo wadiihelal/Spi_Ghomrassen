@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -41,7 +41,6 @@ export class SchedulesComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   readonly installments = signal<PaymentInstallment[]>([]);
   readonly summary = signal<InstallmentSummary | undefined>(undefined);
@@ -63,7 +62,7 @@ export class SchedulesComponent implements OnInit {
     this.installments().reduce((sum, line) => sum + (line.remainingAmount ?? 0), 0));
 
   ngOnInit(): void {
-    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+    this.projectContext.scope$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
       this.selectedProjectId.set(projectId);
       this.api.getClients(projectId).subscribe({ next: (data) => this.clients.set(data) });
       this.reload();

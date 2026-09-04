@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -32,8 +32,6 @@ export class ApartmentsComponent implements OnInit {
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
-  /** The selected project as a stream, so the reaction can be released on destroy. */
-  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   /** One page of apartments, filtered and counted by the server (PERF-02). */
   readonly table = new LazyTable<Apartment>(
@@ -102,7 +100,7 @@ export class ApartmentsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+    this.projectContext.scope$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
       this.selectedProjectId.set(projectId);
       this.filters.projectId = projectId;
       // The table and every project-scoped lookup must follow the header (PERF-02): the

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
@@ -27,8 +27,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
-  /** The selected project as a stream, so the reaction can be released on destroy. */
-  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   readonly sidebarOpen = signal(false);
   /**
@@ -80,7 +78,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+    this.projectContext.scope$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
       this.selectedProjectId.set(projectId);
     });
   }

@@ -6,7 +6,7 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
 import { RouterLink } from '@angular/router';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/services/api.service';
 import { DinarPipe } from '../../shared/pipes/dinar.pipe';
 import { ProjectContextService } from '../../core/services/project-context.service';
@@ -17,6 +17,7 @@ import {
   Expense,
   InstallmentSummary,
   Project,
+  SalesBoard,
   ReportScopeParams
 } from '../../shared/models/models';
 
@@ -25,9 +26,6 @@ const RECENT_EXPENSES = 5;
 
 /** Months shown in the trend bars. */
 const TREND_MONTHS = 6;
-
-/** Projects listed under "meilleures marges". */
-const TOP_PROJECTS = 3;
 
 /** Clients listed under "principaux débiteurs". */
 const TOP_DEBTORS = 5;
@@ -44,8 +42,6 @@ export class DashboardComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
-  /** The selected project as a stream, so the reaction can be released on destroy. */
-  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   /** Signals throughout, so the view refreshes under OnPush when a response lands (PERF-04). */
   readonly loading = signal(true);
@@ -55,12 +51,12 @@ export class DashboardComponent implements OnInit {
   readonly recentExpenses = signal<Expense[]>([]);
   /** What is late and what falls due this month (UX-03). */
   readonly installments = signal<InstallmentSummary | undefined>(undefined);
+  /** What is left to sell, so the home screen opens on the commercial picture too (UX-05). */
+  readonly salesBoard = signal<SalesBoard | undefined>(undefined);
   readonly selectedProjectId = signal<number | null>(null);
 
   /** Expense totals per project, keyed by project name, as aggregated by the backend. */
   private readonly expensesByProject = signal<Map<string, number>>(new Map());
-  /** Contracted totals per project, keyed by project name. */
-  private readonly purchasesByProject = signal<Map<string, number>>(new Map());
   private readonly monthlyExpenses = signal<AmountByLabel[]>([]);
 
   ngOnInit(): void {
@@ -68,7 +64,7 @@ export class DashboardComponent implements OnInit {
     this.api.getProjects().pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: (data) => this.projects.set(data) });
 
-    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef))
+    this.projectContext.scope$.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((projectId) => {
         this.selectedProjectId.set(projectId);
         this.load();
@@ -108,8 +104,8 @@ export class DashboardComponent implements OnInit {
       complete: done
     });
 
-    this.api.getPurchasesByProject(scope).subscribe({
-      next: (data) => (this.purchasesByProject.set(DashboardComponent.byLabel(data))),
+    this.api.getSalesBoard(this.selectedProjectId()).subscribe({
+      next: (data) => this.salesBoard.set(data),
       error: done,
       complete: done
     });
@@ -144,26 +140,11 @@ export class DashboardComponent implements OnInit {
     return this.projects().filter((project) => project.id === this.selectedProjectId());
   }
 
-  get projectsCount(): number {
-    return this.filteredProjects.length;
-  }
-
-  get activeProjectsCount(): number {
-    return this.filteredProjects.filter((project) => project.status === 'IN_PROGRESS').length;
-  }
-
-  get plannedProjectsCount(): number {
-    return this.filteredProjects.filter((project) => project.status === 'PLANNED').length;
-  }
-
-  get completedProjectsCount(): number {
-    return this.filteredProjects.filter((project) => project.status === 'COMPLETED').length;
-  }
-
-  /** Business documents recorded in scope, counted by the backend. */
-  get documentCount(): number {
-    return (this.summary()?.expenses ?? 0) + (this.summary()?.clientPurchases ?? 0)
-      + (this.summary()?.clientAdvances ?? 0);
+  /** Share of the stock already placed, for the commercial tile. */
+  get placedShare(): number {
+    const board = this.salesBoard();
+    if (!board || !board.unitCount) return 0;
+    return Math.round(((board.unitCount - board.availableCount) / board.unitCount) * 100);
   }
 
   /** Share of the planned money already settled, for the collection gauge. */
@@ -206,16 +187,6 @@ export class DashboardComponent implements OnInit {
     const contracted = this.summary()?.totalPurchases ?? 0;
     if (!contracted) return 0;
     return Math.min(100, Math.round((this.totalCashIn / contracted) * 100));
-  }
-
-  get bestProjects(): { name: string; margin: number }[] {
-    return this.filteredProjects
-      .map((project) => ({
-        name: project.name,
-        margin: (this.purchasesByProject().get(project.name) ?? 0) - (this.expensesByProject().get(project.name) ?? 0)
-      }))
-      .sort((a, b) => b.margin - a.margin)
-      .slice(0, TOP_PROJECTS);
   }
 
   get topDebtors(): ClientStatement[] {

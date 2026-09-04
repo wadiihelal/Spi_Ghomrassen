@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { FormsModule } from '@angular/forms';
@@ -25,8 +25,6 @@ export class ReportsComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
-  /** The selected project as a stream, so the reaction can be released on destroy. */
-  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   readonly byCategory = signal<AmountByLabel[]>([]);
   readonly byProject = signal<AmountByLabel[]>([]);
@@ -49,7 +47,7 @@ export class ReportsComponent implements OnInit {
 
   ngOnInit(): void {
     this.api.getProjects().subscribe((data) => this.projects.set(data));
-    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+    this.projectContext.scope$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
       this.selectedProjectId.set(projectId);
       this.loadReports();
     });

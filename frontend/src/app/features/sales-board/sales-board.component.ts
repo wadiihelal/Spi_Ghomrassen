@@ -5,7 +5,7 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
@@ -40,7 +40,6 @@ export class SalesBoardComponent implements OnInit {
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   readonly board = signal<SalesBoard | undefined>(undefined);
   readonly loading = signal(true);
@@ -63,7 +62,7 @@ export class SalesBoardComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.load());
+    this.projectContext.scope$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.load());
   }
 
   private load(): void {

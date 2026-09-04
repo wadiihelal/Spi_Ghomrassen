@@ -138,6 +138,7 @@ public class DemoDataInitializer implements CommandLineRunner {
         seedSupplierInvoices(suppliers, projects);
         ensureDemoResidenceData();
         seedDemoResidenceSupplierInvoices(suppliers);
+        seedDemoResidenceExpenses(categories, suppliers);
         seedPaymentSchedules();
     }
 
@@ -505,12 +506,52 @@ public class DemoDataInitializer implements CommandLineRunner {
      * Seeds sample apartments for the narrative clients (linked to seeded projects and acquirers).
      */
     private void seedApartments(Map<String, Client> clients, Map<String, Project> projects) {
-        createApartment("A12", "S+2", "Appartement S+2 A-12 - 2ème étage", new BigDecimal("108.000"), BigDecimal.ZERO, "P1", 1, new BigDecimal("185000.000"), projects.get("Résidence Oasis Ghomrassen").getId(), clients.get("Sami Ben Youssef").getId());
-        createApartment("V2", "S+4", "Villa V2 avec jardin", new BigDecimal("240.000"), new BigDecimal("80.000"), "P1 + P2", 1, new BigDecimal("310000.000"), projects.get("Villas El Waha").getId(), clients.get("Imen Trabelsi").getId());
-        createApartment("RDC03", "LOCAL", "Local commercial RDC-03", new BigDecimal("95.000"), BigDecimal.ZERO, "", 1, new BigDecimal("240000.000"), projects.get("Immeuble Jasmin").getId(), clients.get("Mohamed Gharbi").getId());
-        createApartment("B07", "S+2", "Appartement B-07 vue jardin", new BigDecimal("112.000"), new BigDecimal("20.000"), "P2", 1, new BigDecimal("198000.000"), projects.get("Résidence Oasis Ghomrassen").getId(), clients.get("Nadia Kchaou").getId());
-        createApartment("B04", "BUREAU", "Bureau B-04 avec parking", new BigDecimal("88.000"), BigDecimal.ZERO, "Parking sous-sol 01", 0, new BigDecimal("145000.000"), projects.get("Bureaux Les Palmes").getId(), clients.get("Marwen Dammak").getId());
-        createApartment("C4", "S+4", "Villa C4 avec jardin", new BigDecimal("230.000"), new BigDecimal("90.000"), "P1 + P2", 1, new BigDecimal("295000.000"), projects.get("Villas El Waha").getId(), clients.get("Rim Bouzid").getId());
+        Long oasis = projects.get("Résidence Oasis Ghomrassen").getId();
+
+        createApartment("A12", "S+2", "Appartement S+2 A-12 - 2ème étage", new BigDecimal("108.000"), BigDecimal.ZERO, "P1", 1, new BigDecimal("185000.000"), oasis, clients.get("Sami Ben Youssef").getId(), "Bloc A", 2);
+        createApartment("V2", "S+4", "Villa V2 avec jardin", new BigDecimal("240.000"), new BigDecimal("80.000"), "P1 + P2", 1, new BigDecimal("310000.000"), projects.get("Villas El Waha").getId(), clients.get("Imen Trabelsi").getId(), "Villas", 0);
+        createApartment("RDC03", "LOCAL", "Local commercial RDC-03", new BigDecimal("95.000"), BigDecimal.ZERO, "", 1, new BigDecimal("240000.000"), projects.get("Immeuble Jasmin").getId(), clients.get("Mohamed Gharbi").getId(), "Bloc Jasmin", 0);
+        createApartment("B07", "S+2", "Appartement B-07 vue jardin", new BigDecimal("112.000"), new BigDecimal("20.000"), "P2", 1, new BigDecimal("198000.000"), oasis, clients.get("Nadia Kchaou").getId(), "Bloc B", 0);
+        createApartment("B04", "BUREAU", "Bureau B-04 avec parking", new BigDecimal("88.000"), BigDecimal.ZERO, "Parking sous-sol 01", 0, new BigDecimal("145000.000"), projects.get("Bureaux Les Palmes").getId(), clients.get("Marwen Dammak").getId(), "Bloc Bureaux", 0);
+        createApartment("C4", "S+4", "Villa C4 avec jardin", new BigDecimal("230.000"), new BigDecimal("90.000"), "P1 + P2", 1, new BigDecimal("295000.000"), projects.get("Villas El Waha").getId(), clients.get("Rim Bouzid").getId(), "Villas", 0);
+
+        seedOasisStock(oasis);
+    }
+
+    /**
+     * The rest of the main residence's stock: unsold lots with no acquirer.
+     *
+     * <p>Two sold lots made the sales board and the « reste à vendre » figure look empty on the
+     * project the console opens on. A promoter's stock is mostly unsold, so it is seeded that
+     * way; without a contract these lots add nothing to any financial total.</p>
+     */
+    private void seedOasisStock(Long oasis) {
+        String[] types = {"S+1", "S+2", "S+3", "S+2"};
+        BigDecimal[] surfaces = {
+                new BigDecimal("74.000"), new BigDecimal("106.000"),
+                new BigDecimal("128.000"), new BigDecimal("110.000")
+        };
+
+        for (String block : new String[]{"Bloc A", "Bloc B"}) {
+            String prefix = block.substring(block.length() - 1);
+            for (int floor = 0; floor <= 3; floor++) {
+                for (int unit = 1; unit <= 2; unit++) {
+                    String number = prefix + floor + unit;
+                    if ("A12".equals(number) || "B07".equals(number)) {
+                        continue;
+                    }
+                    int index = (floor + unit) % types.length;
+                    BigDecimal surface = surfaces[index];
+                    BigDecimal price = surface
+                            .multiply(BigDecimal.valueOf(1780L + floor * 40L + unit * 30L))
+                            .setScale(3, RoundingMode.HALF_UP);
+                    createApartment(number, types[index],
+                            "Appartement " + types[index] + " " + number + " — " + block,
+                            surface, floor == 0 ? new BigDecimal("22.000") : BigDecimal.ZERO,
+                            "P-" + number, unit % 2, price, oasis, null, block, floor);
+                }
+            }
+        }
     }
 
     /** Persists an apartment through {@link ApartmentService}. */
@@ -681,6 +722,74 @@ public class DemoDataInitializer implements CommandLineRunner {
                 new BigDecimal("4800.000"), new BigDecimal("0.0700"),
                 suppliers.get("Atelier Architecture El Medina").getId(), jasmin,
                 "Honoraires d'architecte, phase APS.");
+    }
+
+    /**
+     * Gives each demo residence a run of site expenses over the last six months.
+     *
+     * <p>Without them the dashboard of a demo residence opened on zeros: no trend, no budget
+     * consumption, no recent activity. The dates are relative to today so the trend always ends
+     * on the current month.</p>
+     */
+    private void seedDemoResidenceExpenses(Map<String, ExpenseCategory> categories,
+                                           Map<String, Supplier> suppliers) {
+        List<DemoExpenseSpec> pattern = List.of(
+                new DemoExpenseSpec("Situation travaux gros oeuvre", "Frais Fournisseurs",
+                        "Entreprise Bâtir Ghomrassen", new BigDecimal("38000.000"), new BigDecimal("0.1900")),
+                new DemoExpenseSpec("Achat ciment, ferraillage et agrégats", "Frais Fournisseurs",
+                        "Comptoir des Matériaux du Sud", new BigDecimal("21500.000"), new BigDecimal("0.1900")),
+                new DemoExpenseSpec("Mission de suivi technique", "Frais Ingénieurs",
+                        "Bureau d'Études Ingénierie Tataouine", new BigDecimal("4200.000"), new BigDecimal("0.1900")),
+                new DemoExpenseSpec("Appareillage et tableaux électriques", "Frais Fournisseurs",
+                        "Équipements Électriques Sahara", new BigDecimal("11800.000"), new BigDecimal("0.1300")),
+                new DemoExpenseSpec("Honoraires d'architecte", "Autres",
+                        "Atelier Architecture El Medina", new BigDecimal("5600.000"), new BigDecimal("0.0700")),
+                new DemoExpenseSpec("Frais de dossier municipal", "Frais Baladiya",
+                        null, new BigDecimal("1400.000"), BigDecimal.ZERO)
+        );
+
+        // The main residence is included: it is the project the console opens on, and its six
+        // hand-written expenses left the trend with two bars.
+        List<Project> residences = projectRepository.findAll().stream()
+                .filter(project -> project.getCode() != null
+                        && (project.getCode().startsWith("SPI-DEMO-RES-")
+                            || "SPI-GHOM-RES-01".equals(project.getCode())))
+                .sorted(Comparator.comparing(Project::getCode))
+                .toList();
+
+        LocalDate today = LocalDate.now();
+        for (Project residence : residences) {
+            String block = residence.getCode().substring(residence.getCode().length() - 1);
+            for (int monthsBack = 5; monthsBack >= 0; monthsBack--) {
+                DemoExpenseSpec spec = pattern.get((5 - monthsBack) % pattern.size());
+                // A little variation per month so the trend bars are not a flat line.
+                BigDecimal amountHt = spec.amountHt()
+                        .multiply(BigDecimal.valueOf(100 + (monthsBack * 7) % 35))
+                        .divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
+                BigDecimal vatAmount = amountHt.multiply(spec.vatRate()).setScale(3, RoundingMode.HALF_UP);
+                LocalDate when = today.minusMonths(monthsBack).withDayOfMonth(
+                        Math.min(6 + monthsBack * 3, today.minusMonths(monthsBack).lengthOfMonth()));
+
+                createExpense(
+                        "DEP-DEMO-" + block + "-" + String.format("%02d", 6 - monthsBack),
+                        when,
+                        spec.description() + " — " + residence.getName(),
+                        amountHt,
+                        vatAmount,
+                        amountHt.add(vatAmount),
+                        monthsBack % 2 == 0 ? PaymentMethod.BANK_TRANSFER : PaymentMethod.CHECK,
+                        "PC-" + block + "-" + (6 - monthsBack),
+                        "Dépense de chantier générée pour la démonstration.",
+                        categories.get(spec.categoryName()).getId(),
+                        residence.getId(),
+                        spec.supplierName() == null ? null : suppliers.get(spec.supplierName()).getId());
+            }
+        }
+    }
+
+    /** One line of the repeating expense pattern used for the demo residences. */
+    private record DemoExpenseSpec(String description, String categoryName, String supplierName,
+                                   BigDecimal amountHt, BigDecimal vatRate) {
     }
 
     /**

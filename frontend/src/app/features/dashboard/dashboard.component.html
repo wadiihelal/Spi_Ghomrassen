@@ -73,6 +73,21 @@
         {{ installments()?.scheduledAmount ?? 0 | dinar:'short' }} planifiés
       </div>
     </p-card>
+
+    <a class="board-tile" routerLink="/sales-board">
+      <div class="metric-head">
+        <span class="kpi-label">Reste à vendre</span>
+        <i class="pi pi-th-large"></i>
+      </div>
+      <div class="kpi-value">{{ salesBoard()?.availableValue ?? 0 | dinar:'short' }}</div>
+      <div class="progress-shell">
+        <div class="progress-fill" [style.width.%]="placedShare"></div>
+      </div>
+      <div class="kpi-foot">
+        {{ salesBoard()?.availableCount ?? 0 }} lot(s) en stock sur
+        {{ salesBoard()?.unitCount ?? 0 }} · {{ placedShare }} % commercialisé
+      </div>
+    </a>
   </section>
 
   <section class="kpi-grid">
@@ -81,8 +96,8 @@
         <span class="kpi-label">Total dépenses</span>
         <i class="pi pi-wallet"></i>
       </div>
-      <div class="kpi-value">{{ summary()?.totalExpenses ?? 0 | dinar }}</div>
-      <div class="kpi-foot">Sorties financières globales</div>
+      <div class="kpi-value">{{ summary()?.totalExpenses ?? 0 | dinar:'short' }}</div>
+      <div class="kpi-foot">{{ budgetConsumptionRate }} % du budget du projet</div>
     </p-card>
 
     <p-card styleClass="metric-card success">
@@ -90,60 +105,26 @@
         <span class="kpi-label">Total encaissé</span>
         <i class="pi pi-credit-card"></i>
       </div>
-      <div class="kpi-value">{{ summary()?.totalAdvances ?? 0 | dinar }}</div>
-      <div class="kpi-foot">Encaissements reçus des clients</div>
+      <div class="kpi-value">{{ summary()?.totalAdvances ?? 0 | dinar:'short' }}</div>
+      <div class="kpi-foot">{{ collectionRate }} % des ventes contractées</div>
     </p-card>
 
     <p-card styleClass="metric-card accent">
       <div class="metric-head">
-        <span class="kpi-label">Total achats</span>
-        <i class="pi pi-shopping-cart"></i>
+        <span class="kpi-label">Reste à encaisser</span>
+        <i class="pi pi-hourglass"></i>
       </div>
-      <div class="kpi-value">{{ summary()?.totalPurchases ?? 0 | dinar }}</div>
-      <div class="kpi-foot">Ventes et achats enregistrés</div>
+      <div class="kpi-value">{{ totalReceivables | dinar:'short' }}</div>
+      <div class="kpi-foot">Sur {{ summary()?.totalPurchases ?? 0 | dinar:'short' }} contractés</div>
     </p-card>
 
-  </section>
-
-  <section class="mini-grid">
-    <p-card>
-      <div class="mini-stat-title">Projets</div>
-      <div class="mini-stat-value">{{ projectsCount }}</div>
-      <div class="mini-stat-meta">{{ activeProjectsCount }} en cours • {{ completedProjectsCount }} terminés</div>
-    </p-card>
-
-    <p-card>
-      <div class="mini-stat-title">Taux d'encaissement</div>
-      <div class="mini-stat-value">{{ collectionRate }}%</div>
-      <div class="progress-shell">
-        <div class="progress-fill" [style.width.%]="collectionRate"></div>
+    <p-card styleClass="metric-card danger">
+      <div class="metric-head">
+        <span class="kpi-label">Marge estimée</span>
+        <i class="pi pi-chart-bar"></i>
       </div>
-    </p-card>
-
-    <p-card>
-      <div class="mini-stat-title">Transactions</div>
-      <div class="mini-stat-value">{{ documentCount | number }}</div>
-      <div class="mini-stat-meta">{{ summary()?.expenses ?? 0 }} dépenses • {{ summary()?.clientPurchases ?? 0 }} achats • {{ summary()?.clientAdvances ?? 0 }} acomptes</div>
-    </p-card>
-
-    <p-card>
-      <div class="mini-stat-title">Reste à encaisser</div>
-      <div class="mini-stat-value">{{ totalReceivables | dinar }}</div>
-      <div class="mini-stat-meta">Montant encore attendu des clients</div>
-    </p-card>
-
-    <p-card>
-      <div class="mini-stat-title">Marge estimée</div>
-      <div class="mini-stat-value">{{ estimatedMargin | dinar }}</div>
-      <div class="mini-stat-meta">Achats moins dépenses engagées</div>
-    </p-card>
-
-    <p-card>
-      <div class="mini-stat-title">Budget consommé</div>
-      <div class="mini-stat-value">{{ budgetConsumptionRate }}%</div>
-      <div class="progress-shell">
-        <div class="progress-fill" [style.width.%]="budgetConsumptionRate"></div>
-      </div>
+      <div class="kpi-value">{{ estimatedMargin | dinar:'short' }}</div>
+      <div class="kpi-foot">Ventes moins dépenses engagées</div>
     </p-card>
   </section>
 
@@ -186,9 +167,9 @@
       </div>
     </p-card>
 
-    <p-card header="Projets" class="span-7">
+    <p-card header="Budget du projet" class="span-7">
       <div class="project-list">
-        @for (project of projects().slice(0, 6); track project.id ?? project.name) {
+        @for (project of filteredProjects; track project.id ?? project.name) {
           <div class="project-row">
             <div class="project-main">
               <div class="project-title-row">
@@ -213,13 +194,13 @@
             </div>
           </div>
         }
-        @if (!projects().length) {
+        @if (!filteredProjects.length) {
           <div class="empty-state">Aucun projet enregistré.</div>
         }
       </div>
     </p-card>
 
-    <p-card header="Top clients à relancer" class="span-5">
+    <p-card header="Clients à relancer" class="span-5">
       <div class="debtor-list">
         @for (client of topDebtors; track client.clientId) {
           <div class="debtor-row">
@@ -236,39 +217,5 @@
       </div>
     </p-card>
 
-    <p-card header="Projets les plus rentables" class="span-5">
-      <div class="debtor-list">
-        @for (project of bestProjects; track project.name) {
-          <div class="debtor-row">
-            <strong>{{ project.name }}</strong>
-            <div class="debtor-amount">{{ project.margin | dinar }}</div>
-          </div>
-        }
-        @if (!bestProjects.length) {
-          <div class="empty-state">Aucun indicateur disponible.</div>
-        }
-      </div>
-    </p-card>
   </section>
-
-  <p-card header="Situation clients">
-    <p-table [value]="statements()" [tableStyle]="{ 'min-width': '50rem' }" responsiveLayout="scroll">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Client</th>
-          <th class="num-col">Achats</th>
-          <th class="num-col">Paiements</th>
-          <th class="num-col">Reste</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-row>
-        <tr>
-          <td>{{ row.clientName }}</td>
-          <td class="num-col">{{ row.totalPurchases | dinar }}</td>
-          <td class="num-col">{{ row.totalAdvances | dinar }}</td>
-          <td [class.negative-cell]="row.remainingToPay > 0">{{ row.remainingToPay | dinar }}</td>
-        </tr>
-      </ng-template>
-    </p-table>
-  </p-card>
 }

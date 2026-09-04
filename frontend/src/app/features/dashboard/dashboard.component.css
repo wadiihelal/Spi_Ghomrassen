@@ -302,3 +302,17 @@ a.hero-alert:hover { background: rgba(180, 35, 24, 0.34); color: var(--white); }
   .hero { flex-direction: column; }
   .hero-alert { min-width: 0; }
 }
+
+/* The commercial tile is a link, so it carries the card's own chrome rather than p-card's. */
+.board-tile {
+  display: block;
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: inherit;
+  transition: box-shadow var(--duration-fast) var(--ease),
+              transform var(--duration-fast) var(--ease);
+}
+.board-tile:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }

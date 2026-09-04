@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -26,8 +26,6 @@ export class ClientsComponent implements OnInit {
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
-  /** The selected project as a stream, so the reaction can be released on destroy. */
-  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   /** Signals, so the view refreshes under OnPush when an HTTP response lands (PERF-04). */
   readonly clients = signal<Client[]>([]);
@@ -57,7 +55,7 @@ export class ClientsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+    this.projectContext.scope$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
       this.selectedProjectId.set(projectId);
       if (!this.editingId) {
         this.form.patchValue({ projectId });

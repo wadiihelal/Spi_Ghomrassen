@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -46,8 +46,6 @@ export class SupplierInvoicesComponent implements OnInit {
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
-  /** The selected project as a stream, so the reaction can be released on destroy. */
-  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   /** One page of invoices, filtered and counted by the server (PERF-02). */
   readonly table = new LazyTable<SupplierInvoice>(
@@ -92,7 +90,7 @@ export class SupplierInvoicesComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+    this.projectContext.scope$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
       this.selectedProjectId.set(projectId);
       this.filters.projectId = projectId;
       // The table and every project-scoped lookup must follow the header (PERF-02): the
@@ -125,16 +123,8 @@ export class SupplierInvoicesComponent implements OnInit {
 
   /** What is owed to suppliers on the project in scope. */
   private loadPayables(): void {
-    const requestedFor = this.selectedProjectId();
-    this.api.getPayablesSummary(requestedFor).subscribe({
-      next: (data) => {
-        // Two scopes can be in flight while the context settles at startup; the answer to the
-        // one we have already left must not overwrite the current figures.
-        if (this.selectedProjectId() === requestedFor) {
-          this.payables.set(data);
-        }
-      }
-    });
+    this.api.getPayablesSummary(this.selectedProjectId())
+      .subscribe({ next: (data) => this.payables.set(data) });
   }
 
   submit(): void {
