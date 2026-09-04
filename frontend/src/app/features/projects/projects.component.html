@@ -21,7 +21,7 @@
           <th>Projet</th>
           <th>Lieu</th>
           <th>Statut</th>
-          <th>Budget</th>
+          <th class="num-col">Budget</th>
           <th>Actions</th>
         </tr>
       </ng-template>
@@ -33,7 +33,7 @@
           </td>
           <td>{{ row.location || '-' }}</td>
           <td>{{ getStatusLabel(row.status) }}</td>
-          <td>{{ row.budget != null ? (row.budget | dinar) : '-' }}</td>
+          <td class="num-col">{{ row.budget != null ? (row.budget | dinar) : '-' }}</td>
           <td class="actions-cell">
             <a pButton type="button" icon="pi pi-chart-line" text [routerLink]="['/projects', row.id]"></a>
             <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir projet" (click)="edit(row)"></button>

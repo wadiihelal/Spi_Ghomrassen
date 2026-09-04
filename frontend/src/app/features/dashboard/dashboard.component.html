@@ -141,14 +141,14 @@
           <tr>
             <th>Date</th>
             <th>Description</th>
-            <th>Montant TTC</th>
+            <th class="num-col">Montant TTC</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-row>
           <tr>
             <td>{{ row.expenseDate | date:'dd/MM/yyyy' }}</td>
             <td>{{ row.description }}</td>
-            <td>{{ row.amountTtc | dinar }}</td>
+            <td class="num-col">{{ row.amountTtc | dinar }}</td>
           </tr>
         </ng-template>
       </p-table>
@@ -243,16 +243,16 @@
       <ng-template pTemplate="header">
         <tr>
           <th>Client</th>
-          <th>Achats</th>
-          <th>Paiements</th>
-          <th>Reste</th>
+          <th class="num-col">Achats</th>
+          <th class="num-col">Paiements</th>
+          <th class="num-col">Reste</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row>
         <tr>
           <td>{{ row.clientName }}</td>
-          <td>{{ row.totalPurchases | dinar }}</td>
-          <td>{{ row.totalAdvances | dinar }}</td>
+          <td class="num-col">{{ row.totalPurchases | dinar }}</td>
+          <td class="num-col">{{ row.totalAdvances | dinar }}</td>
           <td [class.negative-cell]="row.remainingToPay > 0">{{ row.remainingToPay | dinar }}</td>
         </tr>
       </ng-template>

@@ -81,23 +81,23 @@
           <th>Appartement</th>
           <th>Projet</th>
           <th>Acquéreur</th>
-          <th>Prix</th>
-          <th>Encaissé</th>
-          <th>Reste</th>
+          <th class="num-col">Prix</th>
+          <th class="num-col">Encaissé</th>
+          <th class="num-col">Reste</th>
           <th>Actions</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row>
         <tr>
-          <td>
+          <td class="num-col">
             <div class="table-main">{{ row.apartmentNumber }}</div>
             <div class="table-meta">{{ row.apartmentType }} · {{ row.totalSurface | number:'1.0-2' }} m² · {{ getPricePerSquareMeter(row) | dinar:'short' }}/m²</div>
           </td>
           <td>{{ getProjectName(row) }}</td>
           <td>{{ getClientName(row) }}</td>
-          <td>{{ row.totalSalePrice | dinar }}</td>
-          <td>{{ getTotalCollected(row) | dinar }}</td>
-          <td>{{ getRemainingToCollect(row) | dinar }}</td>
+          <td class="num-col">{{ row.totalSalePrice | dinar }}</td>
+          <td class="num-col">{{ getTotalCollected(row) | dinar }}</td>
+          <td class="num-col">{{ getRemainingToCollect(row) | dinar }}</td>
           <td class="actions-cell">
             <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir appartement" (click)="edit(row)"></button>
             <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>

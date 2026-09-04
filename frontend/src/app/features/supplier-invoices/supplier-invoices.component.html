@@ -24,23 +24,23 @@
           <th>Facture</th>
           <th>Fournisseur</th>
           <th>Projet</th>
-          <th>HT</th>
-          <th>TVA</th>
-          <th>TTC</th>
+          <th class="num-col">HT</th>
+          <th class="num-col">TVA</th>
+          <th class="num-col">TTC</th>
           <th>Actions</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row>
         <tr>
-          <td>
+          <td class="num-col">
             <div class="table-main">{{ row.invoiceNumber }}</div>
             <div class="table-meta">{{ (row.invoiceDate | date:'dd/MM/yyyy') || '-' }} · HT {{ row.amountHt | dinar }}</div>
           </td>
           <td>{{ row.supplierName || '-' }}</td>
           <td>{{ row.projectName || '-' }}</td>
-          <td>{{ row.amountHt | dinar }}</td>
-          <td>{{ row.vatAmount | dinar }} ({{ (row.vatRate ?? 0) * 100 | percentShare }})</td>
-          <td>{{ row.amountTtc | dinar }}</td>
+          <td class="num-col">{{ row.amountHt | dinar }}</td>
+          <td class="num-col">{{ row.vatAmount | dinar }} ({{ (row.vatRate ?? 0) * 100 | percentShare }})</td>
+          <td class="num-col">{{ row.amountTtc | dinar }}</td>
           <td class="actions-cell">
             <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir facture" (click)="edit(row)"></button>
             <button pButton type="button" icon="pi pi-trash" text severity="danger" (click)="remove(row)"></button>

@@ -4,13 +4,13 @@
             <ng-template pTemplate="header">
                 <tr>
                     <th>Catégorie</th>
-                    <th>Total</th>
+                    <th class="num-col">Total</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-row>
                 <tr>
                     <td>{{ row.label }}</td>
-                    <td>{{ row.amount | dinar }}</td>
+                    <td class="num-col">{{ row.amount | dinar }}</td>
                 </tr>
             </ng-template>
         </p-table>
@@ -21,13 +21,13 @@
             <ng-template pTemplate="header">
                 <tr>
                     <th>Projet</th>
-                    <th>Total</th>
+                    <th class="num-col">Total</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-row>
                 <tr>
                     <td>{{ row.label }}</td>
-                    <td>{{ row.amount | dinar }}</td>
+                    <td class="num-col">{{ row.amount | dinar }}</td>
                 </tr>
             </ng-template>
         </p-table>
@@ -56,17 +56,17 @@
             <ng-template pTemplate="header">
                 <tr>
                     <th>Client</th>
-                    <th>Achats</th>
-                    <th>Paiements</th>
-                    <th>Reste</th>
+                    <th class="num-col">Achats</th>
+                    <th class="num-col">Paiements</th>
+                    <th class="num-col">Reste</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-row>
                 <tr>
                     <td>{{ row.clientName }}</td>
-                    <td>{{ row.totalPurchases | dinar }}</td>
-                    <td>{{ row.totalAdvances | dinar }}</td>
-                    <td>{{ row.remainingToPay | dinar }}</td>
+                    <td class="num-col">{{ row.totalPurchases | dinar }}</td>
+                    <td class="num-col">{{ row.totalAdvances | dinar }}</td>
+                    <td class="num-col">{{ row.remainingToPay | dinar }}</td>
                 </tr>
             </ng-template>
         </p-table>

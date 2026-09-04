@@ -28,7 +28,7 @@
           <th>Catégorie</th>
           <th>Fournisseur</th>
           <th>Projet</th>
-          <th>TTC</th>
+          <th class="num-col">TTC</th>
           <th>Paiement</th>
           <th>Actions</th>
         </tr>
@@ -42,7 +42,7 @@
           <td>{{ getCategoryName(row) }}</td>
           <td>{{ getSupplierName(row) }}</td>
           <td>{{ getProjectName(row) }}</td>
-          <td>{{ row.amountTtc | dinar }}</td>
+          <td class="num-col">{{ row.amountTtc | dinar }}</td>
           <td>{{ getPaymentMethodLabel(row.paymentMethod) }}</td>
           <td class="actions-cell">
             <button pButton type="button" icon="pi pi-external-link" text aria-label="Ouvrir dépense" (click)="edit(row)"></button>

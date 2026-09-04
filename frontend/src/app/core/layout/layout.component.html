@@ -1,26 +1,37 @@
 <p-toast position="top-right"></p-toast>
 <p-confirmDialog></p-confirmDialog>
+
 @if (!selectedProjectId() && projects().length) {
   <div class="project-gate">
     <div class="project-gate-card">
-      <div class="project-gate-eyebrow">Contexte Projet</div>
-      <h2>Choisir le projet de travail</h2>
-      <p>Chaque espace de travail est indépendant. Sélectionnez le projet sur lequel vous voulez travailler maintenant.</p>
+      <div class="brand-mark brand-mark-lg">SPI</div>
+      <div class="eyebrow">Contexte de travail</div>
+      <h2>Choisir le projet</h2>
+      <p>Chaque projet est un espace indépendant : stock, ventes, encaissements et dépenses.
+        Sélectionnez celui sur lequel vous travaillez.</p>
       <p-dropdown
         [options]="projects()"
         optionLabel="name"
         optionValue="id"
         [ngModel]="selectedProjectId()"
         (ngModelChange)="selectProject($event)"
-        placeholder="Choisir projet">
+        placeholder="Choisir un projet">
       </p-dropdown>
     </div>
   </div>
 }
+
 <div class="app-shell">
   <aside class="sidebar" [class.open]="sidebarOpen()">
-    <div class="brand">SP Immobilière GHOMRASSEN</div>
-    <nav>
+    <div class="brand">
+      <div class="brand-mark">SPI</div>
+      <div class="brand-text">
+        <strong>SP Immobilière</strong>
+        <span>Ghomrassen</span>
+      </div>
+    </div>
+
+    <nav class="nav">
       <div class="nav-section-label">Travail quotidien</div>
       @for (item of dailyNavItems; track item.route) {
         <a [routerLink]="item.route" routerLinkActive="active-link" (click)="sidebarOpen.set(false)">
@@ -36,42 +47,34 @@
         </a>
       }
     </nav>
+
+    <div class="sidebar-foot">
+      <span>{{ currentDateTime() | date:'EEEE d MMMM y' }}</span>
+    </div>
   </aside>
 
   <div class="overlay" [class.show]="sidebarOpen()" (click)="sidebarOpen.set(false)"></div>
 
   <div class="content-wrapper">
     <header class="topbar">
-      <div class="topbar-left">
-        <button pButton type="button" class="menu-btn" icon="pi pi-bars" (click)="toggleSidebar()"></button>
-        <div>
-          <h1>SP Immobilière GHOMRASSEN</h1>
-          <p>
-            @if (selectedProject) {
-              Projet actif: <strong>{{ selectedProject.name }}</strong>
-            } @else {
-              Stock, factures, dépenses et paiements liés au projet
-            }
-          </p>
-        </div>
+      <button pButton type="button" class="menu-btn p-button-text" icon="pi pi-bars"
+              aria-label="Ouvrir le menu" (click)="toggleSidebar()"></button>
+
+      <div class="topbar-context">
+        <span class="eyebrow">Projet de travail</span>
+        <strong>{{ selectedProject?.name ?? 'Aucun projet sélectionné' }}</strong>
       </div>
+
       <div class="topbar-right">
-        <div class="project-switcher">
-          <span class="datetime-label">Projet de travail</span>
-          <p-dropdown
-            [options]="projects()"
-            optionLabel="name"
-            optionValue="id"
-            [ngModel]="selectedProjectId()"
-            (ngModelChange)="selectProject($event)"
-            placeholder="Choisir projet">
-          </p-dropdown>
-        </div>
-        <div class="datetime-box">
-          <span class="datetime-label">Date et heure actuelles</span>
-          <strong>{{ currentDateTime() | date:'dd/MM/yyyy' }}</strong>
-          <span>{{ currentDateTime() | date:'HH:mm' }}</span>
-        </div>
+        <p-dropdown
+          styleClass="project-switcher"
+          [options]="projects()"
+          optionLabel="name"
+          optionValue="id"
+          [ngModel]="selectedProjectId()"
+          (ngModelChange)="selectProject($event)"
+          placeholder="Changer de projet">
+        </p-dropdown>
       </div>
     </header>
 

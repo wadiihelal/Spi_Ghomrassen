@@ -60,7 +60,7 @@
           <tr>
             <th>Date</th>
             <th>Description</th>
-            <th>Montant</th>
+            <th class="num-col">Montant</th>
             <th>Justificatif</th>
           </tr>
         </ng-template>
@@ -68,7 +68,7 @@
           <tr>
             <td>{{ row.expenseDate | date:'dd/MM/yyyy' }}</td>
             <td>{{ row.description }}</td>
-            <td>{{ row.amountTtc | dinar }}</td>
+            <td class="num-col">{{ row.amountTtc | dinar }}</td>
             <td>
               <a *ngIf="row.attachmentUrl" [href]="row.attachmentUrl" target="_blank" rel="noreferrer">
                 {{ row.attachmentName || 'Ouvrir' }}
@@ -86,14 +86,14 @@
           <tr>
             <th>Référence</th>
             <th>Bien</th>
-            <th>Montant</th>
+            <th class="num-col">Montant</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-row>
           <tr>
             <td>{{ row.reference || '-' }}</td>
             <td>{{ row.assetDescription }}</td>
-            <td>{{ row.totalAmount | dinar }}</td>
+            <td class="num-col">{{ row.totalAmount | dinar }}</td>
           </tr>
         </ng-template>
       </p-table>
@@ -105,14 +105,14 @@
           <tr>
             <th>Référence</th>
             <th>Date</th>
-            <th>Montant</th>
+            <th class="num-col">Montant</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-row>
           <tr>
             <td>{{ row.reference || '-' }}</td>
             <td>{{ row.advanceDate | date:'dd/MM/yyyy' }}</td>
-            <td>{{ row.amount | dinar }}</td>
+            <td class="num-col">{{ row.amount | dinar }}</td>
           </tr>
         </ng-template>
       </p-table>

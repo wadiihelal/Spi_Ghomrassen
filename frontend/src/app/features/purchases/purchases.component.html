@@ -51,9 +51,9 @@
           <th>Vente</th>
           <th>Appartement</th>
           <th>Client</th>
-          <th>Montant</th>
-          <th>Encaissé</th>
-          <th>Reste</th>
+          <th class="num-col">Montant</th>
+          <th class="num-col">Encaissé</th>
+          <th class="num-col">Reste</th>
           <th>Statut</th>
           <th>Actions</th>
         </tr>
@@ -69,9 +69,9 @@
             <div class="table-meta">{{ row.assetDescription || '-' }}</div>
           </td>
           <td>{{ getClientName(row.clientId) }}</td>
-          <td>{{ row.totalAmount | dinar }}</td>
-          <td>{{ getPurchaseCollectedAmount(row) | dinar }}</td>
-          <td>{{ getPurchaseRemainingAmount(row) | dinar }}</td>
+          <td class="num-col">{{ row.totalAmount | dinar }}</td>
+          <td class="num-col">{{ getPurchaseCollectedAmount(row) | dinar }}</td>
+          <td class="num-col">{{ getPurchaseRemainingAmount(row) | dinar }}</td>
           <td>
             <p-tag [value]="getPaymentStatusLabel(row.paymentStatus)" [severity]="getPaymentStatusSeverity(row.paymentStatus)"></p-tag>
           </td>

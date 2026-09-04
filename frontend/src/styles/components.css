@@ -1,0 +1,345 @@
+/* =============================================================================
+   PrimeNG component overrides
+   -----------------------------------------------------------------------------
+   The stock Lara theme is competent but generic: large radii, heavy gradients,
+   800-weight text everywhere. These rules replace that with the token system.
+   ============================================================================= */
+
+/* --- Buttons ---------------------------------------------------------------- */
+
+body .p-button {
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--brand);
+  color: var(--white);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0;
+  padding: 0.5625rem 0.9375rem;
+  box-shadow: var(--shadow-xs);
+  transition: background-color var(--duration-fast) var(--ease),
+              border-color var(--duration-fast) var(--ease),
+              box-shadow var(--duration-fast) var(--ease);
+}
+body .p-button:enabled:hover {
+  background: var(--brand-strong);
+  color: var(--white);
+}
+body .p-button:enabled:active { background: var(--navy-900); }
+body .p-button:focus-visible { box-shadow: var(--shadow-ring); }
+
+body .p-button.p-button-secondary:not(.p-button-text),
+body .p-button.p-button-outlined {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  color: var(--slate-700);
+  box-shadow: var(--shadow-xs);
+}
+body .p-button.p-button-secondary:not(.p-button-text):enabled:hover,
+body .p-button.p-button-outlined:enabled:hover {
+  background: var(--surface-soft);
+  border-color: var(--slate-400);
+  color: var(--slate-900);
+}
+
+body .p-button.p-button-text {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--slate-600);
+}
+body .p-button.p-button-text:enabled:hover {
+  background: var(--slate-100);
+  color: var(--navy-700);
+}
+body .p-button.p-button-text.p-button-danger { color: var(--danger-600); }
+body .p-button.p-button-text.p-button-danger:enabled:hover {
+  background: var(--danger-050);
+  color: var(--danger-700);
+}
+
+body .p-button.p-button-danger:not(.p-button-text):not(.p-button-outlined) {
+  background: var(--danger-600);
+  border-color: var(--danger-600);
+  color: var(--white);
+}
+body .p-button.p-button-danger:not(.p-button-text):not(.p-button-outlined):enabled:hover {
+  background: var(--danger-700);
+  border-color: var(--danger-700);
+}
+
+/* The one place brass appears as a filled surface: the primary call to action. */
+body .p-button.p-button-accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--navy-950);
+}
+body .p-button.p-button-accent:enabled:hover {
+  background: var(--accent-strong);
+  color: var(--white);
+}
+
+body .p-button .p-button-icon { font-size: 0.875rem; }
+
+/* --- Inputs ---------------------------------------------------------------- */
+
+body .p-inputtext,
+body .p-inputnumber-input,
+body .p-dropdown,
+body .p-multiselect {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  transition: border-color var(--duration-fast) var(--ease),
+              box-shadow var(--duration-fast) var(--ease);
+}
+body .p-inputtext::placeholder { color: var(--text-subtle); }
+body .p-inputtext:enabled:hover,
+body .p-dropdown:not(.p-disabled):hover { border-color: var(--slate-400); }
+body .p-inputtext:enabled:focus,
+body .p-dropdown:not(.p-disabled).p-focus {
+  border-color: var(--navy-500);
+  box-shadow: var(--shadow-ring);
+  outline: 0;
+}
+body .p-inputtext.ng-invalid.ng-touched,
+body .p-inputnumber.ng-invalid.ng-touched .p-inputnumber-input {
+  border-color: var(--danger-600);
+}
+
+body .p-dropdown .p-dropdown-label { padding: 0.5rem 0.75rem; font-size: var(--text-base); }
+body .p-dropdown .p-dropdown-trigger { color: var(--text-subtle); width: 2.25rem; }
+body .p-dropdown-panel,
+body .p-datepicker {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+body .p-dropdown-panel .p-dropdown-item {
+  font-size: var(--text-base);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  margin: 0.0625rem 0.25rem;
+}
+body .p-dropdown-panel .p-dropdown-item.p-highlight {
+  background: var(--brand-soft);
+  color: var(--navy-800);
+  font-weight: var(--weight-semibold);
+}
+body .p-dropdown-panel .p-dropdown-item:not(.p-highlight):hover { background: var(--slate-100); }
+
+body .p-checkbox .p-checkbox-box {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  width: 18px; height: 18px;
+}
+body .p-checkbox .p-checkbox-box.p-highlight {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+/* --- Cards ---------------------------------------------------------------- */
+
+body .p-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: visible;
+}
+body .p-card .p-card-body { padding: var(--space-5); }
+body .p-card .p-card-content { padding: 0; }
+body .p-card .p-card-title {
+  margin: 0 0 var(--space-4);
+  color: var(--text);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+}
+body .p-card .p-card-header { padding: 0; }
+
+/* --- Data table: the workhorse -------------------------------------------- */
+
+body .p-datatable {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  overflow: hidden;
+}
+body .p-datatable .p-datatable-header {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: var(--space-4);
+}
+body .p-datatable table { border-collapse: separate; border-spacing: 0; }
+
+body .p-datatable .p-datatable-thead > tr > th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--slate-500);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wider);
+  line-height: var(--leading-tight);
+  padding: 0.6875rem var(--space-4);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+body .p-datatable .p-datatable-tbody > tr {
+  background: var(--surface);
+  transition: background-color var(--duration-fast) var(--ease);
+}
+body .p-datatable .p-datatable-tbody > tr:hover { background: var(--navy-050); }
+body .p-datatable .p-datatable-tbody > tr > td {
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--slate-800);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  padding: 0.6875rem var(--space-4);
+  vertical-align: middle;
+}
+body .p-datatable .p-datatable-tbody > tr:last-child > td { border-bottom: 0; }
+
+/* Any column whose header is a money or count label aligns right. */
+body .p-datatable th.num-col,
+body .p-datatable td.num-col {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+body .p-datatable .p-sortable-column:hover { background: var(--slate-100); }
+body .p-datatable .p-sortable-column.p-highlight,
+body .p-datatable .p-sortable-column.p-highlight .p-sortable-column-icon {
+  background: var(--brand-soft);
+  color: var(--navy-700);
+}
+
+body .p-datatable .p-datatable-emptymessage > td {
+  padding: var(--space-10) var(--space-4);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+body .p-datatable .p-paginator {
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.625rem var(--space-4);
+  gap: 0.25rem;
+}
+body .p-paginator .p-paginator-current { color: var(--text-muted); font-size: var(--text-xs); }
+body .p-paginator .p-paginator-pages .p-paginator-page,
+body .p-paginator .p-paginator-first,
+body .p-paginator .p-paginator-prev,
+body .p-paginator .p-paginator-next,
+body .p-paginator .p-paginator-last {
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-sm);
+  color: var(--slate-600);
+  font-size: var(--text-sm);
+}
+body .p-paginator .p-paginator-pages .p-paginator-page.p-highlight {
+  background: var(--brand);
+  color: var(--white);
+  font-weight: var(--weight-semibold);
+}
+
+/* --- Tags / status chips -------------------------------------------------- */
+
+body .p-tag {
+  border-radius: var(--radius-pill);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  padding: 0.1875rem 0.5rem;
+  text-transform: uppercase;
+}
+body .p-tag.p-tag-success  { background: var(--success-050); color: var(--success-700); }
+body .p-tag.p-tag-warning  { background: var(--warning-050); color: var(--warning-700); }
+body .p-tag.p-tag-danger   { background: var(--danger-050);  color: var(--danger-700); }
+body .p-tag.p-tag-info     { background: var(--info-050);    color: var(--info-600); }
+body .p-tag.p-tag-secondary{ background: var(--slate-100);   color: var(--slate-600); }
+
+/* --- Dialogs -------------------------------------------------------------- */
+
+body .p-dialog {
+  border: 0;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+body .p-dialog .p-dialog-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: var(--space-5) var(--space-6);
+  color: var(--text);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+body .p-dialog .p-dialog-content { padding: var(--space-6); background: var(--surface); }
+body .p-dialog .p-dialog-footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: var(--space-4) var(--space-6);
+}
+body .p-dialog-mask.p-component-overlay { background: rgba(6, 13, 24, 0.45); }
+
+body .p-confirm-dialog .p-dialog-content { gap: var(--space-4); align-items: flex-start; }
+body .p-confirm-dialog .p-confirm-dialog-icon { color: var(--warning-600); font-size: 1.375rem; }
+body .p-confirm-dialog .p-confirm-dialog-message { margin-left: 0; font-size: var(--text-base); }
+
+/* --- Toasts --------------------------------------------------------------- */
+
+body .p-toast { z-index: 1200; }
+body .p-toast .p-toast-message {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--brand);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+body .p-toast .p-toast-message.p-toast-message-success { border-left-color: var(--success-600); }
+body .p-toast .p-toast-message.p-toast-message-warn    { border-left-color: var(--warning-600); }
+body .p-toast .p-toast-message.p-toast-message-error   { border-left-color: var(--danger-600); }
+body .p-toast .p-toast-message .p-toast-summary {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+body .p-toast .p-toast-message .p-toast-detail {
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* --- File upload ---------------------------------------------------------- */
+
+body .p-fileupload-choose {
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  color: var(--slate-700);
+  box-shadow: none;
+}
+body .p-fileupload-choose:not(.p-disabled):hover {
+  background: var(--brand-soft);
+  border-color: var(--navy-400);
+  color: var(--navy-700);
+}
+
+/* --- Progress ------------------------------------------------------------- */
+
+body .p-progress-spinner-circle { stroke: var(--brand); }
