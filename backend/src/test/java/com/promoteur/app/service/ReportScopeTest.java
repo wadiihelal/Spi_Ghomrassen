@@ -4,6 +4,7 @@ import com.promoteur.app.dto.ExpenseRequest;
 import com.promoteur.app.dto.ProjectRequest;
 import com.promoteur.app.dto.report.AmountByLabelDto;
 import com.promoteur.app.dto.report.ReportFilter;
+import com.promoteur.app.dto.response.DashboardSummaryResponse;
 import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
@@ -24,7 +25,6 @@ import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -127,13 +127,13 @@ class ReportScopeTest {
     @Test
     @DisplayName("the dashboard summary is scoped like every other report")
     void theDashboardSummaryIsScopedLikeEveryOtherReport() {
-        Map<String, Object> summary = this.reportService.globalSummary(this.filterFor(this.projectA.id(), 2026, 9));
+        DashboardSummaryResponse summary = this.reportService.globalSummary(this.filterFor(this.projectA.id(), 2026, 9));
 
-        assertThat(summary.get("totalExpenses")).isEqualTo(new BigDecimal("200.000"));
-        assertThat(summary.get("expenses")).isEqualTo(1L);
-        assertThat(summary.get("projects")).isEqualTo(1L);
-        assertThat(summary.get("projectLabel")).isEqualTo("Projet : Résidence Alpha");
-        assertThat(summary.get("periodLabel")).isEqualTo("Période : septembre 2026");
+        assertThat(summary.totalExpenses()).isEqualByComparingTo("200.000");
+        assertThat(summary.expenses()).isEqualTo(1L);
+        assertThat(summary.projects()).isEqualTo(1L);
+        assertThat(summary.projectLabel()).isEqualTo("Projet : Résidence Alpha");
+        assertThat(summary.periodLabel()).isEqualTo("Période : septembre 2026");
     }
 
     @Test

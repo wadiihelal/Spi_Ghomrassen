@@ -4,10 +4,10 @@ import com.promoteur.app.dto.report.AmountByLabelDto;
 import com.promoteur.app.dto.report.ClientStatementDto;
 import com.promoteur.app.dto.report.ReportFilter;
 import com.promoteur.app.dto.report.ReportScope;
+import com.promoteur.app.dto.response.DashboardSummaryResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.Map;
 
 /**
  * Service exposing aggregated dashboard and export reports.
@@ -64,7 +64,7 @@ public interface ReportService {
     /**
      * Returns the dashboard summary, inside the filter's scope.
      */
-    Map<String, Object> globalSummary(ReportFilter filter);
+    DashboardSummaryResponse globalSummary(ReportFilter filter);
 
     /**
      * Exports the reports for the filter's scope as an Excel document. The workbook states its

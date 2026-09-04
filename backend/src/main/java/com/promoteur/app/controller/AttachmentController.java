@@ -3,6 +3,8 @@ package com.promoteur.app.controller;
 import com.promoteur.app.dto.response.AttachmentResponse;
 import com.promoteur.app.enums.AttachmentOwnerType;
 import com.promoteur.app.service.AttachmentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
@@ -30,6 +32,7 @@ import java.util.List;
  * <p>The plan restricted DELETE to ADMIN; the application has no roles by decision, so it is
  * open like every other endpoint (SEC-01).</p>
  */
+@Tag(name = "Pièces jointes", description = "Justificatifs (PDF, JPEG, PNG) rattachés aux documents.")
 @RestController
 @RequestMapping("/api/attachments")
 @RequiredArgsConstructor
@@ -37,6 +40,7 @@ public class AttachmentController {
 
     private final AttachmentService attachmentService;
 
+    @Operation(summary = "Téléversement d’un justificatif (multipart)")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public AttachmentResponse upload(
@@ -46,6 +50,7 @@ public class AttachmentController {
         return attachmentService.upload(ownerType, ownerId, file);
     }
 
+    @Operation(summary = "Liste des justificatifs d’un document")
     @GetMapping
     public List<AttachmentResponse> findByOwner(
             @RequestParam AttachmentOwnerType ownerType,
@@ -54,6 +59,7 @@ public class AttachmentController {
     }
 
     /** Streams the file inline under its original name. */
+    @Operation(summary = "Téléchargement du fichier")
     @GetMapping("/{id}")
     public ResponseEntity<Resource> download(@PathVariable Long id) {
         AttachmentResponse metadata = attachmentService.findById(id);
@@ -68,6 +74,7 @@ public class AttachmentController {
         return ResponseEntity.ok().headers(headers).body(content);
     }
 
+    @Operation(summary = "Suppression d’un justificatif")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {

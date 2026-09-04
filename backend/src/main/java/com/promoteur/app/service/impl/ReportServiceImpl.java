@@ -16,6 +16,7 @@ import com.promoteur.app.dto.report.CountAndTotal;
 import com.promoteur.app.dto.report.PurchaseSummary;
 import com.promoteur.app.dto.report.ReportFilter;
 import com.promoteur.app.dto.report.ReportScope;
+import com.promoteur.app.dto.response.DashboardSummaryResponse;
 import com.promoteur.app.entity.Client;
 import com.promoteur.app.entity.ClientAdvance;
 import com.promoteur.app.entity.ClientPurchase;
@@ -48,10 +49,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.TextStyle;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 @Service
 // Reporting only ever reads (ARCH-03).
@@ -193,7 +192,7 @@ public class ReportServiceImpl implements ReportService {
      * nothing is grouped in Java any more.
      */
     @Override
-    public Map<String, Object> globalSummary(ReportFilter filter) {
+    public DashboardSummaryResponse globalSummary(ReportFilter filter) {
         ReportScope scope = resolveScope(filter);
 
         CountAndTotal expenses = expenseRepository.countAndTotal(scope.projectId(), scope.dateFrom(), scope.dateTo());
@@ -203,24 +202,21 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal totalCollected = safe(advances.total()).add(safe(purchases.totalPaidDirectly()));
         BigDecimal totalPurchases = safe(purchases.totalContracted());
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("projectId", scope.projectId());
-        result.put("projectLabel", scope.projectLabel());
-        result.put("periodLabel", scope.periodLabel());
-        result.put("clients", scope.projectId() == null
-                ? clientRepository.count()
-                : clientRepository.countByProjectId(scope.projectId()));
-        result.put("projects", scope.projectId() == null ? projectRepository.count() : 1L);
-        // Les fournisseurs ne sont pas rattaches a un projet : le compteur reste global.
-        result.put("suppliers", supplierRepository.count());
-        result.put("expenses", expenses.count());
-        result.put("clientAdvances", advances.count());
-        result.put("clientPurchases", purchases.count());
-        result.put("totalExpenses", safe(expenses.total()));
-        result.put("totalAdvances", totalCollected);
-        result.put("totalPurchases", totalPurchases);
-        result.put("totalRemainingFromClients", totalPurchases.subtract(totalCollected));
-        return result;
+        return new DashboardSummaryResponse(
+                scope.projectId(),
+                scope.projectLabel(),
+                scope.periodLabel(),
+                scope.projectId() == null ? clientRepository.count() : clientRepository.countByProjectId(scope.projectId()),
+                scope.projectId() == null ? projectRepository.count() : 1L,
+                // Les fournisseurs ne sont pas rattaches a un projet : le compteur reste global.
+                supplierRepository.count(),
+                expenses.count(),
+                advances.count(),
+                purchases.count(),
+                safe(expenses.total()),
+                totalCollected,
+                totalPurchases,
+                totalPurchases.subtract(totalCollected));
     }
 
     @Override

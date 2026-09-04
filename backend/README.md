@@ -1,95 +1,162 @@
-# SP Immobilière GHOMRASSEN Backend
+# SP Immobilière GHOMRASSEN — Backend
 
-Backend Spring Boot pour une application de gestion de dépenses et achats clients pour promoteur immobilier.
-
-## Modules inclus
-- Clients
-- Projets
-- Fournisseurs
-- Catégories de dépense
-- Dépenses
-- Achats clients
-- Acomptes clients
-- Retenues à la source
-- Dashboard
-- Rapports
+API Spring Boot d'une application de gestion pour promoteur immobilier : projets, appartements,
+clients, contrats de vente, acomptes, factures fournisseurs, dépenses, justificatifs, journal
+d'audit et rapports Excel / PDF.
 
 ## Stack
-- Java 17
-- Spring Boot 3
-- Spring Web
-- Spring Data JPA
-- Validation
-- PostgreSQL 16 + Flyway
-- H2 (tests uniquement)
-- Lombok
+
+- Java 17, Spring Boot 3.3.5, Spring Web, Spring Data JPA, Validation
+- PostgreSQL 16, schéma géré par Flyway (`ddl-auto=validate`)
+- MapStruct (DTO de réponse), Lombok, Apache POI (Excel), OpenPDF (PDF), springdoc-openapi
+- H2 en mémoire pour la suite de tests uniquement
+
+Découpage : `controller → service (interface) → service/impl → repository`. Les contrôleurs
+renvoient des records de `dto/response`, jamais d'entité. Tous les montants sont des
+`BigDecimal` `precision = 19, scale = 3` (millimes), arrondis `HALF_UP`.
 
 ## Base de données
 
-Le backend s'appuie sur PostgreSQL 16. Le schéma est géré exclusivement par Flyway
-(`src/main/resources/db/migration`) ; Hibernate est en `ddl-auto=validate` et ne crée ni ne
-modifie jamais une table. Les données survivent donc aux redémarrages.
-
-### Démarrer la base
-
-Depuis la racine du projet :
+Le schéma est géré exclusivement par Flyway (`src/main/resources/db/migration`, V1 à V8) ;
+Hibernate ne fait que le vérifier. Les données survivent aux redémarrages.
 
 ```bash
-docker compose up -d
+docker compose up -d postgres      # depuis la racine du projet
+mvn spring-boot:run                # profil dev par défaut
 ```
 
-Le service `postgres` expose `localhost:5432`, base `spi_ghomrassen`, utilisateur `spi`,
-mot de passe `spi`, avec un volume nommé `spi-postgres-data` pour la persistance.
+Le service `postgres` expose `localhost:5432`, base `spi_ghomrassen`, utilisateur `spi`, mot de
+passe `spi`, volume `spi-postgres-data`.
 
-### Lancement du backend
+Sans Docker, l'API se lance sur H2 avec les données de démonstration :
 
 ```bash
-mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.profiles=test,demo -Dspring-boot.run.useTestClasspath=true
 ```
-
-Au premier démarrage, Flyway applique `V1__baseline.sql` et crée les 11 tables.
 
 ## Profils
 
 | Profil | Base | Usage |
 |---|---|---|
-| `dev` (défaut) | PostgreSQL `localhost:5432/spi_ghomrassen` | développement local, `show-sql=true` |
-| `prod` | PostgreSQL via `${DATABASE_URL}` | production, aucune valeur par défaut |
-| `test` | H2 en mémoire, mêmes migrations Flyway | suite de tests |
+| `dev` (défaut) | PostgreSQL `localhost:5432/spi_ghomrassen` | développement, `show-sql=true`, OpenAPI actif |
+| `demo` | s'ajoute à un autre profil | charge des projets, appartements, acquéreurs et paiements **fictifs** — jamais en production |
+| `prod` | PostgreSQL via `${DATABASE_URL}` | production, aucune valeur par défaut, OpenAPI désactivé |
+| `test` | H2 en mémoire, mêmes migrations Flyway | suite de tests, OpenAPI actif |
+
+`ReferenceDataInitializer` tourne dans tous les profils et crée uniquement ce qui manque :
+catégories de dépense, types de fournisseur, taux de TVA (0, 7, 13, 19 %).
 
 ### Variables d'environnement
 
 | Variable | Profils | Défaut |
 |---|---|---|
-| `DB_USER` | dev, prod | `spi` en dev, obligatoire en prod |
-| `DB_PASSWORD` | dev, prod | `spi` en dev, obligatoire en prod |
-| `DATABASE_URL` | prod | obligatoire |
-| `APP_CORS_ALLOWED_ORIGINS` | prod | obligatoire |
+| `DB_USER`, `DB_PASSWORD` | dev, prod | `spi` / `spi` en dev, obligatoires en prod |
+| `DATABASE_URL` | prod | obligatoire, ex. `jdbc:postgresql://postgres:5432/spi_ghomrassen` |
+| `APP_CORS_ALLOWED_ORIGINS` | prod | obligatoire, origine du frontend |
 | `ATTACHMENTS_ROOT` | prod | obligatoire — dossier des pièces jointes, hors du dossier de l'application |
 
-## Données de démonstration — profil `demo`
+## Sécurité — décision métier
 
-Les données fictives ne sont plus chargées automatiquement.
+L'application **n'a aucune authentification ni rôle** (décision du 2 septembre 2026). Toute
+personne capable d'atteindre l'API peut lire les CIN, téléphones, adresses et montants des
+acquéreurs, et supprimer n'importe quel enregistrement. La protection est donc réseau :
 
-`ReferenceDataInitializer` tourne dans tous les profils et ne crée que les données de
-référence manquantes : catégories de dépense et types de fournisseur. Sur une base vide, un
-démarrage en `dev` crée donc 6 catégories et 5 types, et rien d'autre : zéro projet, zéro
-client, zéro appartement.
+- ne jamais publier le port 8080 : `docker-compose.yml` place le backend derrière nginx ;
+- restreindre le port 80 par pare-feu aux adresses du bureau (`ufw allow from <ip> to any port 80`)
+  ou placer le tout derrière un VPN ;
+- à défaut, `auth_basic` dans nginx protège l'API sans écran de connexion.
 
-`DemoDataInitializer` est annoté `@Profile("demo")` et porte tout le reste : 5 « Résidence
-Démo », 120 appartements, ~120 clients synthétiques en `@demo-spi.tn`, leurs achats et leurs
-acomptes. Il journalise un avertissement au démarrage.
+Le journal d'audit (`audit_logs`) enregistre `actor = system` tant qu'il n'y a pas de connexion.
+`AuditLogServiceImpl.resolveActor()` est le seul point à changer si un login est ajouté.
 
-```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=dev,demo
+## Règles métier codées
+
+- **TVA** : le client envoie `amountHt` + `vatRate` ; le serveur calcule `vatAmount` et
+  `amountTtc` (`VatCalculationService`). Les taux sont dans la table `vat_rate_options`.
+  Pas de retenue à la source (décision du 2 septembre 2026).
+- **Acomptes** : plafonnés par le total du contrat de vente, sinon par le prix de vente de
+  l'appartement ; refusés si aucun des deux n'existe. Le contrôle est sérialisé par un verrou
+  pessimiste sur la ligne appartement ; toutes les entités portent un `@Version` (409 en cas de
+  conflit).
+- **Contrats** : un seul par appartement ; encaissé = paiement direct + acomptes ; statut
+  `UNPAID` / `PARTIALLY_PAID` / `PAID` dérivé, jamais stocké.
+- **Références** : `DEP-2026-00042`, `ACC-2026-00042`, attribuées par séquence avant le premier
+  enregistrement.
+- **Rapports** : tout rapport est filtré par `projectId` (absent = projet actif, `ALL` = tous) et
+  par `year` / `month`. Les exports indiquent leur périmètre en en-tête.
+
+## Pièces jointes
+
+Bordereaux de virement, scans de chèque et pages de contrat sont de vrais fichiers
+(`file_attachments`, `POST /api/attachments` en multipart, `GET /api/attachments/{id}` en flux).
+PDF, JPEG, PNG ; 10 Mo maximum. Stockage sur le système de fichiers local sous `app.storage.root` :
+
+| Profil | Racine |
+|---|---|
+| `dev` | `~/.spi-ghomrassen/attachments` |
+| `prod` | `${ATTACHMENTS_ROOT}` — volume `spi-attachments` dans `docker-compose.yml` |
+| `test` | dossier temporaire |
+
+Les anciennes colonnes `attachment_name` / `attachment_url` restent lisibles pour l'historique
+mais ne sont plus alimentées.
+
+### Sauvegardes — lacune assumée
+
+**Aucune sauvegarde automatisée n'est en place** pour le volume PostgreSQL ni pour celui des
+pièces jointes (décision du 4 septembre 2026 : à traiter plus tard). Le dump de la base ne
+contient pas les fichiers : une sauvegarde complète doit couvrir `spi-postgres-data` **et**
+`spi-attachments`. Tant que ce n'est pas fait, la perte du serveur emporte la comptabilité et ses
+justificatifs.
+
+## API
+
+Documentation OpenAPI : `/v3/api-docs` et `/swagger-ui.html`, profils `dev` et `test` uniquement.
+
+Conventions : création → `201` avec en-tête `Location` ; suppression → `204` ; erreurs en JSON
+`{ timestamp, status, error, details? }` avec un message en français ; `400` saisie refusée,
+`404` introuvable, `409` modification concurrente, `413` fichier trop volumineux.
+
+Toutes les listes sont paginées (`page`, `size`, `sort`) et acceptent des filtres en paramètres
+de requête : `projectId`, `clientId`, `supplierId`, `categoryId`, `apartmentId`,
+`paymentStatus`, `paymentMethod`, `dateFrom`, `dateTo`, `search`. Les routes `/by-project/{id}`,
+`/by-client/{id}`, `/by-category/{id}`, `/by-supplier/{id}` sont dépréciées et retirées à la
+prochaine version.
+
+| Ressource | Routes |
+|---|---|
+| Projets | `/api/projects`, `/api/projects/active-context` (`GET`, `PUT /{id}`, `DELETE`) |
+| Appartements | `/api/apartments` |
+| Clients | `/api/clients` |
+| Fournisseurs, types | `/api/suppliers`, `/api/supplier-types` |
+| Catégories, taux de TVA | `/api/expense-categories`, `/api/vat-rates` |
+| Dépenses | `/api/expenses` |
+| Factures fournisseurs | `/api/supplier-invoices` |
+| Contrats de vente | `/api/client-purchases` |
+| Acomptes | `/api/client-advances` |
+| Pièces jointes | `/api/attachments?ownerType&ownerId`, `/api/attachments/{id}` |
+| Journal d'audit | `/api/audit-logs?entityType&actor&dateFrom&dateTo`, `/api/audit-logs/by-entity/{type}/{id}` |
+| Tableau de bord | `/api/dashboard/summary?projectId` |
+| Rapports | `/api/reports/expenses/by-category`, `/by-project`, `/by-month`, `/api/reports/purchases/by-project`, `/api/reports/advances/by-payment-method`, `/api/reports/clients/statements`, `/api/reports/clients/{id}/statement`, `/api/reports/export/excel`, `/export/pdf` |
+
+### Exemple — créer une dépense
+
+```json
+POST /api/expenses
+{
+  "expenseDate": "2026-04-10",
+  "description": "Frais de dossier baladiya",
+  "amountHt": 1000.000,
+  "vatRate": 0.0700,
+  "paymentMethod": "BANK_TRANSFER",
+  "documentNumber": "FAC-001",
+  "categoryId": 1,
+  "projectId": 1,
+  "supplierId": 1
+}
 ```
 
-**Ne jamais activer le profil `demo` en production** : il injecte des acquéreurs fictifs dans
-la comptabilité réelle.
-
-## Console H2
-
-Désactivée dans tous les profils (`spring.h2.console.enabled=false`).
+Réponse `201`, `Location: /api/expenses/42`, corps avec `reference: "DEP-2026-00042"`,
+`vatAmount: 70.000`, `amountTtc: 1070.000`.
 
 ## Déploiement
 
@@ -97,181 +164,15 @@ Désactivée dans tous les profils (`spring.h2.console.enabled=false`).
 docker compose up --build
 ```
 
-Trois services : `postgres`, `backend` (image multi-étapes, JRE 17, utilisateur non root) et
-`frontend` (build Node puis nginx). Seul `frontend` publie un port, le 80 ; il sert
-l'application Angular et relaie `/api/` vers le backend. `environment.prod.ts` pointe donc sur
-`/api` et non sur `http://localhost:8080/api`.
+Trois services : `postgres`, `backend` (image multi-étapes, JRE 17, utilisateur non root, aucun
+port publié) et `frontend` (build Node puis nginx sur le port 80, qui sert la console et relaie
+`/api/`). Voir « Sécurité » ci-dessus avant d'exposer le port 80.
 
-### Exposition réseau — à lire avant de publier sur un serveur
+## Vérifier
 
-L'application **n'a aucune authentification** (constat SEC-01, laissé ouvert par décision
-métier). Tout appelant capable d'atteindre l'API peut lire les CIN, téléphones, adresses et
-montants de contrat de tous les acquéreurs, et peut supprimer n'importe quel enregistrement.
-Sur un serveur public, la protection doit donc venir du réseau :
-
-- ne jamais publier le port 8080 : `docker-compose.yml` place le backend derrière nginx,
-  garder cette configuration ;
-- restreindre le port 80 par pare-feu aux adresses IP du bureau
-  (`ufw allow from <ip> to any port 80`), ou placer le tout derrière un VPN ;
-- à défaut, ajouter une authentification HTTP basique dans nginx
-  (`auth_basic` + `auth_basic_user_file`), ce qui protège l'API sans écran de connexion dans
-  l'application.
-
-## Pièces jointes
-
-Les bordereaux de virement, scans de chèque et pages de contrat sont de vrais fichiers
-(`file_attachments`, `POST /api/attachments` en multipart, `GET /api/attachments/{id}` en flux).
-Formats acceptés : PDF, JPEG, PNG ; 10 Mo maximum par fichier. Les fichiers sont écrits sur le
-système de fichiers local sous `app.storage.root` :
-
-| Profil | Racine |
-|---|---|
-| `dev` | `~/.spi-ghomrassen/attachments` |
-| `prod` | `${ATTACHMENTS_ROOT}` — le `docker-compose.yml` monte le volume `spi-attachments` |
-| `test` | un dossier temporaire |
-
-Les anciennes colonnes `attachment_name` / `attachment_url` restent lisibles pour les lignes
-historiques mais ne sont plus alimentées.
-
-### Sauvegardes — lacune assumée
-
-**Aucune sauvegarde automatisée n'est en place** pour le volume PostgreSQL ni pour le volume
-des pièces jointes (décision du 4 septembre 2026 : à traiter plus tard). Le dump de la base ne
-contient pas les fichiers : une sauvegarde complète doit couvrir `spi-postgres-data` **et**
-`spi-attachments`. Tant que ce n'est pas fait, la perte du serveur emporte la comptabilité et
-ses justificatifs.
-
-## Endpoints principaux
-### CRUD de base
-- `/api/clients`
-- `/api/projects`
-- `/api/suppliers`
-- `/api/expense-categories`
-- `/api/expenses`
-- `/api/client-purchases`
-- `/api/client-advances`
-- `/api/withholding-taxes`
-
-### Métier / filtres
-- `GET /api/expenses/by-category/{categoryId}`
-- `GET /api/expenses/by-project/{projectId}`
-- `GET /api/client-purchases/by-client/{clientId}`
-- `GET /api/client-purchases/by-project/{projectId}`
-- `GET /api/client-advances/by-client/{clientId}`
-- `GET /api/client-advances/by-project/{projectId}`
-
-### Dashboard / rapports
-- `GET /api/dashboard/summary`
-- `GET /api/reports/expenses/by-category`
-- `GET /api/reports/expenses/by-project`
-- `GET /api/reports/clients/statements`
-- `GET /api/reports/clients/{clientId}/statement`
-
-## Exemples JSON
-
-### Créer un client
-```json
-{
-  "fullName": "Ahmed Ben Salah",
-  "phone": "22111222",
-  "email": "ahmed@test.com",
-  "address": "Tunis",
-  "cinOrFiscalId": "12345678",
-  "notes": "Client prioritaire",
-  "active": true
-}
+```bash
+mvn -q verify        # compilation + 83 tests sur H2 avec les migrations Flyway
 ```
 
-### Créer un projet
-```json
-{
-  "code": "PRJ-001",
-  "name": "Résidence Les Jardins",
-  "location": "Ariana",
-  "description": "Projet immobilier R+4",
-  "startDate": "2026-04-01",
-  "expectedEndDate": "2027-06-30",
-  "budget": 2500000,
-  "status": "IN_PROGRESS"
-}
-```
-
-### Créer un fournisseur
-```json
-{
-  "name": "Bureau Etudes Alpha",
-  "fiscalId": "MF123",
-  "phone": "55111222",
-  "email": "alpha@test.com",
-  "address": "Sfax",
-  "type": "ENGINEER",
-  "withholdingApplicable": true,
-  "active": true
-}
-```
-
-### Créer une dépense
-```json
-{
-  "reference": "EXP-001",
-  "expenseDate": "2026-04-10",
-  "description": "Frais de dossier baladiya",
-  "amountHt": 1000,
-  "vatAmount": 190,
-  "amountTtc": 1190,
-  "paymentMethod": "BANK_TRANSFER",
-  "documentNumber": "FAC-001",
-  "notes": "Paiement mairie",
-  "categoryId": 1,
-  "projectId": 1,
-  "supplierId": 1
-}
-```
-
-### Créer un achat client
-```json
-{
-  "reference": "PUR-001",
-  "purchaseDate": "2026-04-12",
-  "contractDate": "2026-04-15",
-  "assetDescription": "Appartement A12",
-  "totalAmount": 185000,
-  "notes": "Réservation confirmée",
-  "clientId": 1,
-  "projectId": 1
-}
-```
-
-### Créer un acompte client
-```json
-{
-  "reference": "ADV-001",
-  "advanceDate": "2026-04-13",
-  "amount": 25000,
-  "paymentMethod": "CHECK",
-  "notes": "Premier acompte",
-  "clientId": 1,
-  "projectId": 1
-}
-```
-
-### Créer une retenue à la source
-```json
-{
-  "reference": "WHT-001",
-  "calculationDate": "2026-04-13",
-  "baseAmount": 1000,
-  "rate": 1.5,
-  "expenseId": 1,
-  "supplierId": 1,
-  "status": "CALCULATED"
-}
-```
-
-## Remarque
-Le projet est prêt structurellement. Je n'ai pas pu exécuter Maven ici car `mvn` n'est pas disponible dans l'environnement de génération du ZIP.
-
-
-Architecture:
-- controllers -> services -> serviceImpl -> repositories
-- serviceImpl disponibles pour Client, Project, Supplier, ExpenseCategory, Expense, ClientPurchase, ClientAdvance, WithholdingTax, Report
+Chaque règle financière a son test dans `src/test/java/com/promoteur/app/service`, nommé
+d'après la règle en clair.

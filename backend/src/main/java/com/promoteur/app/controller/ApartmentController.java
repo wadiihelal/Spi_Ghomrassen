@@ -4,11 +4,15 @@ import com.promoteur.app.dto.ApartmentRequest;
 import com.promoteur.app.dto.ListFilter;
 import com.promoteur.app.dto.response.ApartmentResponse;
 import com.promoteur.app.service.ApartmentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,10 +21,14 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.time.LocalDate;
 
+@Tag(name = "Appartements", description = "Stock d’appartements par projet, avec acquéreur et encaissements.")
 @RestController
 @RequestMapping("/api/apartments")
 @RequiredArgsConstructor
@@ -31,6 +39,7 @@ public class ApartmentController {
     /**
      * Filtered, paginated list. Every parameter is optional (PERF-02).
      */
+    @Operation(summary = "Liste paginée et filtrée")
     @GetMapping
     public Page<ApartmentResponse> findAll(
             @RequestParam(required = false) Long projectId,
@@ -48,30 +57,43 @@ public class ApartmentController {
                 paymentStatus, paymentMethod, dateFrom, dateTo, search), pageable);
     }
 
+    @Operation(summary = "Détail par identifiant")
     @GetMapping("/{id}")
     public ApartmentResponse findById(@PathVariable Long id) {
         return apartmentService.findById(id);
     }
 
+    @Operation(summary = "Création")
     @PostMapping
-    public ApartmentResponse create(@Valid @RequestBody ApartmentRequest request) {
-        return apartmentService.create(request);
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<ApartmentResponse> create(@Valid @RequestBody ApartmentRequest request) {
+        ApartmentResponse created = apartmentService.create(request);
+        return ResponseEntity.created(locationOf(created.id())).body(created);
     }
 
+    @Operation(summary = "Modification")
     @PutMapping("/{id}")
     public ApartmentResponse update(@PathVariable Long id, @Valid @RequestBody ApartmentRequest request) {
         return apartmentService.update(id, request);
     }
 
+    @Operation(summary = "Suppression")
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         apartmentService.delete(id);
     }
 
     /** @deprecated use the query parameters on {@code GET} instead; kept for one release. */
     @Deprecated(forRemoval = true)
+    @Operation(summary = "Liste par critère (route dépréciée : utiliser les paramètres de requête)")
     @GetMapping("/by-project/{projectId}")
     public Page<ApartmentResponse> findByProject(@PathVariable Long projectId, Pageable pageable) {
         return apartmentService.findByProject(projectId, pageable);
+    }
+
+    /** Location of a freshly created resource, for the 201 response (API-02). */
+    private URI locationOf(final Long id) {
+        return ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(id).toUri();
     }
 }
