@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -17,14 +17,15 @@ import { Project } from '../../shared/models/models';
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, DropdownModule, DialogModule, RouterLink],
   templateUrl: './projects.component.html',
-  styleUrl: './projects.component.css'
+  styleUrl: './projects.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectsComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly fb = inject(FormBuilder);
   private readonly ui = inject(UiService);
 
-  projects: Project[] = [];
+  readonly projects = signal<Project[]>([]);
   editingId: number | null = null;
   dialogVisible = false;
   filters = {
@@ -56,20 +57,19 @@ export class ProjectsComponent implements OnInit {
     return this.statuses.find(item => item.value === status)?.label ?? status ?? '-';
   }
 
-  get filteredProjects(): Project[] {
-    return this.projects.filter((project) => {
+  /** Memoised: recomputed only when the projects or the filters change (PERF-04). */
+  readonly filteredProjects = computed(() => this.projects().filter((project) => {
       const term = this.filters.search.trim().toLowerCase();
       const matchSearch = !term || [project.code, project.name, project.location, project.description]
         .some((value) => (value ?? '').toString().toLowerCase().includes(term));
       const matchStatus = !this.filters.status || project.status === this.filters.status;
       const matchLocation = !this.filters.location || (project.location ?? '').toLowerCase().includes(this.filters.location.toLowerCase());
       return matchSearch && matchStatus && matchLocation;
-    });
-  }
+    }));
 
   loadProjects(): void {
     this.api.getProjects().subscribe({
-      next: (data) => (this.projects = data)
+      next: (data) => this.projects.set(data)
     });
   }
 

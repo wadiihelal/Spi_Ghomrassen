@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -23,9 +24,12 @@ public class ClientController {
 
     private final ClientService clientService;
 
+    /**
+     * @param projectId optional: restrict to the clients of one project
+     */
     @GetMapping
-    public Page<ClientResponse> findAll(Pageable pageable) {
-        return clientService.findAll(pageable);
+    public Page<ClientResponse> findAll(@RequestParam(required = false) Long projectId, Pageable pageable) {
+        return clientService.findAll(projectId, pageable);
     }
 
     @GetMapping("/{id}")

@@ -1,4 +1,4 @@
-import { DestroyRef } from '@angular/core';
+import { DestroyRef, WritableSignal, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, Subject, debounceTime } from 'rxjs';
 import { PageQuery, PagedResponse } from '../../shared/models/models';
@@ -26,9 +26,10 @@ export interface LazyPageEvent {
  */
 export class LazyTable<T> {
 
-  rows: T[] = [];
-  totalRecords = 0;
-  loading = false;
+  /** Signals, so a template reading them works under OnPush without a manual nudge (PERF-04). */
+  readonly rows: WritableSignal<T[]> = signal<T[]>([]);
+  readonly totalRecords = signal(0);
+  readonly loading = signal(false);
   readonly pageSize = DEFAULT_PAGE_SIZE;
 
   private lastEvent: LazyPageEvent = { first: 0, rows: DEFAULT_PAGE_SIZE };
@@ -73,15 +74,16 @@ export class LazyTable<T> {
       sort: LazyTable.sortOf(event)
     };
 
-    this.loading = true;
+    this.loading.set(true);
     this.fetch(query).subscribe({
       next: (response) => {
-        this.rows = response.content ?? [];
-        this.totalRecords = response.totalElements ?? this.rows.length;
-        this.loading = false;
+        const content = response.content ?? [];
+        this.rows.set(content);
+        this.totalRecords.set(response.totalElements ?? content.length);
+        this.loading.set(false);
       },
       // The HTTP error interceptor already surfaces the reason (FE-02).
-      error: () => (this.loading = false)
+      error: () => this.loading.set(false)
     });
   }
 

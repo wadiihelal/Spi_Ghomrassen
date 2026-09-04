@@ -1,5 +1,6 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -22,7 +23,8 @@ const FALLBACK_VAT_RATE = 0.19;
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule],
   templateUrl: './expenses.component.html',
-  styleUrl: './expenses.component.css'
+  styleUrl: './expenses.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ExpensesComponent implements OnInit {
   private readonly api = inject(ApiService);
@@ -30,6 +32,8 @@ export class ExpensesComponent implements OnInit {
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
+  /** The selected project as a stream, so the reaction can be released on destroy. */
+  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   /** One page of expenses, filtered and counted by the server (PERF-02). */
   readonly table = new LazyTable<Expense>(
@@ -37,14 +41,14 @@ export class ExpensesComponent implements OnInit {
     this.destroyRef
   );
 
-  categories: ExpenseCategory[] = [];
-  projects: Project[] = [];
-  suppliers: Supplier[] = [];
+  readonly categories = signal<ExpenseCategory[]>([]);
+  readonly projects = signal<Project[]>([]);
+  readonly suppliers = signal<Supplier[]>([]);
   editingId: number | null = null;
   expenseDialogVisible = false;
   categoryDialogVisible = false;
-  vatRates: VatRateOption[] = [];
-  selectedProjectId: number | null = null;
+  readonly vatRates = signal<VatRateOption[]>([]);
+  readonly selectedProjectId = signal<number | null>(null);
   filters = {
     search: '',
     categoryId: null as number | null,
@@ -83,9 +87,12 @@ export class ExpensesComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.projectContext.selectedProjectId$.subscribe((projectId) => {
-      this.selectedProjectId = projectId;
+    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+      this.selectedProjectId.set(projectId);
       this.filters.projectId = projectId;
+      // The table and every project-scoped lookup must follow the header (PERF-02): the
+      // first page is fetched before the context arrives, and the user can switch project.
+      this.table.onFilterChange();
       if (!this.editingId) {
         this.form.patchValue({ projectId });
       }
@@ -98,7 +105,7 @@ export class ExpensesComponent implements OnInit {
     return {
       search: this.filters.search,
       categoryId: this.filters.categoryId,
-      projectId: this.selectedProjectId ?? this.filters.projectId,
+      projectId: this.selectedProjectId() ?? this.filters.projectId,
       supplierId: this.filters.supplierId,
       dateFrom: this.filters.dateFrom,
       dateTo: this.filters.dateTo
@@ -106,34 +113,35 @@ export class ExpensesComponent implements OnInit {
   }
 
   loadReferenceData(): void {
-    this.api.getExpenseCategories().subscribe({ next: (data) => (this.categories = data) });
-    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
-    this.api.getSuppliers().subscribe({ next: (data) => (this.suppliers = data) });
-    this.api.getVatRates().subscribe({ next: (data) => (this.vatRates = data) });
+    this.api.getExpenseCategories().subscribe({ next: (data) => this.categories.set(data) });
+    this.api.getProjects().subscribe({ next: (data) => this.projects.set(data) });
+    this.api.getSuppliers().subscribe({ next: (data) => this.suppliers.set(data) });
+    this.api.getVatRates().subscribe({ next: (data) => this.vatRates.set(data) });
   }
 
   getCategoryName(row: Expense): string {
     if (row.categoryName) return row.categoryName;
     const categoryId = row.categoryId;
-    return this.categories.find((item) => item.id === categoryId)?.name ?? '-';
+    return this.categories().find((item) => item.id === categoryId)?.name ?? '-';
   }
 
   getProjectName(row: Expense): string {
     if (row.projectName) return row.projectName;
     const projectId = row.projectId;
-    return this.projects.find((item) => item.id === projectId)?.name ?? '-';
+    return this.projects().find((item) => item.id === projectId)?.name ?? '-';
   }
 
-  get currentProjectName(): string {
-    if (!this.selectedProjectId) return 'Aucun projet sélectionné';
-    return this.projects.find((item) => item.id === this.selectedProjectId)?.name ?? 'Projet en cours';
-  }
+  /** Memoised: the header's project name, recomputed only when it changes. */
+  readonly currentProjectName = computed(() => {
+    if (!this.selectedProjectId()) return 'Aucun projet sélectionné';
+    return this.projects().find((item) => item.id === this.selectedProjectId())?.name ?? 'Projet en cours';
+  });
 
   getSupplierName(row: Expense): string {
     if (row.supplierName) return row.supplierName;
     const supplierId = row.supplierId;
     if (!supplierId) return '-';
-    return this.suppliers.find((item) => item.id === supplierId)?.name ?? '-';
+    return this.suppliers().find((item) => item.id === supplierId)?.name ?? '-';
   }
 
   getPaymentMethodLabel(value?: string | null): string {
@@ -179,8 +187,8 @@ export class ExpensesComponent implements OnInit {
       projectId: expense.projectId ?? null,
       supplierId: expense.supplierId ?? null
     });
-    if (this.selectedProjectId) {
-      this.form.patchValue({ projectId: this.selectedProjectId });
+    if (this.selectedProjectId()) {
+      this.form.patchValue({ projectId: this.selectedProjectId() });
     }
   }
 
@@ -211,7 +219,7 @@ export class ExpensesComponent implements OnInit {
       notes: '',
       supplierId: null,
       categoryId: null,
-      projectId: this.selectedProjectId,
+      projectId: this.selectedProjectId(),
       description: '',
       expenseDate: ''
     });
@@ -237,7 +245,7 @@ export class ExpensesComponent implements OnInit {
 
   /** Proposes the rate this supplier usually invoices, falling back to 19 %. */
   onSupplierChange(supplierId: number | null): void {
-    const supplier = this.suppliers.find((item) => item.id === supplierId);
+    const supplier = this.suppliers().find((item) => item.id === supplierId);
     this.form.patchValue({ vatRate: supplier?.defaultVatRate ?? FALLBACK_VAT_RATE });
   }
 

@@ -30,8 +30,11 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ClientResponse> findAll(final Pageable pageable) {
-        return this.clientRepository.findAll(pageable).map(this.clientMapper::toResponse);
+    public Page<ClientResponse> findAll(final Long projectId, final Pageable pageable) {
+        final Page<Client> clients = projectId == null
+                ? this.clientRepository.findAll(pageable)
+                : this.clientRepository.findByProjectId(projectId, pageable);
+        return clients.map(this.clientMapper::toResponse);
     }
 
     @Override

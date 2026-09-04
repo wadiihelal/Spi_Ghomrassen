@@ -8,7 +8,7 @@
     <form [formGroup]="bulkForm" class="form-grid" (ngSubmit)="submitBulk()">
       <div class="field">
         <label>Projet</label>
-        <div class="value-box">{{ currentProjectName }}</div>
+        <div class="value-box">{{ currentProjectName() }}</div>
       </div>
       <div class="field">
         <label>Bloc</label>
@@ -66,13 +66,13 @@
   </div>
 
   <p-card header="Stock appartements par projet">
-    <p-table [value]="table.rows" [lazy]="true" (onLazyLoad)="table.onLazyLoad($event)" [loading]="table.loading"
-             [totalRecords]="table.totalRecords" responsiveLayout="scroll" [paginator]="true" [rows]="table.pageSize"
+    <p-table [value]="table.rows()" [lazy]="true" (onLazyLoad)="table.onLazyLoad($event)" [loading]="table.loading()"
+             [totalRecords]="table.totalRecords()" responsiveLayout="scroll" [paginator]="true" [rows]="table.pageSize"
              [rowsPerPageOptions]="[25, 50, 100]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}"
              [showCurrentPageReport]="true">
       <ng-template pTemplate="caption">
         <div class="filter-grid">
-          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="projects" optionLabel="name" optionValue="id" placeholder="Filtrer par projet"></p-dropdown>
+          <p-dropdown [(ngModel)]="filters.projectId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" [options]="projects()" optionLabel="name" optionValue="id" placeholder="Filtrer par projet"></p-dropdown>
           <input pInputText [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" (ngModelChange)="table.onFilterChange()" placeholder="Recherche numéro/type/client..." />
         </div>
       </ng-template>
@@ -111,7 +111,7 @@
     <form [formGroup]="form" class="form-grid" (ngSubmit)="submit()">
       <div class="field">
         <label>Projet</label>
-        <div class="value-box">{{ currentProjectName }}</div>
+        <div class="value-box">{{ currentProjectName() }}</div>
       </div>
       <div class="field">
         <label>Numéro appartement</label>

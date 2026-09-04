@@ -8,7 +8,7 @@
   </div>
 
   <p-card header="Liste des projets">
-    <p-table #dt [value]="filteredProjects" responsiveLayout="scroll" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
+    <p-table #dt [value]="filteredProjects()" responsiveLayout="scroll" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
       <ng-template pTemplate="caption">
         <div class="filter-grid">
           <input pInputText type="text" placeholder="Recherche..." [(ngModel)]="filters.search" [ngModelOptions]="{ standalone: true }" />

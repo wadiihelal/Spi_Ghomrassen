@@ -8,7 +8,7 @@
   </div>
 
   <p-card header="Liste des clients">
-    <p-table #dt [value]="filteredClients" responsiveLayout="scroll" [globalFilterFields]="['fullName', 'phone', 'email']" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
+    <p-table #dt [value]="filteredClients()" responsiveLayout="scroll" [globalFilterFields]="['fullName', 'phone', 'email']" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
       <ng-template pTemplate="caption">
         <div class="table-toolbar">
           <input pInputText type="text" placeholder="Rechercher un client..." (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
@@ -46,7 +46,7 @@
     <form [formGroup]="form" class="form-grid" (ngSubmit)="submit()">
       <div class="field">
         <label>Projet</label>
-        <div class="value-box">{{ currentProjectName }}</div>
+        <div class="value-box">{{ currentProjectName() }}</div>
       </div>
       <div class="field">
         <label>Nom complet</label>

@@ -1,5 +1,6 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -20,7 +21,8 @@ import { forkJoin } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule],
   templateUrl: './apartments.component.html',
-  styleUrl: './apartments.component.css'
+  styleUrl: './apartments.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ApartmentsComponent implements OnInit {
   private readonly api = inject(ApiService);
@@ -28,18 +30,20 @@ export class ApartmentsComponent implements OnInit {
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
+  /** The selected project as a stream, so the reaction can be released on destroy. */
+  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   /** One page of apartments, filtered and counted by the server (PERF-02). */
   readonly table = new LazyTable<Apartment>(
     (query) => this.api.getApartments(this.serverFilter, query),
     this.destroyRef
   );
-  projects: Project[] = [];
-  clients: Client[] = [];
+  readonly projects = signal<Project[]>([]);
+  readonly clients = signal<Client[]>([]);
   editingId: number | null = null;
   dialogVisible = false;
   bulkMode = true;
-  selectedProjectId: number | null = null;
+  readonly selectedProjectId = signal<number | null>(null);
   filters = {
     projectId: null as number | null,
     search: ''
@@ -53,16 +57,17 @@ export class ApartmentsComponent implements OnInit {
     { label: 'Autre', value: 'AUTRE' }
   ];
 
-  get currentProjectName(): string {
-    if (!this.selectedProjectId) return 'Aucun projet sélectionné';
-    return this.projects.find((item) => item.id === this.selectedProjectId)?.name ?? 'Projet en cours';
-  }
+  /** Memoised: the header's project name, recomputed only when it changes. */
+  readonly currentProjectName = computed(() => {
+    if (!this.selectedProjectId()) return 'Aucun projet sélectionné';
+    return this.projects().find((item) => item.id === this.selectedProjectId())?.name ?? 'Projet en cours';
+  });
 
   get availableClients(): Client[] {
-    if (!this.selectedProjectId) {
-      return this.clients;
+    if (!this.selectedProjectId()) {
+      return this.clients();
     }
-    return this.clients.filter((client) => client.projectId === this.selectedProjectId);
+    return this.clients().filter((client) => client.projectId === this.selectedProjectId());
   }
 
   form = this.fb.group({
@@ -93,9 +98,12 @@ export class ApartmentsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.projectContext.selectedProjectId$.subscribe((projectId) => {
-      this.selectedProjectId = projectId;
+    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+      this.selectedProjectId.set(projectId);
       this.filters.projectId = projectId;
+      // The table and every project-scoped lookup must follow the header (PERF-02): the
+      // first page is fetched before the context arrives, and the user can switch project.
+      this.table.onFilterChange();
       if (!this.editingId) {
         this.form.patchValue({ projectId });
         this.bulkForm.patchValue({ projectId });
@@ -111,22 +119,22 @@ export class ApartmentsComponent implements OnInit {
   /** Filters sent to the server; the header's project always narrows the list. */
   private get serverFilter(): ListFilter {
     return {
-      projectId: this.selectedProjectId ?? this.filters.projectId,
+      projectId: this.selectedProjectId() ?? this.filters.projectId,
       search: this.filters.search
     };
   }
 
   loadData(): void {
-    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
-    this.api.getClients().subscribe({ next: (data) => (this.clients = data) });
+    this.api.getProjects().subscribe({ next: (data) => this.projects.set(data) });
+    this.api.getClients().subscribe({ next: (data) => this.clients.set(data) });
   }
 
   getProjectName(row: Apartment): string {
-    return row.projectName ?? this.projects.find((item) => item.id === row.projectId)?.name ?? '-';
+    return row.projectName ?? this.projects().find((item) => item.id === row.projectId)?.name ?? '-';
   }
 
   getClientName(row: Apartment): string {
-    return row.acquirerName ?? this.clients.find((item) => item.id === row.acquirerId)?.fullName ?? '-';
+    return row.acquirerName ?? this.clients().find((item) => item.id === row.acquirerId)?.fullName ?? '-';
   }
 
   getPricePerSquareMeter(row: Apartment): number {
@@ -233,7 +241,7 @@ export class ApartmentsComponent implements OnInit {
       cellarCount: row.cellarCount ?? 0,
       totalSalePrice: row.totalSalePrice ?? 0,
       detail: row.detail ?? '',
-      projectId: this.selectedProjectId ?? row.projectId ?? null,
+      projectId: this.selectedProjectId() ?? row.projectId ?? null,
       acquirerId: row.acquirerId ?? null
     });
   }
@@ -263,7 +271,7 @@ export class ApartmentsComponent implements OnInit {
       cellarCount: 0,
       totalSalePrice: 0,
       detail: '',
-      projectId: this.selectedProjectId,
+      projectId: this.selectedProjectId(),
       acquirerId: null
     });
   }
@@ -280,7 +288,7 @@ export class ApartmentsComponent implements OnInit {
       cellarCount: 0,
       totalSalePrice: 0,
       detail: '',
-      projectId: this.selectedProjectId
+      projectId: this.selectedProjectId()
     });
   }
 

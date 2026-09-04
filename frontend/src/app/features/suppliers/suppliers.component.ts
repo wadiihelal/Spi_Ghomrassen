@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -16,19 +16,20 @@ import { Supplier, SupplierTypeOption, VatRateOption } from '../../shared/models
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, DropdownModule, DialogModule],
   templateUrl: './suppliers.component.html',
-  styleUrl: './suppliers.component.css'
+  styleUrl: './suppliers.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SuppliersComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly fb = inject(FormBuilder);
   private readonly ui = inject(UiService);
 
-  suppliers: Supplier[] = [];
+  readonly suppliers = signal<Supplier[]>([]);
   editingId: number | null = null;
   dialogVisible = false;
-  supplierTypes: SupplierTypeOption[] = [];
+  readonly supplierTypes = signal<SupplierTypeOption[]>([]);
   supplierTypeDialogVisible = false;
-  vatRates: VatRateOption[] = [];
+  readonly vatRates = signal<VatRateOption[]>([]);
 
   form = this.fb.group({
     name: ['', [Validators.required]],
@@ -49,18 +50,18 @@ export class SuppliersComponent implements OnInit {
   ngOnInit(): void {
     this.loadSuppliers();
     this.loadSupplierTypes();
-    this.api.getVatRates().subscribe({ next: (data) => (this.vatRates = data) });
+    this.api.getVatRates().subscribe({ next: (data) => this.vatRates.set(data) });
   }
 
   loadSuppliers(): void {
     this.api.getSuppliers().subscribe({
-      next: (data) => (this.suppliers = data)
+      next: (data) => this.suppliers.set(data)
     });
   }
 
   loadSupplierTypes(): void {
     this.api.getSupplierTypes().subscribe({
-      next: (data) => (this.supplierTypes = data.filter((item) => item.active !== false))
+      next: (data) => this.supplierTypes.set(data.filter((item) => item.active !== false))
     });
   }
 

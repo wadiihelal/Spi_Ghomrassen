@@ -1,5 +1,6 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -29,7 +30,8 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, TagModule],
   templateUrl: './purchases.component.html',
-  styleUrl: './purchases.component.css'
+  styleUrl: './purchases.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PurchasesComponent implements OnInit {
   private readonly api = inject(ApiService);
@@ -37,6 +39,8 @@ export class PurchasesComponent implements OnInit {
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
+  /** The selected project as a stream, so the reaction can be released on destroy. */
+  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   /** One page of contracts, filtered and counted by the server (PERF-02). */
   readonly table = new LazyTable<ClientPurchase>(
@@ -45,19 +49,19 @@ export class PurchasesComponent implements OnInit {
   );
 
   /** Contracts of the selected project, used to tell which apartments are still free. */
-  projectPurchases: ClientPurchase[] = [];
-  apartments: Apartment[] = [];
+  readonly projectPurchases = signal<ClientPurchase[]>([]);
+  readonly apartments = signal<Apartment[]>([]);
   /** Advances on the apartment currently chosen in the form, loaded on demand. */
-  selectedApartmentAdvances: ClientAdvance[] = [];
+  readonly selectedApartmentAdvances = signal<ClientAdvance[]>([]);
   /** Scope-wide aggregate behind the KPI strip. */
-  summary?: DashboardSummary;
+  readonly summary = signal<DashboardSummary | undefined>(undefined);
   /** Contracts fully collected in scope, counted by the server. */
-  paidCount = 0;
-  clients: Client[] = [];
-  projects: Project[] = [];
+  readonly paidCount = signal(0);
+  readonly clients = signal<Client[]>([]);
+  readonly projects = signal<Project[]>([]);
   editingId: number | null = null;
   dialogVisible = false;
-  selectedProjectId: number | null = null;
+  readonly selectedProjectId = signal<number | null>(null);
   filters = {
     search: '',
     clientId: null as number | null,
@@ -74,20 +78,21 @@ export class PurchasesComponent implements OnInit {
   ];
 
   getClientName(clientId?: number | null): string {
-    return this.clients.find((item) => item.id === clientId)?.fullName ?? '-';
+    return this.clients().find((item) => item.id === clientId)?.fullName ?? '-';
   }
 
   getProjectName(projectId?: number | null): string {
-    return this.projects.find((item) => item.id === projectId)?.name ?? '-';
+    return this.projects().find((item) => item.id === projectId)?.name ?? '-';
   }
 
-  get currentProjectName(): string {
-    if (!this.selectedProjectId) return 'Aucun projet sélectionné';
-    return this.projects.find((item) => item.id === this.selectedProjectId)?.name ?? 'Projet en cours';
-  }
+  /** Memoised: the header's project name, recomputed only when it changes. */
+  readonly currentProjectName = computed(() => {
+    if (!this.selectedProjectId()) return 'Aucun projet sélectionné';
+    return this.projects().find((item) => item.id === this.selectedProjectId())?.name ?? 'Projet en cours';
+  });
 
   get selectedFormProjectId(): number | null {
-    return this.selectedProjectId ?? this.form.get('projectId')?.value ?? null;
+    return this.selectedProjectId() ?? this.form.get('projectId')?.value ?? null;
   }
 
   get selectedApartmentId(): number | null {
@@ -95,10 +100,10 @@ export class PurchasesComponent implements OnInit {
   }
 
   get projectClients(): Client[] {
-    if (!this.selectedProjectId) {
-      return this.clients;
+    if (!this.selectedProjectId()) {
+      return this.clients();
     }
-    return this.clients.filter((client) => client.projectId === this.selectedProjectId);
+    return this.clients().filter((client) => client.projectId === this.selectedProjectId());
   }
 
   get availableApartments(): Apartment[] {
@@ -106,13 +111,13 @@ export class PurchasesComponent implements OnInit {
     const clientId = this.form.get('clientId')?.value;
     const currentApartmentId = this.selectedApartmentId;
 
-    return this.apartments.filter((apartment) => {
+    return this.apartments().filter((apartment) => {
       const apartmentProjectId = apartment.projectId;
       if (projectId && apartmentProjectId !== projectId) {
         return false;
       }
 
-      const apartmentPurchase = this.projectPurchases.find(
+      const apartmentPurchase = this.projectPurchases().find(
         (purchase) => purchase.apartmentId === apartment.id && purchase.id !== this.editingId
       );
       if (apartmentPurchase) {
@@ -137,7 +142,7 @@ export class PurchasesComponent implements OnInit {
       return 0;
     }
 
-    return this.selectedApartmentAdvances.reduce((sum, advance) => sum + (advance.amount ?? 0), 0);
+    return this.selectedApartmentAdvances().reduce((sum, advance) => sum + (advance.amount ?? 0), 0);
   }
 
   get currentDirectPaidAmount(): number {
@@ -183,23 +188,23 @@ export class PurchasesComponent implements OnInit {
    * figures come from the backend's aggregate rather than from the loaded rows (PERF-02).
    */
   get filteredPurchaseCount(): number {
-    return this.table.totalRecords;
+    return this.table.totalRecords();
   }
 
   get filteredDeclaredTotal(): number {
-    return this.summary?.totalPurchases ?? 0;
+    return this.summary()?.totalPurchases ?? 0;
   }
 
   get filteredCollectedTotal(): number {
-    return this.summary?.totalAdvances ?? 0;
+    return this.summary()?.totalAdvances ?? 0;
   }
 
   get filteredRemainingTotal(): number {
-    return this.summary?.totalRemainingFromClients ?? 0;
+    return this.summary()?.totalRemainingFromClients ?? 0;
   }
 
   get filteredPaidCount(): number {
-    return this.paidCount;
+    return this.paidCount();
   }
 
   form = this.fb.group({
@@ -218,9 +223,13 @@ export class PurchasesComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.projectContext.selectedProjectId$.subscribe((projectId) => {
-      this.selectedProjectId = projectId;
+    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+      this.selectedProjectId.set(projectId);
       this.filters.projectId = projectId;
+      // The table and every project-scoped lookup must follow the header (PERF-02): the
+      // first page is fetched before the context arrives, and the user can switch project.
+      this.table.onFilterChange();
+      this.loadData();
       if (!this.editingId) {
         this.form.patchValue({ projectId });
         const currentClientId = this.form.get('clientId')?.value;
@@ -231,13 +240,12 @@ export class PurchasesComponent implements OnInit {
     });
     this.form.get('clientId')?.valueChanges.subscribe((clientId) => this.syncApartmentToClient(clientId));
     this.form.get('apartmentId')?.valueChanges.subscribe((apartmentId) => this.syncClientToApartment(apartmentId));
-    this.loadData();
   }
 
   /** Filters sent to the server; the header's project always narrows the list. */
   private get serverFilter(): ListFilter {
     return {
-      projectId: this.selectedProjectId ?? this.filters.projectId,
+      projectId: this.selectedProjectId() ?? this.filters.projectId,
       clientId: this.filters.clientId,
       paymentStatus: this.filters.paymentStatus || null,
       dateFrom: this.filters.dateFrom,
@@ -249,17 +257,17 @@ export class PurchasesComponent implements OnInit {
   loadData(): void {
     // Form lookups, scoped to the selected project and bounded: the apartment dropdown and the
     // "already sold" check. Never the table's own rows, which page server-side.
-    this.api.getApartmentOptions(this.selectedProjectId)
-      .subscribe({ next: (data) => (this.apartments = data) });
-    this.api.getPurchaseOptions(this.selectedProjectId)
-      .subscribe({ next: (data) => (this.projectPurchases = data) });
-    this.api.getDashboardSummary({ projectId: this.selectedProjectId })
-      .subscribe({ next: (data) => (this.summary = data) });
+    this.api.getApartmentOptions(this.selectedProjectId())
+      .subscribe({ next: (data) => this.apartments.set(data) });
+    this.api.getPurchaseOptions(this.selectedProjectId())
+      .subscribe({ next: (data) => this.projectPurchases.set(data) });
+    this.api.getDashboardSummary({ projectId: this.selectedProjectId() })
+      .subscribe({ next: (data) => this.summary.set(data) });
     // One page of size 1 is enough: only the total is read.
-    this.api.getPurchases({ projectId: this.selectedProjectId, paymentStatus: 'PAID' }, { page: 0, size: 1 })
-      .subscribe({ next: (data) => (this.paidCount = data.totalElements) });
-    this.api.getClients().subscribe({ next: (data) => (this.clients = data) });
-    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
+    this.api.getPurchases({ projectId: this.selectedProjectId(), paymentStatus: 'PAID' }, { page: 0, size: 1 })
+      .subscribe({ next: (data) => this.paidCount.set(data.totalElements) });
+    this.api.getClients().subscribe({ next: (data) => this.clients.set(data) });
+    this.api.getProjects().subscribe({ next: (data) => this.projects.set(data) });
   }
 
   submit(): void {
@@ -305,7 +313,7 @@ export class PurchasesComponent implements OnInit {
       notes: purchase.notes ?? '',
       clientId: purchase.clientId ?? null,
       apartmentId: purchase.apartmentId ?? null,
-      projectId: this.selectedProjectId ?? purchase.projectId ?? null
+      projectId: this.selectedProjectId() ?? purchase.projectId ?? null
     });
   }
 
@@ -338,7 +346,7 @@ export class PurchasesComponent implements OnInit {
       notes: '',
       clientId: null,
       apartmentId: null,
-      projectId: this.selectedProjectId
+      projectId: this.selectedProjectId()
     });
   }
 
@@ -351,7 +359,7 @@ export class PurchasesComponent implements OnInit {
     this.filters = {
       search: '',
       clientId: null,
-      projectId: this.selectedProjectId,
+      projectId: this.selectedProjectId(),
       paymentStatus: '',
       dateFrom: '',
       dateTo: ''
@@ -359,7 +367,7 @@ export class PurchasesComponent implements OnInit {
   }
 
   getApartmentName(apartmentId?: number | null): string {
-    return this.apartments.find((item) => item.id === apartmentId)?.apartmentNumber ?? '-';
+    return this.apartments().find((item) => item.id === apartmentId)?.apartmentNumber ?? '-';
   }
 
   getPurchaseCollectedAmount(purchase: ClientPurchase): number {
@@ -414,7 +422,7 @@ export class PurchasesComponent implements OnInit {
   }
 
   private syncClientToApartment(apartmentId: number | null): void {
-    const apartment = this.apartments.find((item) => item.id === apartmentId);
+    const apartment = this.apartments().find((item) => item.id === apartmentId);
     if (!apartment) {
       return;
     }
@@ -438,7 +446,7 @@ export class PurchasesComponent implements OnInit {
       return;
     }
 
-    const apartment = this.apartments.find((item) => item.id === apartmentId);
+    const apartment = this.apartments().find((item) => item.id === apartmentId);
     if (!apartment) {
       return;
     }

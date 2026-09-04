@@ -8,7 +8,7 @@
   </div>
 
   <p-card header="Liste des fournisseurs">
-    <p-table #dt [value]="suppliers" responsiveLayout="scroll" [globalFilterFields]="['name', 'phone', 'email', 'type']" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
+    <p-table #dt [value]="suppliers()" responsiveLayout="scroll" [globalFilterFields]="['name', 'phone', 'email', 'type']" [paginator]="true" [rows]="8" [rowsPerPageOptions]="[8, 15, 25]" currentPageReportTemplate="Affichage de {first} à {last} sur {totalRecords}" [showCurrentPageReport]="true">
       <ng-template pTemplate="caption">
         <div class="table-toolbar">
           <input pInputText type="text" placeholder="Rechercher un fournisseur..." (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
@@ -63,13 +63,13 @@
       <div class="field">
         <label>Type</label>
         <div class="inline-select">
-          <p-dropdown formControlName="typeId" [options]="supplierTypes" optionLabel="label" optionValue="id" placeholder="Choisir"></p-dropdown>
+          <p-dropdown formControlName="typeId" [options]="supplierTypes()" optionLabel="label" optionValue="id" placeholder="Choisir"></p-dropdown>
           <button pButton type="button" icon="pi pi-plus" severity="secondary" (click)="openSupplierTypeDialog()"></button>
         </div>
       </div>
       <div class="field">
         <label>Taux de TVA habituel</label>
-        <p-dropdown formControlName="defaultVatRate" [options]="vatRates" optionLabel="label" optionValue="rate" placeholder="Aucun" [showClear]="true"></p-dropdown>
+        <p-dropdown formControlName="defaultVatRate" [options]="vatRates()" optionLabel="label" optionValue="rate" placeholder="Aucun" [showClear]="true"></p-dropdown>
       </div>
       <div class="field field-full">
         <label>Adresse</label>

@@ -4,16 +4,16 @@
       <div class="back-link">
         <a routerLink="/projects">Retour aux projets</a>
       </div>
-      <h2 class="page-title">{{ currentProject.name }}</h2>
-      <p class="page-subtitle">{{ currentProject.location || 'Localisation non renseignée' }}</p>
+      <h2 class="page-title">{{ project()!.name }}</h2>
+      <p class="page-subtitle">{{ project()!.location || 'Localisation non renseignée' }}</p>
     </div>
-    <p-tag [value]="getStatusLabel(currentProject.status)" [severity]="getStatusSeverity(currentProject.status)"></p-tag>
+    <p-tag [value]="getStatusLabel(project()!.status)" [severity]="getStatusSeverity(project()!.status)"></p-tag>
   </div>
 
   <section class="kpi-grid">
     <p-card>
       <div class="kpi-label">Budget projet</div>
-      <div class="kpi-value">{{ currentProject.budget ?? 0 | number:'1.0-2' }} DT</div>
+      <div class="kpi-value">{{ project()!.budget ?? 0 | number:'1.0-2' }} DT</div>
     </p-card>
     <p-card>
       <div class="kpi-label">Dépenses engagées</div>
@@ -49,13 +49,13 @@
         </div>
         <div class="metric-row">
           <span>Dernière mise à jour</span>
-          <strong>{{ currentProject.updatedAt | date:'dd/MM/yyyy HH:mm' }}</strong>
+          <strong>{{ project()!.updatedAt | date:'dd/MM/yyyy HH:mm' }}</strong>
         </div>
       </div>
     </p-card>
 
     <p-card header="Dépenses liées" class="span-8">
-      <p-table [value]="expenses" responsiveLayout="scroll">
+      <p-table [value]="expenses()" responsiveLayout="scroll">
         <ng-template pTemplate="header">
           <tr>
             <th>Date</th>
@@ -81,7 +81,7 @@
     </p-card>
 
     <p-card header="Achats clients" class="span-6">
-      <p-table [value]="purchases" responsiveLayout="scroll">
+      <p-table [value]="purchases()" responsiveLayout="scroll">
         <ng-template pTemplate="header">
           <tr>
             <th>Référence</th>
@@ -100,7 +100,7 @@
     </p-card>
 
     <p-card header="Acomptes reçus" class="span-6">
-      <p-table [value]="advances" responsiveLayout="scroll">
+      <p-table [value]="advances()" responsiveLayout="scroll">
         <ng-template pTemplate="header">
           <tr>
             <th>Référence</th>
@@ -120,14 +120,14 @@
 
     <p-card header="Historique projet" class="span-12">
       <div class="audit-list">
-        <div class="audit-row" *ngFor="let log of auditLogs">
+        <div class="audit-row" *ngFor="let log of auditLogs()">
           <div>
             <strong>{{ log.action }}</strong>
             <div class="audit-summary">{{ log.summary }}</div>
           </div>
           <div class="audit-date">{{ log.createdAt | date:'dd/MM/yyyy HH:mm' }}</div>
         </div>
-        <div class="empty-state" *ngIf="!auditLogs.length">Aucun historique disponible pour ce projet.</div>
+        <div class="empty-state" *ngIf="!auditLogs().length">Aucun historique disponible pour ce projet.</div>
       </div>
     </p-card>
   </section>

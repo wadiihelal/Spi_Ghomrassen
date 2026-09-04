@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -6,7 +6,7 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
 import { RouterLink } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/services/api.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import {
@@ -35,34 +35,38 @@ const TOP_DEBTORS = 5;
   standalone: true,
   imports: [CommonModule, RouterLink, CardModule, ButtonModule, ProgressSpinnerModule, TableModule, TagModule],
   templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.css'
+  styleUrl: './dashboard.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
+  /** The selected project as a stream, so the reaction can be released on destroy. */
+  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
-  loading = true;
-  summary?: DashboardSummary;
-  statements: ClientStatement[] = [];
-  projects: Project[] = [];
-  recentExpenses: Expense[] = [];
-  selectedProjectId: number | null = null;
+  /** Signals throughout, so the view refreshes under OnPush when a response lands (PERF-04). */
+  readonly loading = signal(true);
+  readonly summary = signal<DashboardSummary | undefined>(undefined);
+  readonly statements = signal<ClientStatement[]>([]);
+  readonly projects = signal<Project[]>([]);
+  readonly recentExpenses = signal<Expense[]>([]);
+  readonly selectedProjectId = signal<number | null>(null);
 
   /** Expense totals per project, keyed by project name, as aggregated by the backend. */
-  private expensesByProject = new Map<string, number>();
+  private readonly expensesByProject = signal<Map<string, number>>(new Map());
   /** Contracted totals per project, keyed by project name. */
-  private purchasesByProject = new Map<string, number>();
-  private monthlyExpenses: AmountByLabel[] = [];
+  private readonly purchasesByProject = signal<Map<string, number>>(new Map());
+  private readonly monthlyExpenses = signal<AmountByLabel[]>([]);
 
   ngOnInit(): void {
     // The projects list is small and bounded, and feeds the status counts and the budget cards.
     this.api.getProjects().pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({ next: (data) => (this.projects = data) });
+      .subscribe({ next: (data) => this.projects.set(data) });
 
-    this.projectContext.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef))
+    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((projectId) => {
-        this.selectedProjectId = projectId;
+        this.selectedProjectId.set(projectId);
         this.load();
       });
   }
@@ -73,49 +77,49 @@ export class DashboardComponent implements OnInit {
    * advance and reduce them in the browser (PERF-02).
    */
   private load(): void {
-    const scope: ReportScopeParams = { projectId: this.selectedProjectId };
+    const scope: ReportScopeParams = { projectId: this.selectedProjectId() };
     let pending = 6;
     const done = () => {
       pending -= 1;
       if (pending <= 0) {
-        this.loading = false;
+        this.loading.set(false);
       }
     };
 
     this.api.getDashboardSummary(scope).subscribe({
-      next: (data) => (this.summary = data),
+      next: (data) => this.summary.set(data),
       error: done,
       complete: done
     });
 
     this.api.getClientStatements(scope).subscribe({
-      next: (data) => (this.statements = data),
+      next: (data) => this.statements.set(data),
       error: done,
       complete: done
     });
 
     this.api.getExpensesByProject(scope).subscribe({
-      next: (data) => (this.expensesByProject = DashboardComponent.byLabel(data)),
+      next: (data) => (this.expensesByProject.set(DashboardComponent.byLabel(data))),
       error: done,
       complete: done
     });
 
     this.api.getPurchasesByProject(scope).subscribe({
-      next: (data) => (this.purchasesByProject = DashboardComponent.byLabel(data)),
+      next: (data) => (this.purchasesByProject.set(DashboardComponent.byLabel(data))),
       error: done,
       complete: done
     });
 
     this.api.getExpensesByMonth(scope).subscribe({
-      next: (data) => (this.monthlyExpenses = data),
+      next: (data) => this.monthlyExpenses.set(data),
       error: done,
       complete: done
     });
 
     this.api
-      .getExpenses({ projectId: this.selectedProjectId }, { page: 0, size: RECENT_EXPENSES, sort: 'expenseDate,desc' })
+      .getExpenses({ projectId: this.selectedProjectId() }, { page: 0, size: RECENT_EXPENSES, sort: 'expenseDate,desc' })
       .subscribe({
-        next: (data) => (this.recentExpenses = data.content),
+        next: (data) => this.recentExpenses.set(data.content),
         error: done,
         complete: done
       });
@@ -126,8 +130,8 @@ export class DashboardComponent implements OnInit {
   }
 
   get filteredProjects(): Project[] {
-    if (!this.selectedProjectId) return this.projects;
-    return this.projects.filter((project) => project.id === this.selectedProjectId);
+    if (!this.selectedProjectId()) return this.projects();
+    return this.projects().filter((project) => project.id === this.selectedProjectId());
   }
 
   get projectsCount(): number {
@@ -148,16 +152,16 @@ export class DashboardComponent implements OnInit {
 
   /** Business documents recorded in scope, counted by the backend. */
   get documentCount(): number {
-    return (this.summary?.expenses ?? 0) + (this.summary?.clientPurchases ?? 0)
-      + (this.summary?.clientAdvances ?? 0);
+    return (this.summary()?.expenses ?? 0) + (this.summary()?.clientPurchases ?? 0)
+      + (this.summary()?.clientAdvances ?? 0);
   }
 
   get totalCashIn(): number {
-    return this.summary?.totalAdvances ?? 0;
+    return this.summary()?.totalAdvances ?? 0;
   }
 
   get totalCashOut(): number {
-    return this.summary?.totalExpenses ?? 0;
+    return this.summary()?.totalExpenses ?? 0;
   }
 
   get balance(): number {
@@ -165,7 +169,7 @@ export class DashboardComponent implements OnInit {
   }
 
   get totalReceivables(): number {
-    return this.summary?.totalRemainingFromClients ?? 0;
+    return this.summary()?.totalRemainingFromClients ?? 0;
   }
 
   get totalBudget(): number {
@@ -178,11 +182,11 @@ export class DashboardComponent implements OnInit {
   }
 
   get estimatedMargin(): number {
-    return (this.summary?.totalPurchases ?? 0) - this.totalCashOut;
+    return (this.summary()?.totalPurchases ?? 0) - this.totalCashOut;
   }
 
   get collectionRate(): number {
-    const contracted = this.summary?.totalPurchases ?? 0;
+    const contracted = this.summary()?.totalPurchases ?? 0;
     if (!contracted) return 0;
     return Math.min(100, Math.round((this.totalCashIn / contracted) * 100));
   }
@@ -191,7 +195,7 @@ export class DashboardComponent implements OnInit {
     return this.filteredProjects
       .map((project) => ({
         name: project.name,
-        margin: (this.purchasesByProject.get(project.name) ?? 0) - (this.expensesByProject.get(project.name) ?? 0)
+        margin: (this.purchasesByProject().get(project.name) ?? 0) - (this.expensesByProject().get(project.name) ?? 0)
       }))
       .sort((a, b) => b.margin - a.margin)
       .slice(0, TOP_PROJECTS);
@@ -199,13 +203,13 @@ export class DashboardComponent implements OnInit {
 
   get topDebtors(): ClientStatement[] {
     // The statements are already scoped to the selected project by the backend.
-    return [...this.statements]
+    return [...this.statements()]
       .sort((a, b) => (b.remainingToPay ?? 0) - (a.remainingToPay ?? 0))
       .slice(0, TOP_DEBTORS);
   }
 
   get expenseTrend(): { label: string; amount: number; width: number }[] {
-    const entries = this.monthlyExpenses.slice(-TREND_MONTHS).map((row) => ({
+    const entries = this.monthlyExpenses().slice(-TREND_MONTHS).map((row) => ({
       label: DashboardComponent.monthLabel(row.label),
       amount: row.amount ?? 0,
       width: 0
@@ -262,7 +266,7 @@ export class DashboardComponent implements OnInit {
   }
 
   getProjectExpenseAmount(project: Project): number {
-    return this.expensesByProject.get(project.name) ?? 0;
+    return this.expensesByProject().get(project.name) ?? 0;
   }
 
   getProjectBudgetRemaining(project: Project): number {

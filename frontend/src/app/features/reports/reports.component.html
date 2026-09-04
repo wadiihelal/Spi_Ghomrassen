@@ -1,6 +1,6 @@
 <section class="reports-grid">
     <p-card header="Dépenses par catégorie">
-        <p-table [value]="byCategory" responsiveLayout="scroll">
+        <p-table [value]="byCategory()" responsiveLayout="scroll">
             <ng-template pTemplate="header">
                 <tr>
                     <th>Catégorie</th>
@@ -17,7 +17,7 @@
     </p-card>
 
     <p-card header="Dépenses par projet">
-        <p-table [value]="byProject" responsiveLayout="scroll">
+        <p-table [value]="byProject()" responsiveLayout="scroll">
             <ng-template pTemplate="header">
                 <tr>
                     <th>Projet</th>
@@ -52,7 +52,7 @@
     </p-card>
 
     <p-card header="Situation clients" class="full-span">
-        <p-table [value]="clientStatements" responsiveLayout="scroll">
+        <p-table [value]="clientStatements()" responsiveLayout="scroll">
             <ng-template pTemplate="header">
                 <tr>
                     <th>Client</th>

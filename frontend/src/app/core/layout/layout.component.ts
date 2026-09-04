@@ -1,5 +1,6 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
@@ -11,21 +12,33 @@ import { ProjectContextService } from '../services/project-context.service';
 import { Project } from '../../shared/models/models';
 import { forkJoin } from 'rxjs';
 
+/** The header shows the date and the hour, so a minute's resolution is enough. */
+const CLOCK_INTERVAL_MS = 60_000;
+
 @Component({
   selector: 'app-layout',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, ButtonModule, ToastModule, ConfirmDialogModule, DropdownModule],
   templateUrl: './layout.component.html',
-  styleUrl: './layout.component.css'
+  styleUrl: './layout.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LayoutComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly projectContext = inject(ProjectContextService);
+  private readonly destroyRef = inject(DestroyRef);
+  /** The selected project as a stream, so the reaction can be released on destroy. */
+  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
-  sidebarOpen = false;
-  currentDateTime = new Date();
-  projects: Project[] = [];
-  selectedProjectId: number | null = null;
+  readonly sidebarOpen = signal(false);
+  /**
+   * Header date. Refreshed every minute, not every second (FE-06): the old one-second timer
+   * forced an application-wide change-detection pass sixty times a minute for a display that
+   * shows no seconds.
+   */
+  readonly currentDateTime = signal(new Date());
+  readonly projects = signal<Project[]>([]);
+  readonly selectedProjectId = signal<number | null>(null);
   private timerId: ReturnType<typeof setInterval> | null = null;
 
   dailyNavItems = [
@@ -45,29 +58,28 @@ export class LayoutComponent implements OnInit, OnDestroy {
   ];
 
   get selectedProject(): Project | null {
-    return this.projectContext.getSelectedProject(this.projects);
+    return this.projectContext.getSelectedProject(this.projects());
   }
 
   ngOnInit(): void {
-    this.timerId = setInterval(() => {
-      this.currentDateTime = new Date();
-    }, 1000);
+    this.timerId = setInterval(() => this.currentDateTime.set(new Date()), CLOCK_INTERVAL_MS);
 
     forkJoin({
       projects: this.api.getProjects(),
       selectedProjectId: this.projectContext.loadSelectedProjectId()
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ projects, selectedProjectId }) => {
-        this.projects = projects;
-        this.selectedProjectId = selectedProjectId;
+        this.projects.set(projects);
+        this.selectedProjectId.set(selectedProjectId);
       },
       error: () => {
-        this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
+        this.api.getProjects().pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({ next: (data) => this.projects.set(data) });
       }
     });
 
-    this.projectContext.selectedProjectId$.subscribe((projectId) => {
-      this.selectedProjectId = projectId;
+    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+      this.selectedProjectId.set(projectId);
     });
   }
 
@@ -78,13 +90,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   toggleSidebar(): void {
-    this.sidebarOpen = !this.sidebarOpen;
+    this.sidebarOpen.update((open) => !open);
   }
 
   selectProject(projectId: number | null): void {
     this.projectContext.setSelectedProjectId(projectId).subscribe({
       next: () => {
-        this.sidebarOpen = false;
+        this.sidebarOpen.set(false);
       }
     });
   }

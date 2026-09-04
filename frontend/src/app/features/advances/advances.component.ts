@@ -1,5 +1,6 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -29,7 +30,8 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule, TagModule],
   templateUrl: './advances.component.html',
-  styleUrl: './advances.component.css'
+  styleUrl: './advances.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdvancesComponent implements OnInit {
   private readonly api = inject(ApiService);
@@ -37,6 +39,8 @@ export class AdvancesComponent implements OnInit {
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
+  /** The selected project as a stream, so the reaction can be released on destroy. */
+  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   /** One page of advances, filtered and counted by the server (PERF-02). */
   readonly table = new LazyTable<ClientAdvance>(
@@ -45,17 +49,17 @@ export class AdvancesComponent implements OnInit {
   );
 
   /** Advances on the apartment currently chosen in the form, loaded on demand. */
-  selectedApartmentAdvances: ClientAdvance[] = [];
+  readonly selectedApartmentAdvances = signal<ClientAdvance[]>([]);
   /** Advance totals per payment method for the selected project, aggregated by the backend. */
-  advanceTotalsByMethod: AmountByLabel[] = [];
-  apartments: Apartment[] = [];
-  purchases: ClientPurchase[] = [];
-  clients: Client[] = [];
-  projects: Project[] = [];
+  readonly advanceTotalsByMethod = signal<AmountByLabel[]>([]);
+  readonly apartments = signal<Apartment[]>([]);
+  readonly purchases = signal<ClientPurchase[]>([]);
+  readonly clients = signal<Client[]>([]);
+  readonly projects = signal<Project[]>([]);
   editingId: number | null = null;
   dialogVisible = false;
   dialogProjectId: number | null = null;
-  selectedProjectId: number | null = null;
+  readonly selectedProjectId = signal<number | null>(null);
   filters = {
     search: '',
     clientId: null as number | null,
@@ -76,13 +80,13 @@ export class AdvancesComponent implements OnInit {
   getClientName(row: ClientAdvance): string {
     if (row.clientName) return row.clientName;
     const clientId = row.clientId;
-    return this.clients.find((item) => item.id === clientId)?.fullName ?? '-';
+    return this.clients().find((item) => item.id === clientId)?.fullName ?? '-';
   }
 
   getProjectName(row: ClientAdvance): string {
     if (row.projectName) return row.projectName;
     const projectId = row.projectId;
-    return this.projects.find((item) => item.id === projectId)?.name ?? '-';
+    return this.projects().find((item) => item.id === projectId)?.name ?? '-';
   }
 
   getApartmentLabel(apartment?: Apartment | null): string {
@@ -95,13 +99,13 @@ export class AdvancesComponent implements OnInit {
   getApartmentName(row: ClientAdvance): string {
     if (row.apartmentNumber) return row.apartmentNumber;
     const apartmentId = row.apartmentId;
-    return this.apartments.find((item) => item.id === apartmentId)?.apartmentNumber ?? '-';
+    return this.apartments().find((item) => item.id === apartmentId)?.apartmentNumber ?? '-';
   }
 
   get selectedApartment(): Apartment | undefined {
     const apartmentId = this.form.get('apartmentId')?.value;
     return this.availableApartments.find((item) => item.id === apartmentId)
-      ?? this.apartments.find((item) => item.id === apartmentId);
+      ?? this.apartments().find((item) => item.id === apartmentId);
   }
 
   get selectedApartmentId(): number | null {
@@ -113,24 +117,25 @@ export class AdvancesComponent implements OnInit {
   }
 
   get availableApartments(): Apartment[] {
-    return this.apartments.filter((apartment) => {
-      const activeProjectId = this.dialogProjectId ?? this.selectedProjectId;
+    return this.apartments().filter((apartment) => {
+      const activeProjectId = this.dialogProjectId ?? this.selectedProjectId();
       const matchesProject = !activeProjectId || apartment.projectId === activeProjectId;
       return matchesProject && !!apartment.acquirerId;
     });
   }
 
-  get currentProjectName(): string {
-    const activeProjectId = this.dialogProjectId ?? this.selectedProjectId;
+  /** Memoised: the header's project name, recomputed only when it changes. */
+  readonly currentProjectName = computed(() => {
+    const activeProjectId = this.dialogProjectId ?? this.selectedProjectId();
     if (!activeProjectId) return 'Aucun projet sélectionné';
-    return this.projects.find((item) => item.id === activeProjectId)?.name ?? 'Projet en cours';
-  }
+    return this.projects().find((item) => item.id === activeProjectId)?.name ?? 'Projet en cours';
+  });
 
   get projectClients(): Client[] {
-    if (!this.selectedProjectId) {
-      return this.clients;
+    if (!this.selectedProjectId()) {
+      return this.clients();
     }
-    return this.clients.filter((client) => client.projectId === this.selectedProjectId);
+    return this.clients().filter((client) => client.projectId === this.selectedProjectId());
   }
 
   getPaymentMethodLabel(value?: string | null): string {
@@ -146,7 +151,7 @@ export class AdvancesComponent implements OnInit {
   }
 
   get selectedExistingAdvancesAmount(): number {
-    return this.selectedApartmentAdvances
+    return this.selectedApartmentAdvances()
       .filter((advance) => advance.id !== this.editingId)
       .reduce((sum, advance) => sum + (advance.amount ?? 0), 0);
   }
@@ -189,15 +194,15 @@ export class AdvancesComponent implements OnInit {
    * browser no longer holds the rows to reduce (PERF-02).
    */
   get filteredAdvanceCount(): number {
-    return this.table.totalRecords;
+    return this.table.totalRecords();
   }
 
   get filteredAdvanceTotal(): number {
-    return this.advanceTotalsByMethod.reduce((sum, row) => sum + (row.amount ?? 0), 0);
+    return this.advanceTotalsByMethod().reduce((sum, row) => sum + (row.amount ?? 0), 0);
   }
 
   get filteredBankTransferTotal(): number {
-    return this.advanceTotalsByMethod.find((row) => row.label === 'BANK_TRANSFER')?.amount ?? 0;
+    return this.advanceTotalsByMethod().find((row) => row.label === 'BANK_TRANSFER')?.amount ?? 0;
   }
 
   form = this.fb.group({
@@ -212,12 +217,16 @@ export class AdvancesComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.projectContext.selectedProjectId$.subscribe((projectId) => {
-      this.selectedProjectId = projectId;
+    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+      this.selectedProjectId.set(projectId);
       if (!this.dialogVisible || !this.editingId) {
         this.dialogProjectId = projectId;
       }
       this.filters.projectId = projectId;
+      // The table and every project-scoped lookup must follow the header (PERF-02): the
+      // first page is fetched before the context arrives, and the user can switch project.
+      this.table.onFilterChange();
+      this.loadData();
       if (!this.editingId) {
         const currentApartmentId = this.form.get('apartmentId')?.value;
         const apartmentStillVisible = this.availableApartments.some((item) => item.id === currentApartmentId);
@@ -226,13 +235,12 @@ export class AdvancesComponent implements OnInit {
         }
       }
     });
-    this.loadData();
   }
 
   /** Filters sent to the server; the header's project always narrows the list. */
   private get serverFilter(): ListFilter {
     return {
-      projectId: this.selectedProjectId ?? this.filters.projectId,
+      projectId: this.selectedProjectId() ?? this.filters.projectId,
       clientId: this.filters.clientId,
       paymentMethod: this.filters.paymentMethod || null,
       dateFrom: this.filters.dateFrom,
@@ -244,14 +252,14 @@ export class AdvancesComponent implements OnInit {
   loadData(): void {
     // Form lookups, scoped to the selected project and bounded: the apartment dropdown and the
     // contract behind each advance. Never the table's own rows, which page server-side.
-    this.api.getApartmentOptions(this.selectedProjectId)
-      .subscribe({ next: (data) => (this.apartments = data) });
-    this.api.getPurchaseOptions(this.selectedProjectId)
-      .subscribe({ next: (data) => (this.purchases = data) });
-    this.api.getAdvancesByPaymentMethod({ projectId: this.selectedProjectId })
-      .subscribe({ next: (data) => (this.advanceTotalsByMethod = data) });
-    this.api.getClients().subscribe({ next: (data) => (this.clients = data) });
-    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
+    this.api.getApartmentOptions(this.selectedProjectId())
+      .subscribe({ next: (data) => this.apartments.set(data) });
+    this.api.getPurchaseOptions(this.selectedProjectId())
+      .subscribe({ next: (data) => this.purchases.set(data) });
+    this.api.getAdvancesByPaymentMethod({ projectId: this.selectedProjectId() })
+      .subscribe({ next: (data) => this.advanceTotalsByMethod.set(data) });
+    this.api.getClients().subscribe({ next: (data) => this.clients.set(data) });
+    this.api.getProjects().subscribe({ next: (data) => this.projects.set(data) });
   }
 
   submit(): void {
@@ -282,7 +290,7 @@ export class AdvancesComponent implements OnInit {
   edit(advance: ClientAdvance): void {
     this.editingId = advance.id ?? null;
     this.dialogVisible = true;
-    this.dialogProjectId = advance.projectId ?? this.selectedProjectId;
+    this.dialogProjectId = advance.projectId ?? this.selectedProjectId();
     this.form.patchValue({
       reference: advance.reference ?? '',
       advanceDate: advance.advanceDate ?? '',
@@ -312,7 +320,7 @@ export class AdvancesComponent implements OnInit {
   resetForm(): void {
     this.editingId = null;
     this.dialogVisible = false;
-    this.dialogProjectId = this.selectedProjectId;
+    this.dialogProjectId = this.selectedProjectId();
     this.form.reset({
       reference: '',
       advanceDate: '',
@@ -327,7 +335,7 @@ export class AdvancesComponent implements OnInit {
 
   openCreateDialog(): void {
     this.resetForm();
-    this.dialogProjectId = this.selectedProjectId;
+    this.dialogProjectId = this.selectedProjectId();
     this.dialogVisible = true;
   }
 
@@ -335,7 +343,7 @@ export class AdvancesComponent implements OnInit {
     this.filters = {
       search: '',
       clientId: null,
-      projectId: this.selectedProjectId,
+      projectId: this.selectedProjectId(),
       paymentMethod: '',
       dateFrom: '',
       dateTo: ''
@@ -347,7 +355,7 @@ export class AdvancesComponent implements OnInit {
       return undefined;
     }
 
-    return this.purchases.find((purchase) => purchase.apartmentId === apartmentId);
+    return this.purchases().find((purchase) => purchase.apartmentId === apartmentId);
   }
 
   getPurchaseForAdvance(advance: ClientAdvance): ClientPurchase | undefined {
@@ -390,10 +398,10 @@ export class AdvancesComponent implements OnInit {
   /** Advances already recorded on the apartment chosen in the form, fetched when it changes. */
   private loadSelectedApartmentAdvances(apartmentId: number | null): void {
     if (!apartmentId) {
-      this.selectedApartmentAdvances = [];
+      this.selectedApartmentAdvances.set([]);
       return;
     }
     this.api.getAdvancesForApartment(apartmentId)
-      .subscribe({ next: (data) => (this.selectedApartmentAdvances = data) });
+      .subscribe({ next: (data) => this.selectedApartmentAdvances.set(data) });
   }
 }

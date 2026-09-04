@@ -20,6 +20,9 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
 
     List<Client> findByProjectId(Long projectId);
 
+    @EntityGraph(attributePaths = {"project"})
+    Page<Client> findByProjectId(Long projectId, Pageable pageable);
+
     long countByProjectId(Long projectId);
 
     /**

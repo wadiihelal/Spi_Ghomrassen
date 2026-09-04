@@ -1,16 +1,16 @@
 <p-toast position="top-right"></p-toast>
 <p-confirmDialog></p-confirmDialog>
-@if (!selectedProjectId && projects.length) {
+@if (!selectedProjectId() && projects().length) {
   <div class="project-gate">
     <div class="project-gate-card">
       <div class="project-gate-eyebrow">Contexte Projet</div>
       <h2>Choisir le projet de travail</h2>
       <p>Chaque espace de travail est indépendant. Sélectionnez le projet sur lequel vous voulez travailler maintenant.</p>
       <p-dropdown
-        [options]="projects"
+        [options]="projects()"
         optionLabel="name"
         optionValue="id"
-        [ngModel]="selectedProjectId"
+        [ngModel]="selectedProjectId()"
         (ngModelChange)="selectProject($event)"
         placeholder="Choisir projet">
       </p-dropdown>
@@ -18,19 +18,19 @@
   </div>
 }
 <div class="app-shell">
-  <aside class="sidebar" [class.open]="sidebarOpen">
+  <aside class="sidebar" [class.open]="sidebarOpen()">
     <div class="brand">SP Immobilière GHOMRASSEN</div>
     <nav>
       <div class="nav-section-label">Travail quotidien</div>
       @for (item of dailyNavItems; track item.route) {
-        <a [routerLink]="item.route" routerLinkActive="active-link" (click)="sidebarOpen = false">
+        <a [routerLink]="item.route" routerLinkActive="active-link" (click)="sidebarOpen.set(false)">
           <i [class]="item.icon"></i>
           <span>{{ item.label }}</span>
         </a>
       }
       <div class="nav-section-label">Paramètres</div>
       @for (item of settingsNavItems; track item.route) {
-        <a [routerLink]="item.route" routerLinkActive="active-link" (click)="sidebarOpen = false">
+        <a [routerLink]="item.route" routerLinkActive="active-link" (click)="sidebarOpen.set(false)">
           <i [class]="item.icon"></i>
           <span>{{ item.label }}</span>
         </a>
@@ -38,7 +38,7 @@
     </nav>
   </aside>
 
-  <div class="overlay" [class.show]="sidebarOpen" (click)="sidebarOpen = false"></div>
+  <div class="overlay" [class.show]="sidebarOpen()" (click)="sidebarOpen.set(false)"></div>
 
   <div class="content-wrapper">
     <header class="topbar">
@@ -59,18 +59,18 @@
         <div class="project-switcher">
           <span class="datetime-label">Projet de travail</span>
           <p-dropdown
-            [options]="projects"
+            [options]="projects()"
             optionLabel="name"
             optionValue="id"
-            [ngModel]="selectedProjectId"
+            [ngModel]="selectedProjectId()"
             (ngModelChange)="selectProject($event)"
             placeholder="Choisir projet">
           </p-dropdown>
         </div>
         <div class="datetime-box">
           <span class="datetime-label">Date et heure actuelles</span>
-          <strong>{{ currentDateTime | date:'dd/MM/yyyy' }}</strong>
-          <span>{{ currentDateTime | date:'HH:mm:ss' }}</span>
+          <strong>{{ currentDateTime() | date:'dd/MM/yyyy' }}</strong>
+          <span>{{ currentDateTime() | date:'HH:mm' }}</span>
         </div>
       </div>
     </header>

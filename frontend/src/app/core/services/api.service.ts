@@ -134,8 +134,12 @@ export class ApiService {
     return this.http.delete<void>(`${this.baseUrl}/projects/active-context`);
   }
 
-  getClients(): Observable<Client[]> {
-    return this.getReferenceList<Client>('/clients');
+  /**
+   * Clients as a dropdown and list source. Optionally narrowed to one project, so the clients
+   * screen no longer filters a full list in the browser.
+   */
+  getClients(projectId?: number | null): Observable<Client[]> {
+    return this.getReferenceList<Client>('/clients', { projectId });
   }
 
   createClient(payload: Client): Observable<Client> {

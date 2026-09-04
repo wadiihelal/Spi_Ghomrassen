@@ -13,7 +13,12 @@ public interface ClientService {
     /**
      * Returns clients using the requested pagination.
      */
-    Page<ClientResponse> findAll(Pageable pageable);
+    /**
+     * Returns clients, optionally restricted to one project.
+     *
+     * @param projectId project to restrict to, or {@code null} for every client
+     */
+    Page<ClientResponse> findAll(Long projectId, Pageable pageable);
 
     /**
      * Returns a single client by identifier.

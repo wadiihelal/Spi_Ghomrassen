@@ -1,5 +1,6 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -16,24 +17,33 @@ import { Client, Project } from '../../shared/models/models';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, DialogModule],
   templateUrl: './clients.component.html',
-  styleUrl: './clients.component.css'
+  styleUrl: './clients.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ClientsComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly fb = inject(FormBuilder);
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
+  private readonly destroyRef = inject(DestroyRef);
+  /** The selected project as a stream, so the reaction can be released on destroy. */
+  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
-  clients: Client[] = [];
-  projects: Project[] = [];
+  /** Signals, so the view refreshes under OnPush when an HTTP response lands (PERF-04). */
+  readonly clients = signal<Client[]>([]);
+  readonly projects = signal<Project[]>([]);
+  readonly selectedProjectId = signal<number | null>(null);
   editingId: number | null = null;
   dialogVisible = false;
-  selectedProjectId: number | null = null;
 
-  get currentProjectName(): string {
-    if (!this.selectedProjectId) return 'Aucun projet sélectionné';
-    return this.projects.find((item) => item.id === this.selectedProjectId)?.name ?? 'Projet en cours';
-  }
+  /** The clients of the selected project; the backend does the filtering. */
+  readonly filteredClients = computed(() => this.clients());
+
+  readonly currentProjectName = computed(() => {
+    const projectId = this.selectedProjectId();
+    if (!projectId) return 'Aucun projet sélectionné';
+    return this.projects().find((item) => item.id === projectId)?.name ?? 'Projet en cours';
+  });
 
   form = this.fb.group({
     fullName: ['', [Validators.required]],
@@ -47,8 +57,8 @@ export class ClientsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.projectContext.selectedProjectId$.subscribe((projectId) => {
-      this.selectedProjectId = projectId;
+    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+      this.selectedProjectId.set(projectId);
       if (!this.editingId) {
         this.form.patchValue({ projectId });
       }
@@ -57,17 +67,10 @@ export class ClientsComponent implements OnInit {
   }
 
   loadClients(): void {
-    this.api.getClients().subscribe({
-      next: (data) => (this.clients = data)
+    this.api.getClients(this.selectedProjectId()).subscribe({
+      next: (data) => this.clients.set(data)
     });
-    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
-  }
-
-  get filteredClients(): Client[] {
-    if (!this.selectedProjectId) {
-      return this.clients;
-    }
-    return this.clients.filter((client) => client.projectId === this.selectedProjectId);
+    this.api.getProjects().subscribe({ next: (data) => (this.projects.set(data)) });
   }
 
   submit(): void {
@@ -102,7 +105,7 @@ export class ClientsComponent implements OnInit {
       cinOrFiscalId: client.cinOrFiscalId ?? '',
       notes: client.notes ?? '',
       active: client.active ?? true,
-      projectId: this.selectedProjectId ?? client.projectId ?? null
+      projectId: this.selectedProjectId() ?? client.projectId ?? null
     });
   }
 
@@ -135,7 +138,7 @@ export class ClientsComponent implements OnInit {
       cinOrFiscalId: '',
       notes: '',
       active: true,
-      projectId: this.selectedProjectId
+      projectId: this.selectedProjectId()
     });
   }
 

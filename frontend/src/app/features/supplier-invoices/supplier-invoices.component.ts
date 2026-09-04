@@ -1,5 +1,6 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -22,7 +23,8 @@ import { LazyTable } from '../../core/services/lazy-table';
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, CardModule, ButtonModule, InputTextModule, InputNumberModule, DropdownModule, DialogModule],
   templateUrl: './supplier-invoices.component.html',
-  styleUrl: './supplier-invoices.component.css'
+  styleUrl: './supplier-invoices.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SupplierInvoicesComponent implements OnInit {
   private readonly api = inject(ApiService);
@@ -30,6 +32,8 @@ export class SupplierInvoicesComponent implements OnInit {
   private readonly ui = inject(UiService);
   private readonly projectContext = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
+  /** The selected project as a stream, so the reaction can be released on destroy. */
+  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
   /** One page of invoices, filtered and counted by the server (PERF-02). */
   readonly table = new LazyTable<SupplierInvoice>(
@@ -37,22 +41,23 @@ export class SupplierInvoicesComponent implements OnInit {
     this.destroyRef
   );
 
-  suppliers: Supplier[] = [];
-  vatRates: VatRateOption[] = [];
-  projects: Project[] = [];
+  readonly suppliers = signal<Supplier[]>([]);
+  readonly vatRates = signal<VatRateOption[]>([]);
+  readonly projects = signal<Project[]>([]);
   editingId: number | null = null;
   dialogVisible = false;
-  selectedProjectId: number | null = null;
+  readonly selectedProjectId = signal<number | null>(null);
   filters = {
     projectId: null as number | null,
     supplierId: null as number | null,
     search: ''
   };
 
-  get currentProjectName(): string {
-    if (!this.selectedProjectId) return 'Aucun projet sélectionné';
-    return this.projects.find((item) => item.id === this.selectedProjectId)?.name ?? 'Projet en cours';
-  }
+  /** Memoised: the header's project name, recomputed only when it changes. */
+  readonly currentProjectName = computed(() => {
+    if (!this.selectedProjectId()) return 'Aucun projet sélectionné';
+    return this.projects().find((item) => item.id === this.selectedProjectId())?.name ?? 'Projet en cours';
+  });
 
   form = this.fb.group({
     invoiceNumber: ['', [Validators.required]],
@@ -67,9 +72,12 @@ export class SupplierInvoicesComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.projectContext.selectedProjectId$.subscribe((projectId) => {
-      this.selectedProjectId = projectId;
+    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+      this.selectedProjectId.set(projectId);
       this.filters.projectId = projectId;
+      // The table and every project-scoped lookup must follow the header (PERF-02): the
+      // first page is fetched before the context arrives, and the user can switch project.
+      this.table.onFilterChange();
       if (!this.editingId) {
         this.form.patchValue({ projectId });
       }
@@ -80,16 +88,16 @@ export class SupplierInvoicesComponent implements OnInit {
   /** Filters sent to the server; the header's project always narrows the list. */
   private get serverFilter(): ListFilter {
     return {
-      projectId: this.selectedProjectId ?? this.filters.projectId,
+      projectId: this.selectedProjectId() ?? this.filters.projectId,
       supplierId: this.filters.supplierId,
       search: this.filters.search
     };
   }
 
   loadData(): void {
-    this.api.getSuppliers().subscribe({ next: (data) => (this.suppliers = data) });
-    this.api.getProjects().subscribe({ next: (data) => (this.projects = data) });
-    this.api.getVatRates().subscribe({ next: (data) => (this.vatRates = data) });
+    this.api.getSuppliers().subscribe({ next: (data) => this.suppliers.set(data) });
+    this.api.getProjects().subscribe({ next: (data) => this.projects.set(data) });
+    this.api.getVatRates().subscribe({ next: (data) => this.vatRates.set(data) });
   }
 
   submit(): void {
@@ -122,7 +130,7 @@ export class SupplierInvoicesComponent implements OnInit {
       attachmentUrl: row.attachmentUrl ?? '',
       detail: row.detail ?? '',
       supplierId: row.supplierId ?? null,
-      projectId: this.selectedProjectId ?? row.projectId ?? null
+      projectId: this.selectedProjectId() ?? row.projectId ?? null
     });
   }
 
@@ -151,7 +159,7 @@ export class SupplierInvoicesComponent implements OnInit {
       attachmentUrl: '',
       detail: '',
       supplierId: null,
-      projectId: this.selectedProjectId
+      projectId: this.selectedProjectId()
     });
   }
 
@@ -175,7 +183,7 @@ export class SupplierInvoicesComponent implements OnInit {
 
   /** Proposes the rate this supplier usually invoices, falling back to 19 %. */
   onSupplierChange(supplierId: number | null): void {
-    const supplier = this.suppliers.find((item) => item.id === supplierId);
+    const supplier = this.suppliers().find((item) => item.id === supplierId);
     this.form.patchValue({ vatRate: supplier?.defaultVatRate ?? FALLBACK_VAT_RATE });
   }
 

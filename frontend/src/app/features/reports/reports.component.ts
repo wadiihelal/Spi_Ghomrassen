@@ -1,5 +1,6 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { FormsModule } from '@angular/forms';
@@ -14,17 +15,21 @@ import { AmountByLabel, ClientStatement, Project, ReportScopeParams } from '../.
   standalone: true,
   imports: [CommonModule, FormsModule, CardModule, TableModule, ButtonModule, CheckboxModule],
   templateUrl: './reports.component.html',
-  styleUrl: './reports.component.css'
+  styleUrl: './reports.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReportsComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly projectContext = inject(ProjectContextService);
+  private readonly destroyRef = inject(DestroyRef);
+  /** The selected project as a stream, so the reaction can be released on destroy. */
+  private readonly selectedProjectId$ = toObservable(this.projectContext.selectedProjectId);
 
-  byCategory: AmountByLabel[] = [];
-  byProject: AmountByLabel[] = [];
-  clientStatements: ClientStatement[] = [];
-  projects: Project[] = [];
-  selectedProjectId: number | null = null;
+  readonly byCategory = signal<AmountByLabel[]>([]);
+  readonly byProject = signal<AmountByLabel[]>([]);
+  readonly clientStatements = signal<ClientStatement[]>([]);
+  readonly projects = signal<Project[]>([]);
+  readonly selectedProjectId = signal<number | null>(null);
   selectedYear = new Date().getFullYear();
   selectedMonth: number | null = new Date().getMonth() + 1;
   /** Aggregate across every project instead of the one selected in the header. */
@@ -33,9 +38,9 @@ export class ReportsComponent implements OnInit {
   exportingPdf = false;
 
   ngOnInit(): void {
-    this.api.getProjects().subscribe((data) => (this.projects = data));
-    this.projectContext.selectedProjectId$.subscribe((projectId) => {
-      this.selectedProjectId = projectId;
+    this.api.getProjects().subscribe((data) => this.projects.set(data));
+    this.selectedProjectId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((projectId) => {
+      this.selectedProjectId.set(projectId);
       this.loadReports();
     });
   }
@@ -43,7 +48,7 @@ export class ReportsComponent implements OnInit {
   /** Scope sent to every report call: the header's project unless "tous les projets" is on. */
   get scope(): ReportScopeParams {
     return {
-      projectId: this.allProjects ? 'ALL' : this.selectedProjectId,
+      projectId: this.allProjects ? 'ALL' : this.selectedProjectId(),
       year: this.selectedYear,
       month: this.selectedMonth
     };
@@ -52,7 +57,7 @@ export class ReportsComponent implements OnInit {
   get scopeLabel(): string {
     const projectName = this.allProjects
       ? 'Tous les projets'
-      : this.projects.find((project) => project.id === this.selectedProjectId)?.name ?? 'Tous les projets';
+      : this.projects().find((project) => project.id === this.selectedProjectId())?.name ?? 'Tous les projets';
     const period = this.selectedMonth
       ? `${String(this.selectedMonth).padStart(2, '0')}/${this.selectedYear}`
       : `année ${this.selectedYear}`;
@@ -61,9 +66,9 @@ export class ReportsComponent implements OnInit {
 
   loadReports(): void {
     const scope = this.scope;
-    this.api.getExpensesByCategory(scope).subscribe((data) => (this.byCategory = data));
-    this.api.getExpensesByProject(scope).subscribe((data) => (this.byProject = data));
-    this.api.getClientStatements(scope).subscribe((data) => (this.clientStatements = data));
+    this.api.getExpensesByCategory(scope).subscribe((data) => this.byCategory.set(data));
+    this.api.getExpensesByProject(scope).subscribe((data) => this.byProject.set(data));
+    this.api.getClientStatements(scope).subscribe((data) => this.clientStatements.set(data));
   }
 
   exportExcel(): void {

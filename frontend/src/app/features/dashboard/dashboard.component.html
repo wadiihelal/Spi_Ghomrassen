@@ -1,4 +1,4 @@
-@if (loading) {
+@if (loading()) {
   <div class="centered"><p-progressSpinner ariaLabel="loading"></p-progressSpinner></div>
 } @else {
   <section class="hero-card">
@@ -68,7 +68,7 @@
         <span class="kpi-label">Total dépenses</span>
         <i class="pi pi-wallet"></i>
       </div>
-      <div class="kpi-value">{{ summary?.totalExpenses ?? 0 | number:'1.0-2' }} DT</div>
+      <div class="kpi-value">{{ summary()?.totalExpenses ?? 0 | number:'1.0-2' }} DT</div>
       <div class="kpi-foot">Sorties financières globales</div>
     </p-card>
 
@@ -77,7 +77,7 @@
         <span class="kpi-label">Total encaissé</span>
         <i class="pi pi-credit-card"></i>
       </div>
-      <div class="kpi-value">{{ summary?.totalAdvances ?? 0 | number:'1.0-2' }} DT</div>
+      <div class="kpi-value">{{ summary()?.totalAdvances ?? 0 | number:'1.0-2' }} DT</div>
       <div class="kpi-foot">Encaissements reçus des clients</div>
     </p-card>
 
@@ -86,7 +86,7 @@
         <span class="kpi-label">Total achats</span>
         <i class="pi pi-shopping-cart"></i>
       </div>
-      <div class="kpi-value">{{ summary?.totalPurchases ?? 0 | number:'1.0-2' }} DT</div>
+      <div class="kpi-value">{{ summary()?.totalPurchases ?? 0 | number:'1.0-2' }} DT</div>
       <div class="kpi-foot">Ventes et achats enregistrés</div>
     </p-card>
 
@@ -110,7 +110,7 @@
     <p-card>
       <div class="mini-stat-title">Transactions</div>
       <div class="mini-stat-value">{{ documentCount | number }}</div>
-      <div class="mini-stat-meta">{{ summary?.expenses ?? 0 }} dépenses • {{ summary?.clientPurchases ?? 0 }} achats • {{ summary?.clientAdvances ?? 0 }} acomptes</div>
+      <div class="mini-stat-meta">{{ summary()?.expenses ?? 0 }} dépenses • {{ summary()?.clientPurchases ?? 0 }} achats • {{ summary()?.clientAdvances ?? 0 }} acomptes</div>
     </p-card>
 
     <p-card>
@@ -136,7 +136,7 @@
 
   <section class="dashboard-grid">
     <p-card header="Suivi des dépenses récentes" class="span-7">
-      <p-table [value]="recentExpenses" responsiveLayout="scroll">
+      <p-table [value]="recentExpenses()" responsiveLayout="scroll">
         <ng-template pTemplate="header">
           <tr>
             <th>Date</th>
@@ -175,7 +175,7 @@
 
     <p-card header="Projets" class="span-7">
       <div class="project-list">
-        @for (project of projects.slice(0, 6); track project.id ?? project.name) {
+        @for (project of projects().slice(0, 6); track project.id ?? project.name) {
           <div class="project-row">
             <div class="project-main">
               <div class="project-title-row">
@@ -200,7 +200,7 @@
             </div>
           </div>
         }
-        @if (!projects.length) {
+        @if (!projects().length) {
           <div class="empty-state">Aucun projet enregistré.</div>
         }
       </div>
@@ -239,7 +239,7 @@
   </section>
 
   <p-card header="Situation clients">
-    <p-table [value]="statements" [tableStyle]="{ 'min-width': '50rem' }" responsiveLayout="scroll">
+    <p-table [value]="statements()" [tableStyle]="{ 'min-width': '50rem' }" responsiveLayout="scroll">
       <ng-template pTemplate="header">
         <tr>
           <th>Client</th>
