@@ -29,7 +29,7 @@ mvn -q verify
 mvn test -Dtest=VatCalculationTest
 
 # Une seule méthode
-mvn test -Dtest=AdvanceCeilingTest#anAdvanceAboveTheContractTotalIsRefused
+mvn test -Dtest=AdvanceCeilingTest#withAContractTheAdvanceIsCappedByTheContractTotal
 
 # Démarrage sur PostgreSQL local (profil dev par défaut) — nécessite docker compose up -d postgres
 mvn spring-boot:run
@@ -47,21 +47,33 @@ Aucun outil de formatage ni de lint n'est configuré. Le seul garde-fou automati
 ## Pièges au démarrage et en test
 
 - **`ddl-auto=validate` dans tous les profils.** Ajouter un champ à une entité sans écrire la
-  migration correspondante ne casse pas la compilation : ça casse le démarrage *et les 19
-  classes de test d'un coup*, avec un message Hibernate sur la colonne manquante. Entité et
-  migration se livrent ensemble.
+  migration correspondante ne casse pas la compilation : ça casse le démarrage *et les
+  dix-neuf classes `@SpringBootTest` d'un coup*, avec un message Hibernate sur la colonne
+  manquante. Entité et migration se livrent ensemble.
 - **Les migrations doivent tourner sur PostgreSQL *et* H2.** La suite de tests reconstruit le
   schéma avec les mêmes fichiers que la production. Pas de `jsonb`, pas de `ON CONFLICT`, pas de
   type PostgreSQL exclusif dans `db/migration`. Une migration livrée ne se réécrit jamais —
   V7 existe précisément parce qu'on a corrigé des données au lieu de modifier V6.
-- **Chaque classe de test a sa propre base H2**, nommée dans son `@TestPropertySource`
-  (`jdbc:h2:mem:spi_ghomrassen_test_vat`, `..._queries`, `..._messages`…). Une nouvelle classe
-  de test **doit** déclarer la sienne : réutiliser un nom existant fait hériter les lignes de
-  l'autre classe, et les comptages de requêtes ou de totaux deviennent faux de façon aléatoire.
+- **Une nouvelle classe d'intégration hérite de `AbstractIntegrationTest`**, et n'ajoute ni
+  `@SpringBootTest`, ni `@ActiveProfiles`, ni `@TestPropertySource`. Ces annotations sont
+  portées par la classe de base, et c'est ce qui fait que les 18 classes partagent **un seul**
+  contexte Spring : la configuration déclarée fait partie de la clé du cache de contexte, donc
+  la moindre `@TestPropertySource` locale en démarre un deuxième.
+- **Une seule base H2 pour tout le monde**, nettoyée par `DatabaseCleaner` en `@BeforeAll` de la
+  classe de base. Les trois tables de référence (`expense_categories`, `supplier_type_options`,
+  `vat_rate_options`) sont **préservées** : `ReferenceDataInitializer` ne les peuple qu'au
+  démarrage du contexte, et six classes y lisent une catégorie par
+  `expenseCategoryRepository.findAll().get(0)`. Un test qui a besoin d'un jeu de données de
+  référence différent doit le créer, pas modifier ces tables.
 - **`@TestInstance(PER_CLASS)` + `@BeforeAll`** : les tests ne roulent pas en arrière entre les
-  méthodes. Les fixtures sont créées une fois et les données s'accumulent, d'où les
-  `AtomicInteger sequence` qui rendent uniques les numéros de lot et les références. Une méthode
-  qui compte des lignes doit filtrer sur son propre projet, pas compter la table.
+  méthodes. Les fixtures sont créées une fois et les données s'accumulent au fil de la classe,
+  d'où les `AtomicInteger sequence` qui rendent uniques les numéros de lot et les références.
+  Une méthode qui compte des lignes doit filtrer sur son propre projet, pas compter la table —
+  le nettoyage garantit une base propre en **début** de classe, pas entre deux méthodes.
+- **Trois classes restent hors du contexte partagé**, volontairement : `StartupSeedTest` et
+  `DemoProfileSeedTest` gardent leur propre base parce qu'elles assèrent ce que produit le seed
+  de démarrage, et `AmountInWordsTest` est le seul test unitaire pur de la suite — ne pas lui
+  donner de contexte Spring.
 - **`application.properties` est lu en ISO-8859-1.** Les accents s'y écrivent en échappement
   unicode (`Immobilière`), sinon ils arrivent déformés sur les documents imprimés.
   `messages_fr.properties` est à l'inverse lu en UTF-8 (`MessageSourceConfig` fixe
@@ -249,9 +261,11 @@ sauvegarde complète couvre `spi-postgres-data` **et** `spi-attachments`.
 
 ## Tests
 
-`src/test/java/com/promoteur/app/` — 19 classes, ~177 méthodes `@Test`, toutes `@SpringBootTest`
-sur H2. Les compteurs cités dans `../CLAUDE.md` (140) et `README.md` (83) sont périmés ; ne pas
-s'y fier, lancer `mvn -q verify`.
+`src/test/java/com/promoteur/app/` — 21 classes, **155 exécutions** (total surefire, la seule
+source de vérité : `grep -c "@Test"` compte aussi `@TestPropertySource` et `@TestInstance`, ce
+qui a déjà produit un faux « 177 »). Dix-huit classes partagent un contexte Spring sur H2 via
+`AbstractIntegrationTest`, deux gardent le leur, et `AmountInWordsTest` n'en a pas. Le compteur
+de `README.md` (83) est périmé ; celui de `../CLAUDE.md` est tenu à jour.
 
 Une classe par règle, nommée d'après elle, et des `@DisplayName` qui énoncent la règle en clair
 (« an advance above the contract total is refused »). Toute modification d'une règle financière
@@ -273,6 +287,10 @@ s'accompagne d'un test ; les classes existantes indiquent où l'ajouter :
 | `MessageCatalogTest` | catalogue français (apostrophes `MessageFormat`) |
 | `AttachmentTest`, `AuditTrailTest`, `SearchServiceTest` | pièces jointes, journal, recherche globale |
 | `StartupSeedTest`, `DemoProfileSeedTest` | idempotence des seeds |
+| `DatabaseCleanerTest` | le nettoyage vide les tables métier et préserve les données de référence |
+
+Infrastructure : `AbstractIntegrationTest` (contexte et base partagés) et `DatabaseCleaner`
+(nettoyage entre classes), tous deux dans `com.promoteur.app`.
 
 ## Où sont les choses
 

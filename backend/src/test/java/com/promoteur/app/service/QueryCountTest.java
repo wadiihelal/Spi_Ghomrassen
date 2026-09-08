@@ -15,15 +15,14 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -36,14 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * contracts fetched three associations per row and ran one advance lookup per row, and the
  * client statement report ran three queries per client.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_queries;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
-        "spring.jpa.properties.hibernate.generate_statistics=true"
-})
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class QueryCountTest {
+class QueryCountTest extends AbstractIntegrationTest {
 
     private static final int CONTRACTS = 25;
 

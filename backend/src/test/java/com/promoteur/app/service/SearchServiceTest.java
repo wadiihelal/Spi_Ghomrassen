@@ -7,14 +7,12 @@ import com.promoteur.app.dto.SupplierRequest;
 import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.dto.response.SearchHitResponse;
 import com.promoteur.app.enums.ProjectStatus;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -25,12 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Covers the global search (UX-08): a few characters find a client, a lot or a supplier, the
  * project in scope bounds what is found, and the result list stays short.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_search;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class SearchServiceTest {
+class SearchServiceTest extends AbstractIntegrationTest {
 
     @Autowired
     private SearchService searchService;

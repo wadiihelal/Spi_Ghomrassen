@@ -50,7 +50,7 @@ Application interne d'un promoteur immobilier tunisien. `backend/` Spring Boot 3
 ## Vérifier avant de livrer
 
 ```bash
-cd backend && mvn -q verify        # 152 tests, H2 + Flyway
+cd backend && mvn -q verify        # 155 tests, H2 + Flyway, un contexte Spring partage
 cd frontend && npx ng build        # TypeScript strict + strictTemplates
 ```
 
@@ -61,6 +61,30 @@ cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=test,demo -Dspring-
 ```
 
 Le profil `demo` charge des acquéreurs fictifs : jamais en production.
+
+## Chantier en cours : durcissement des tests
+
+`TEST_HARDENING_SPEC.md` decoupe le travail en cinq lots (WP0 a WP4) : mutualisation du
+contexte Spring, tests PostgreSQL via Testcontainers, couche web (`@WebMvcTest`), couche
+persistance (`@DataJpaTest` sur les specifications), et regles d'architecture (ArchUnit).
+
+Un lot se livre avec la commande `/test-hardening` :
+
+```
+/test-hardening status   # ou en est-on, sans rien ecrire
+/test-hardening wp0      # puis wp1, wp2, wp3, wp4 — dans cet ordre
+```
+
+Etat de depart : 20 classes, 152 executions, dont **un seul test unitaire pur**
+(`AmountInWordsTest`). Les 19 autres classes sont des `@SpringBootTest` sur H2, alors que
+la production tourne sur PostgreSQL 16. Aucun test ne couvre les 19 controleurs ni le
+`GlobalExceptionHandler`.
+
+**WP0 livre** (08/09/2026) : les 17 classes d'integration heritent de
+`AbstractIntegrationTest` et partagent un seul contexte Spring et une seule base H2, nettoyee
+entre les classes par `DatabaseCleaner`. 19 demarrages de contexte -> 3. Phase de test 18,3 s
+-> 9,3 s. `StartupSeedTest` et `DemoProfileSeedTest` restent isoles, `AmountInWordsTest` reste
+un test unitaire pur.
 
 ## Où sont les choses
 

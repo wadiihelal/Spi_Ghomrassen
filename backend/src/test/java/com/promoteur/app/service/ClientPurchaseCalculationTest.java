@@ -13,14 +13,12 @@ import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.enums.PurchasePaymentStatus;
 import com.promoteur.app.repository.ClientPurchaseRepository;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -33,12 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Covers the rules that decide how much a client still owes (TEST-01): the payment status, the
  * enrichment arithmetic, and the ceiling on the collected amount.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_purchases;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class ClientPurchaseCalculationTest {
+class ClientPurchaseCalculationTest extends AbstractIntegrationTest {
 
     private final AtomicInteger sequence = new AtomicInteger();
 

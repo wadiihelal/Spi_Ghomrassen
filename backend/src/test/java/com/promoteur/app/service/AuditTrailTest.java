@@ -7,14 +7,13 @@ import com.promoteur.app.dto.response.ExpenseResponse;
 import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,11 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * summary of a deletion is built from values captured before the row left the database, and the
  * French labels come from {@code messages_fr.properties} correctly accented.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_audit;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
-class AuditTrailTest {
+class AuditTrailTest extends AbstractIntegrationTest {
 
     @Autowired
     private ExpenseService expenseService;

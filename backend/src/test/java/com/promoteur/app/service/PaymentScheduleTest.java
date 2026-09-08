@@ -18,14 +18,12 @@ import com.promoteur.app.dto.response.PaymentScheduleResponse;
 import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.InstallmentStatus;
 import com.promoteur.app.enums.ProjectStatus;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -40,12 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * spread across its instalments in order, so the plan and the cash can never disagree, and the
  * status of each line follows from its due date and its share.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_schedule;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class PaymentScheduleTest {
+class PaymentScheduleTest extends AbstractIntegrationTest {
 
     private final AtomicInteger sequence = new AtomicInteger();
 

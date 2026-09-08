@@ -15,16 +15,15 @@ import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.enums.PurchasePaymentStatus;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,12 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * request page 0 of 1000 rows per resource and filter in TypeScript, silently losing records
  * past the thousandth because nothing read totalElements.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_filters;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class ServerSideFilteringTest {
+class ServerSideFilteringTest extends AbstractIntegrationTest {
 
     private final AtomicInteger sequence = new AtomicInteger();
 

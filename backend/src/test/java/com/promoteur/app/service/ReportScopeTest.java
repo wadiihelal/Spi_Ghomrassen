@@ -11,15 +11,14 @@ import com.promoteur.app.repository.ExpenseCategoryRepository;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
@@ -33,13 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * absent project falls back to the active context, only an explicit ALL aggregates across
  * projects, and every export states its own scope.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_reports;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 // One instance for the class: the two projects and their three expenses are seeded once.
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class ReportScopeTest {
+class ReportScopeTest extends AbstractIntegrationTest {
 
     private static final LocalDate AUGUST = LocalDate.of(2026, 8, 15);
     private static final LocalDate SEPTEMBER = LocalDate.of(2026, 9, 15);

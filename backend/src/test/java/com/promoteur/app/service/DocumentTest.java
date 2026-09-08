@@ -16,15 +16,14 @@ import com.promoteur.app.dto.response.SupplierResponse;
 import com.promoteur.app.enums.PaymentMethod;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.exception.ResourceNotFoundException;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,12 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * figures, printing never changes a balance, and an unknown id is refused rather than printed
  * blank.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_documents;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class DocumentTest {
+class DocumentTest extends AbstractIntegrationTest {
 
     /** Every PDF begins with this signature; a truncated stream would not. */
     private static final byte[] PDF_MAGIC = {'%', 'P', 'D', 'F'};

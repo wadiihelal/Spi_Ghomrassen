@@ -1,11 +1,9 @@
 package com.promoteur.app.service;
 
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,11 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * when the message has arguments to substitute. A message with no placeholder is returned
  * verbatim, so a doubled apostrophe there reaches the user as « n''a pas ».</p>
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_messages;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
-class MessageCatalogTest {
+class MessageCatalogTest extends AbstractIntegrationTest {
 
     @Autowired
     private MessageService messageService;

@@ -9,15 +9,14 @@ import com.promoteur.app.enums.AttachmentOwnerType;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.exception.ResourceNotFoundException;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -31,14 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Covers FE-05: a proof file is stored on the filesystem behind StorageService, linked to an
  * existing document, served back byte for byte, and gone from both row and disk once deleted.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_attachments;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
-        "app.storage.root=${java.io.tmpdir}/spi-ghomrassen-attachment-test-${random.uuid}"
-})
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class AttachmentTest {
+class AttachmentTest extends AbstractIntegrationTest {
 
     private static final byte[] PDF_BYTES = "%PDF-1.4 bordereau de virement".getBytes();
 

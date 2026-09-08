@@ -11,17 +11,16 @@ import com.promoteur.app.dto.response.SupplierInvoiceResponse;
 import com.promoteur.app.dto.response.VatRateOptionResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.repository.ExpenseCategoryRepository;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -35,12 +34,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Covers CALC-01: any Tunisian VAT rate can be entered, and the backend — not the browser —
  * derives the VAT and gross amounts at scale 3.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_vat;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class VatCalculationTest {
+class VatCalculationTest extends AbstractIntegrationTest {
 
     private final AtomicInteger sequence = new AtomicInteger();
 

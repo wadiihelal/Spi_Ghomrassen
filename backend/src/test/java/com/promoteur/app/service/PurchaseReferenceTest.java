@@ -9,14 +9,12 @@ import com.promoteur.app.dto.response.ClientPurchaseResponse;
 import com.promoteur.app.dto.response.ClientResponse;
 import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,12 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Covers the sale contract's reference (UX-09): allocated by sequence when the form leaves it
  * blank, kept when the user brings one, and never changed by an update.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_purchase_ref;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class PurchaseReferenceTest {
+class PurchaseReferenceTest extends AbstractIntegrationTest {
 
     private final AtomicInteger sequence = new AtomicInteger();
 

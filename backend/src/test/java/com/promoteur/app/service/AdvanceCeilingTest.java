@@ -12,14 +12,12 @@ import com.promoteur.app.entity.ClientAdvance;
 import com.promoteur.app.dto.response.ProjectResponse;
 import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.repository.ClientAdvanceRepository;
+import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,12 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Covers CALC-03 and CONC-01: an advance is always capped by something, and two advances
  * submitted at the same instant can never both be accepted past the ceiling.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "spring.datasource.url=jdbc:h2:mem:spi_ghomrassen_test_ceiling;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=15000")
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class AdvanceCeilingTest {
+class AdvanceCeilingTest extends AbstractIntegrationTest {
 
     private final AtomicInteger sequence = new AtomicInteger();
 
