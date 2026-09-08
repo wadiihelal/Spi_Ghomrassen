@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -160,14 +161,21 @@ class GlobalExceptionHandlerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"amount\": -5}"))
                 .andExpect(status().isBadRequest())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
+        // getContentAsString() without a charset falls back to ISO-8859-1, unlike the jsonPath
+        // matchers which decode UTF-8 — reading the body by hand needs the charset spelled out,
+        // or a correct accented message looks like mojibake to the test alone.
         // The whole console is French; a field error that arrives as "must not be blank"
         // because the server happens to run under en_TN is a leak of the runtime environment
-        // into the user interface.
+        // into the user interface. Asserting the French text as well as the absence of the
+        // English one also proves the bundle is decoded as UTF-8 — a mojibake accent would
+        // fail here rather than reach a user's screen.
         assertThat(body)
                 .doesNotContain("must not be blank")
-                .doesNotContain("must be greater than 0");
+                .doesNotContain("must be greater than 0")
+                .contains("Ce champ ne peut pas être vide.")
+                .contains("La valeur doit être strictement supérieure à zéro.");
     }
 
     @Test
@@ -175,7 +183,7 @@ class GlobalExceptionHandlerTest {
     void noErrorResponseEverLeaksAStackTraceOrSql() throws Exception {
         for (final String path : new String[]{"/probe/unexpected", "/probe/data-integrity"}) {
             final String body = this.mockMvc.perform(get(path))
-                    .andReturn().getResponse().getContentAsString();
+                    .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
             assertThat(body).as("body of %s", path)
                     .doesNotContain("at com.promoteur")
