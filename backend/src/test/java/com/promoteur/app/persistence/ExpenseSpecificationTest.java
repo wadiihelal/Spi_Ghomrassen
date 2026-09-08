@@ -6,23 +6,14 @@ import com.promoteur.app.entity.ExpenseCategory;
 import com.promoteur.app.entity.Project;
 import com.promoteur.app.entity.Supplier;
 import com.promoteur.app.enums.PaymentMethod;
-import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.repository.ExpenseRepository;
 import com.promoteur.app.repository.specification.ExpenseSpecifications;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -39,18 +30,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * because a null check is inverted — invisible when the fixture happens to match anyway — and a
  * surplus join, which changes no row at all and can only be seen in the statement itself.</p>
  */
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ActiveProfiles("test")
-class ExpenseSpecificationTest {
+class ExpenseSpecificationTest extends AbstractPersistenceTest {
 
     private static final PageRequest FIRST_PAGE = PageRequest.of(0, 50);
 
     @Autowired
     private ExpenseRepository expenseRepository;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     private Project residence;
     private Project other;
@@ -73,8 +58,7 @@ class ExpenseSpecificationTest {
         this.persistExpense("SPEC-DEP-3", "Taxe de bâtisse", LocalDate.of(2026, 10, 1),
                 this.other, this.baladiya, null, PaymentMethod.CHECK);
 
-        this.entityManager.flush();
-        this.entityManager.clear();
+        this.settleFixture();
     }
 
     @Test
@@ -108,7 +92,7 @@ class ExpenseSpecificationTest {
         // The search paths are built inside the List.of(...) handed to whenSearch, and Java
         // evaluates arguments before the call: the joins are created even when there is no
         // search term for them to serve.
-        assertThat(this.joinsOf(ListFilter.none())).isEmpty();
+        assertThat(this.joinsOfExpenses(ListFilter.none())).isEmpty();
     }
 
     @Test
@@ -120,7 +104,7 @@ class ExpenseSpecificationTest {
         // whenId joins "project" to compare its id and whenSearch needs it again to read its
         // name; every call to root.join used to add one more. Category and supplier are joined
         // too, legitimately: the search reads their names as well.
-        assertThat(this.joinsOf(both))
+        assertThat(this.joinsOfExpenses(both))
                 .containsOnlyOnce("project")
                 .doesNotHaveDuplicates();
     }
@@ -132,7 +116,7 @@ class ExpenseSpecificationTest {
                 this.carrelages.getId(), this.baladiya.getId(), null, null, "CHECK",
                 LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), "bâtisse");
 
-        assertThat(this.joinsOf(everything))
+        assertThat(this.joinsOfExpenses(everything))
                 .containsExactlyInAnyOrder("project", "category", "supplier")
                 .doesNotHaveDuplicates();
     }
@@ -202,22 +186,9 @@ class ExpenseSpecificationTest {
                 .containsExactlyInAnyOrder("SPEC-DEP-1", "SPEC-DEP-3");
     }
 
-    /**
-     * Applies the specification to a bare criteria query and returns the association names it
-     * joined, one entry per join. Measured on the criteria tree rather than on the emitted SQL:
-     * Hibernate 6 prunes a join it ends up not using, so the statement hides a surplus join
-     * that the query the code builds does contain.
-     */
-    private List<String> joinsOf(final ListFilter filter) {
-        final CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
-        final CriteriaQuery<Expense> query = builder.createQuery(Expense.class);
-        final Root<Expense> root = query.from(Expense.class);
 
-        ExpenseSpecifications.matching(filter).toPredicate(root, query, builder);
-
-        return root.getJoins().stream()
-                .map(join -> join.getAttribute().getName())
-                .toList();
+    private List<String> joinsOfExpenses(final ListFilter filter) {
+        return this.joinsOf(Expense.class, ExpenseSpecifications.matching(filter));
     }
 
     private Page<Expense> find(final ListFilter filter) {
@@ -228,14 +199,6 @@ class ExpenseSpecificationTest {
         return new ListFilter(null, null, null, null, null, null, null, null, null, search);
     }
 
-    private Project persistProject(final String code, final String name) {
-        final Project project = new Project();
-        project.setCode(code);
-        project.setName(name);
-        project.setStatus(ProjectStatus.IN_PROGRESS);
-        this.entityManager.persist(project);
-        return project;
-    }
 
     private ExpenseCategory persistCategory(final String name) {
         final ExpenseCategory category = new ExpenseCategory();
@@ -244,12 +207,6 @@ class ExpenseSpecificationTest {
         return category;
     }
 
-    private Supplier persistSupplier(final String name) {
-        final Supplier supplier = new Supplier();
-        supplier.setName(name);
-        this.entityManager.persist(supplier);
-        return supplier;
-    }
 
     private void persistExpense(final String reference, final String description,
                                 final LocalDate date, final Project project,

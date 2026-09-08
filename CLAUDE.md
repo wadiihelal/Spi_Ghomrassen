@@ -50,8 +50,8 @@ Application interne d'un promoteur immobilier tunisien. `backend/` Spring Boot 3
 ## Vérifier avant de livrer
 
 ```bash
-cd backend && mvn -q verify             # 204 tests, H2 + Flyway, un contexte Spring partage
-cd backend && mvn -q verify -Ppostgres  # 221 tests : + PostgreSQL 16 reel, demande Docker
+cd backend && mvn -q verify             # 258 tests, H2 + Flyway, un contexte Spring partage
+cd backend && mvn -q verify -Ppostgres  # 275 tests : + PostgreSQL 16 reel, demande Docker
 cd frontend && npx ng build             # TypeScript strict + strictTemplates
 ```
 
@@ -90,6 +90,15 @@ la production tourne sur PostgreSQL 16. Aucun test ne couvre les 19 controleurs 
 entre les classes par `DatabaseCleaner`. 19 demarrages de contexte -> 3. Phase de test 18,3 s
 -> 9,3 s. `StartupSeedTest` et `DemoProfileSeedTest` restent isoles, `AmountInWordsTest` reste
 un test unitaire pur.
+
+**WP3 livre** (08/09/2026) : les cinq specifications de `repository/specification` ont un test
+direct (`@DataJpaTest`, paquet `persistence`), plus le graphe de chargement de la liste des
+depenses et un garde-fou de serialisation des DTO. **Les jointures derapaient** : les chemins de
+recherche etaient construits dans un `List.of(...)` evalue avant l'appel, donc joints meme sans
+terme de recherche, et `root.join` en ajoutait une a chaque appel — six jointures pour trois
+associations une fois tous les filtres poses. Corrige par un `Supplier` et la reutilisation des
+jointures. Aucune ligne ne change : les associations sont toutes `@ManyToOne`, donc `totalElements`
+n'etait pas fausse.
 
 **WP2 livre** (08/09/2026) : la couche web est couverte — `GlobalExceptionHandlerTest` plus
 quatre slices `@WebMvcTest` (`ExpenseController`, `AttachmentController`, `ReportController`,

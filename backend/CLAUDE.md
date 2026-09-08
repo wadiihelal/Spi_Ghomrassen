@@ -92,6 +92,17 @@ Aucun outil de formatage ni de lint n'est configuré. Le seul garde-fou automati
   statiques et **tout** répond 500. `GlobalExceptionHandler`, `MessageServiceImpl` et
   `MessageSourceConfig` s'importent aussi : une slice ne charge pas les `@Configuration` du
   projet. Mockito et `@MockBean` sont réservés à ces slices, jamais dans un test de service.
+- **Un test de spécification hérite de `persistence/AbstractPersistenceTest`** (`@DataJpaTest` +
+  `@AutoConfigureTestDatabase(NONE)` pour garder Flyway et le schéma réel). Chaque test roule en
+  arrière, donc pas de `DatabaseCleaner` ici — mais `ReferenceDataInitializer` **ne tourne pas**
+  (c'est un `CommandLineRunner`) : le test construit tout son jeu d'essai.
+- **Compter les jointures sur l'arbre du critère**, pas sur le SQL émis : `joinsOf(...)` de la
+  classe de base applique la spécification et lit `root.getJoins()`. Une jointure surnuméraire ne
+  change aucune ligne, et Hibernate peut élaguer celle qu'il n'utilise pas — le SQL cacherait
+  donc un défaut bien présent dans la requête que le code construit.
+- **`whenSearch` prend un `Supplier<List<Path<String>>>`**, pas une `List`. Construire ces chemins
+  joint des associations, et un argument est évalué avant l'appel : passer un `List.of(...)`
+  joindrait à chaque requête, terme de recherche ou pas.
 - **`getContentAsString()` sans charset retombe en ISO-8859-1** dans `MockHttpServletResponse`,
   alors que les matchers `jsonPath` décodent en UTF-8. Lire un corps à la main sans
   `StandardCharsets.UTF_8` fait passer un accent correct pour du mojibake.
@@ -296,7 +307,7 @@ sauvegarde complète couvre `spi-postgres-data` **et** `spi-attachments`.
 
 ## Tests
 
-`src/test/java/com/promoteur/app/` — 31 classes, **204 exécutions** sans Docker et **221** avec
+`src/test/java/com/promoteur/app/` — 38 classes, **258 exécutions** sans Docker et **275** avec
 `-Ppostgres` (total surefire, la seule source de vérité : `grep -c "@Test"` compte aussi `@TestPropertySource` et `@TestInstance`, ce
 qui a déjà produit un faux « 177 »). Dix-huit classes partagent un contexte Spring sur H2 via
 `AbstractIntegrationTest`, deux gardent le leur, `AmountInWordsTest` n'en a pas, et quatre
@@ -333,10 +344,14 @@ s'accompagne d'un test ; les classes existantes indiquent où l'ajouter :
 | `web/ReportControllerTest` | les trois sens de `projectId`, types MIME des exports |
 | `web/SearchControllerTest` | contrat de la recherche globale |
 | `web/CorsConfigurationTest` | origines autorisées, jamais `*` avec `allowCredentials` |
+| `persistence/*SpecificationTest` | les 5 spécifications : filtre vide, filtres isolés et combinés, `totalElements`, une jointure par association |
+| `persistence/ExpenseFetchGraphTest` | l'`@EntityGraph` de la liste : une requête, pas une par ligne |
+| `persistence/ResponseSerializationTest` | aucun DTO ne déclenche un chargement paresseux hors transaction |
 
 Infrastructure : `AbstractIntegrationTest` (contexte et base H2 partagés),
 `AbstractPostgresTest` (conteneur PostgreSQL 16) et `DatabaseCleaner` (nettoyage entre classes,
-H2 et PostgreSQL), tous dans `com.promoteur.app`.
+H2 et PostgreSQL), tous dans `com.promoteur.app` ; `persistence/AbstractPersistenceTest` porte le
+canevas `@DataJpaTest` et le comptage de jointures.
 
 ## Où sont les choses
 

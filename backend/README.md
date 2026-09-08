@@ -194,8 +194,8 @@ port publié) et `frontend` (build Node puis nginx sur le port 80, qui sert la c
 ## Vérifier
 
 ```bash
-mvn -q verify                  # 155 tests sur H2 avec les migrations Flyway, sans Docker
-mvn -q verify -Ppostgres       # 172 tests : ajoute ceux qui tournent sur PostgreSQL 16
+mvn -q verify                  # 258 tests sur H2 avec les migrations Flyway, sans Docker
+mvn -q verify -Ppostgres       # 275 tests : ajoute ceux qui tournent sur PostgreSQL 16
 ```
 
 Chaque règle financière a son test dans `src/test/java/com/promoteur/app/service`, nommé

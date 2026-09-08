@@ -647,6 +647,18 @@ des contrats dont les encaissements sont connus.
 - [ ] Les **5 spécifications** de `repository/specification/` ont un test direct
       (`SpecificationSupport` est un utilitaire package-private : il est couvert à travers
       elles, pas par une classe de test dédiée).
+⚠️ Trois attentes de cette section se sont révélées fausses à l'exécution, corrigées ici :
+
+- **La mesure ne peut pas porter sur le SQL émis.** La journalisation SQL est désactivée dans le
+  profil `test`, et Hibernate 6 élague une jointure qu'il n'utilise pas : une assertion sur le
+  texte du statement passe au vert alors que la requête construite contient bien la jointure en
+  trop. Mesurer sur `root.getJoins()` après avoir appliqué la spécification.
+- **Une page qui tient entièrement dans la première requête ne déclenche pas de comptage.**
+  Spring Data élide la requête `count(*)` dans ce cas : un `@EntityGraph` correct donne **une**
+  seule requête, pas deux. Forcer une page plus petite pour observer les deux.
+- **`apartment_id` est `NOT NULL` sur `client_advances` et `client_purchases`**, et **unique**
+  sur les contrats : un jeu d'essai doit créer un lot par contrat.
+
 - [ ] Le double-join est corrigé (mise en cache du join dans un `Map<String, Join<?,?>>` au sein
       de la spécification, **et** évaluation paresseuse des chemins de recherche pour ne plus
       joindre en l'absence de terme), avec les tests qui l'attestent. Son innocuité pour
