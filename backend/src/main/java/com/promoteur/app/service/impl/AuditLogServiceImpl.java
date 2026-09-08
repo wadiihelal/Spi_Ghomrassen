@@ -53,6 +53,7 @@ public class AuditLogServiceImpl implements AuditLogService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<AuditLogResponse> search(final String entityType, final String actor, final LocalDate dateFrom,
                                         final LocalDate dateTo, final Pageable pageable) {
         final LocalDateTime from = dateFrom == null ? null : dateFrom.atStartOfDay();

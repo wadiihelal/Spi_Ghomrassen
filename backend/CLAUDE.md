@@ -100,6 +100,12 @@ Aucun outil de formatage ni de lint n'est configuré. Le seul garde-fou automati
   classe de base applique la spécification et lit `root.getJoins()`. Une jointure surnuméraire ne
   change aucune ligne, et Hibernate peut élaguer celle qu'il n'utilise pas — le SQL cacherait
   donc un défaut bien présent dans la requête que le code construit.
+- **`ArchitectureTest` fait échouer le build sur les règles de ce fichier** : couches, frontière
+  DTO, `double`/`float` interdits, `precision`/`scale` des colonnes monétaires, finders en
+  `readOnly`, `findAll()` sans argument, `java.util.Date`, `System.out`, injection par champ,
+  cycles de paquets. Une règle ArchUnit ne porte **pas** de `@DisplayName` (c'est un champ, pas
+  une méthode) : la phrase passe par `as(...)`. Les trois exclusions existantes sont nominatives
+  et commentées — ne pas en ajouter une sans la justifier dans le javadoc de la règle.
 - **`whenSearch` prend un `Supplier<List<Path<String>>>`**, pas une `List`. Construire ces chemins
   joint des associations, et un argument est évalué avant l'appel : passer un `List.of(...)`
   joindrait à chaque requête, terme de recherche ou pas.
@@ -307,7 +313,7 @@ sauvegarde complète couvre `spi-postgres-data` **et** `spi-attachments`.
 
 ## Tests
 
-`src/test/java/com/promoteur/app/` — 38 classes, **258 exécutions** sans Docker et **275** avec
+`src/test/java/com/promoteur/app/` — 39 classes, **274 exécutions** sans Docker et **291** avec
 `-Ppostgres` (total surefire, la seule source de vérité : `grep -c "@Test"` compte aussi `@TestPropertySource` et `@TestInstance`, ce
 qui a déjà produit un faux « 177 »). Dix-huit classes partagent un contexte Spring sur H2 via
 `AbstractIntegrationTest`, deux gardent le leur, `AmountInWordsTest` n'en a pas, et quatre
@@ -347,6 +353,7 @@ s'accompagne d'un test ; les classes existantes indiquent où l'ajouter :
 | `persistence/*SpecificationTest` | les 5 spécifications : filtre vide, filtres isolés et combinés, `totalElements`, une jointure par association |
 | `persistence/ExpenseFetchGraphTest` | l'`@EntityGraph` de la liste : une requête, pas une par ligne |
 | `persistence/ResponseSerializationTest` | aucun DTO ne déclenche un chargement paresseux hors transaction |
+| `ArchitectureTest` | les 16 règles de `CLAUDE.md` rendues vérifiables (ArchUnit) |
 
 Infrastructure : `AbstractIntegrationTest` (contexte et base H2 partagés),
 `AbstractPostgresTest` (conteneur PostgreSQL 16) et `DatabaseCleaner` (nettoyage entre classes,

@@ -779,6 +779,19 @@ ou une exclusion **commentée avec la raison**. Ne jamais désactiver une règle
 
 ## Critères d'acceptation WP4
 
+⚠️ Trois précisions venues de la livraison :
+
+- **`archunit-junit5` n'est qu'un agrégateur** de `archunit-junit5-api` et
+  `archunit-junit5-engine` ; déclarer les deux directement évite un POM intermédiaire.
+- **La règle des finders doit lire l'annotation de classe**, pas seulement celle de la méthode :
+  Spring résout `@Transactional` sur la méthode puis sur la classe déclarante.
+  `SearchServiceImpl.search` est couvert au niveau classe — le signaler serait un faux positif.
+- **Il y a deux cycles de paquets, pas un.** Exclure `config` révèle
+  `exception → service → exception` : les services lèvent `ResourceNotFoundException`, et
+  `GlobalExceptionHandler`, dans le même paquet, injecte `MessageService`. Les deux sont
+  structurels ; les corriger demande de déplacer `CompanyProperties` et
+  `GlobalExceptionHandler`.
+
 - [ ] `ArchitectureTest` couvre les 5 groupes ci-dessus.
 - [ ] Toute exclusion porte un commentaire justifiant pourquoi le cas est légitime.
 - [ ] Les violations réelles trouvées sont corrigées ou listées dans le rapport final.

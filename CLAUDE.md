@@ -50,8 +50,8 @@ Application interne d'un promoteur immobilier tunisien. `backend/` Spring Boot 3
 ## Vérifier avant de livrer
 
 ```bash
-cd backend && mvn -q verify             # 258 tests, H2 + Flyway, un contexte Spring partage
-cd backend && mvn -q verify -Ppostgres  # 275 tests : + PostgreSQL 16 reel, demande Docker
+cd backend && mvn -q verify             # 274 tests, H2 + Flyway, un contexte Spring partage
+cd backend && mvn -q verify -Ppostgres  # 291 tests : + PostgreSQL 16 reel, demande Docker
 cd frontend && npx ng build             # TypeScript strict + strictTemplates
 ```
 
@@ -90,6 +90,15 @@ la production tourne sur PostgreSQL 16. Aucun test ne couvre les 19 controleurs 
 entre les classes par `DatabaseCleaner`. 19 demarrages de contexte -> 3. Phase de test 18,3 s
 -> 9,3 s. `StartupSeedTest` et `DemoProfileSeedTest` restent isoles, `AmountInWordsTest` reste
 un test unitaire pur.
+
+**WP4 livre** (08/09/2026) — dernier lot. `ArchitectureTest` (ArchUnit) rend verifiables seize
+regles de ce fichier : le decoupage en couches, la frontiere DTO, « l'argent est un BigDecimal
+a l'echelle 3 », les finders en lecture seule, l'hygiene generale. Une vraie violation trouvee
+et corrigee : `AuditLogServiceImpl.search` tournait **sans transaction**. Trois exclusions,
+chacune commentee dans la classe : la marge de page de `DocumentServiceImpl` (geometrie, pas un
+montant), `MessageServiceImpl.get` (lit un bundle, aucune base), et les cycles de paquets
+`config` et `exception` — structurels, corrigeables en deplacant `CompanyProperties` et
+`GlobalExceptionHandler`, decision non prise.
 
 **WP3 livre** (08/09/2026) : les cinq specifications de `repository/specification` ont un test
 direct (`@DataJpaTest`, paquet `persistence`), plus le graphe de chargement de la liste des
