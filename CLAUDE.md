@@ -50,9 +50,14 @@ Application interne d'un promoteur immobilier tunisien. `backend/` Spring Boot 3
 ## Vérifier avant de livrer
 
 ```bash
-cd backend && mvn -q verify        # 155 tests, H2 + Flyway, un contexte Spring partage
-cd frontend && npx ng build        # TypeScript strict + strictTemplates
+cd backend && mvn -q verify             # 155 tests, H2 + Flyway, un contexte Spring partage
+cd backend && mvn -q verify -Ppostgres  # 172 tests : + PostgreSQL 16 reel, demande Docker
+cd frontend && npx ng build             # TypeScript strict + strictTemplates
 ```
+
+Les tests marques `@Tag("postgres")` sont exclus par defaut : `mvn verify` reste utilisable
+sans demon Docker, et c'est ce que lance la CI. Voir `backend/README.md`, section
+« Tests sur PostgreSQL ».
 
 Sans PostgreSQL local, le backend se lance sur H2 avec les données de démonstration :
 
@@ -85,6 +90,14 @@ la production tourne sur PostgreSQL 16. Aucun test ne couvre les 19 controleurs 
 entre les classes par `DatabaseCleaner`. 19 demarrages de contexte -> 3. Phase de test 18,3 s
 -> 9,3 s. `StartupSeedTest` et `DemoProfileSeedTest` restent isoles, `AmountInWordsTest` reste
 un test unitaire pur.
+
+**WP1 livre** (08/09/2026) : quatre classes dans `com.promoteur.app.postgres` tournent contre
+un PostgreSQL 16 reel (Testcontainers, `AbstractPostgresTest`). Les 12 migrations et
+`ddl-auto=validate` sont confirmes sur le dialecte de production, et CONC-01 tient sous
+concurrence. Deux constats a trancher, documentes dans `backend/README.md` : la recherche
+globale est **sensible aux accents** (« bechir » ne trouve pas « Béchir »), et toute ecriture
+consomme **deux** connexions simultanement a cause du journal d'audit en `REQUIRES_NEW`, alors
+que le pool Hikari de production reste au defaut de 10.
 
 ## Où sont les choses
 

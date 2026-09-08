@@ -247,6 +247,12 @@ public abstract class AbstractPostgresTest {
 
 Points d'attention :
 
+- ⚠️ **`@Testcontainers` + `@Container` ne marche pas ici.** `SpringExtension` et
+  `TestcontainersExtension` accrochent tous deux `beforeAll`, et celui de Spring passe en
+  premier : la datasource réclame le port avant que l'extension ait démarré le conteneur, et le
+  contexte échoue sur `Mapped port can only be obtained after the container is started`.
+  Démarrer le conteneur dans un **initialiseur statique** et retirer `@Testcontainers` : l'ordre
+  n'est plus une question. `@ServiceConnection` sur le champ statique suffit au câblage.
 - `@ServiceConnection` **écrase** `spring.datasource.*` d'`application-test.properties`. Vérifier
   qu'aucune `@TestPropertySource` résiduelle ne réimpose une URL H2 : elle gagnerait.
 - Il faut neutraliser `spring.jpa.database-platform=org.hibernate.dialect.H2Dialect` hérité du
@@ -267,12 +273,17 @@ existe et que les entités lui correspondent.
 - `@DisplayName("the twelve migrations apply in order on a clean PostgreSQL database")`
   — le contexte démarre, donc Flyway a tourné et `ddl-auto=validate` a accepté le mapping.
   Asserter que `flyway_schema_history` contient 12 lignes toutes en `success = true`.
-- `@DisplayName("every money column is numeric(19,3)")` — parcourir
-  `information_schema.columns` et asserter `numeric_precision = 19` et `numeric_scale = 3`
-  pour toute colonne `numeric`. Protège la règle « argent » de `CLAUDE.md` au niveau du schéma.
-- `@DisplayName("the version column added by V5 exists on every table BaseEntity maps")` —
-  `V5__optimistic_locking.sql` ajoute `version` à 12 tables ; `BaseEntity` est un
-  `@MappedSuperclass`. Asserter la correspondance.
+- `@DisplayName("every money column is numeric(19,3) and every rate column numeric(5,4)")` —
+  parcourir `information_schema.columns`. ⚠️ **Toute colonne `numeric` n'est pas de l'argent** :
+  `vat_rate`, `default_vat_rate` et `rate` sont des *taux*, en `numeric(5, 4)`. Asserter 19,3
+  partout ferait échouer le test sur ces trois-là. Protège la règle « argent » au niveau du
+  schéma, en distinguant les deux familles.
+- `@DisplayName("the version column exists on every table an entity maps")` — ⚠️ **15 tables,
+  pas les 12 de V5** : `V5__optimistic_locking.sql` couvre les tables qui existaient alors, et
+  V8, V9, V10 déclarent la colonne à la création de `file_attachments`,
+  `payment_installments` et `supplier_payments`. Lire la liste depuis le métamodèle JPA plutôt
+  que depuis V5, pour qu'une seizième entité ne passe pas sans son verrou. Filtrer sur ces
+  tables : `flyway_schema_history` a elle aussi une colonne `version`, en `varchar`.
 - `@DisplayName("the three reference sequences exist and start at one")` — les trois séquences
   de V6 et V12 dans `information_schema.sequences`.
 
@@ -316,7 +327,12 @@ Cible les divergences #3 et #4.
 - `@DisplayName("a rolled back creation may leave a gap but never reuses a number")` — le vrai
   contrat de DATA-03 : l'unicité, pas la contiguïté.
 - `@DisplayName("a hundred concurrent expenses receive a hundred distinct references")` —
-  pool de 10 threads, asserter `distinct().count() == 100`.
+  pool de 10 threads, asserter `distinct().count() == 100`. ⚠️ Ce test échoue d'abord sur
+  `HikariPool-1 - Connection is not available` et non sur la séquence : **toute écriture tient
+  deux connexions à la fois**, la transaction métier plus celle que `AuditLogServiceImpl.create`
+  ouvre en `REQUIRES_NEW`. Avec le défaut Hikari de 10, dix écritures concurrentes se bloquent
+  mutuellement. Élargir le pool du profil de test pour que le test mesure la séquence, et
+  **signaler le constat** : la production tourne sur ce défaut de 10.
 - `@DisplayName("an amount beyond numeric(19,3) is refused by the database, not silently truncated")`
 
 ### 1.6 — Séparation CI / local

@@ -10,10 +10,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * Brings the shared test database back to its start-up state, so that test classes sharing one
- * Spring context do not see each other's rows.
+ * Brings a shared test database back to its start-up state, so that test classes sharing one
+ * Spring context do not see each other's rows. Serves both engines the suite uses: the H2
+ * database behind {@link AbstractIntegrationTest} and the PostgreSQL container behind
+ * {@link AbstractPostgresTest}.
  *
  * <p>Sharing a single H2 database is what makes one context enough for the whole suite. It also
  * means the isolation the old per-class URLs provided has to be recreated explicitly: several
@@ -69,18 +72,16 @@ public class DatabaseCleaner {
         try (Connection connection = this.dataSource.getConnection();
              Statement statement = connection.createStatement()) {
 
-            this.requireH2(connection);
             final List<String> tables = this.truncatableTables(connection);
+            final String product = connection.getMetaData().getDatabaseProductName();
 
-            // Foreign keys make the order matter; suspending the checks avoids having to
-            // topologically sort fifteen tables that a future V13 could reorder anyway.
-            statement.execute("SET REFERENTIAL_INTEGRITY FALSE");
-            try {
-                for (final String table : tables) {
-                    statement.execute("TRUNCATE TABLE \"" + table + "\" RESTART IDENTITY");
-                }
-            } finally {
-                statement.execute("SET REFERENTIAL_INTEGRITY TRUE");
+            if ("H2".equalsIgnoreCase(product)) {
+                this.truncateOnH2(statement, tables);
+            } else if ("PostgreSQL".equalsIgnoreCase(product)) {
+                this.truncateOnPostgres(statement, tables);
+            } else {
+                throw new IllegalStateException(
+                        "DatabaseCleaner supports H2 and PostgreSQL, but the test database is " + product);
             }
 
             for (final String sequence : REFERENCE_SEQUENCES) {
@@ -112,15 +113,32 @@ public class DatabaseCleaner {
     }
 
     /**
-     * {@code SET REFERENTIAL_INTEGRITY} is H2 syntax. A different engine — the PostgreSQL
-     * container of a later work package, say — needs its own statement, so fail with a readable
-     * message rather than an obscure SQL error.
+     * H2 truncates one table at a time and has no way to defer foreign-key checks per
+     * statement, so integrity is suspended around the batch. That avoids topologically sorting
+     * fifteen tables whose dependencies a future migration could reorder anyway.
      */
-    private void requireH2(final Connection connection) throws SQLException {
-        final String product = connection.getMetaData().getDatabaseProductName();
-        if (!"H2".equalsIgnoreCase(product)) {
-            throw new IllegalStateException(
-                    "DatabaseCleaner only supports H2, but the test database is " + product);
+    private void truncateOnH2(final Statement statement, final List<String> tables) throws SQLException {
+        statement.execute("SET REFERENTIAL_INTEGRITY FALSE");
+        try {
+            for (final String table : tables) {
+                statement.execute("TRUNCATE TABLE \"" + table + "\" RESTART IDENTITY");
+            }
+        } finally {
+            statement.execute("SET REFERENTIAL_INTEGRITY TRUE");
         }
+    }
+
+    /**
+     * PostgreSQL truncates every table in a single statement, which resolves the ordering by
+     * itself. Deliberately without {@code CASCADE}: the reference tables are parents of the
+     * truncated ones, so the statement succeeds as long as every child is listed — and if one
+     * were ever missing, PostgreSQL says so instead of quietly emptying a table this class
+     * promised to preserve.
+     */
+    private void truncateOnPostgres(final Statement statement, final List<String> tables) throws SQLException {
+        final String quoted = tables.stream()
+                .map(table -> '"' + table + '"')
+                .collect(Collectors.joining(", "));
+        statement.execute("TRUNCATE TABLE " + quoted + " RESTART IDENTITY");
     }
 }

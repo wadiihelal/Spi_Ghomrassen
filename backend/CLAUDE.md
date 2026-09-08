@@ -31,6 +31,9 @@ mvn test -Dtest=VatCalculationTest
 # Une seule méthode
 mvn test -Dtest=AdvanceCeilingTest#withAContractTheAdvanceIsCappedByTheContractTotal
 
+# Toute la suite + les tests sur PostgreSQL 16 réel (nécessite un démon Docker)
+mvn -q verify -Ppostgres
+
 # Démarrage sur PostgreSQL local (profil dev par défaut) — nécessite docker compose up -d postgres
 mvn spring-boot:run
 
@@ -74,6 +77,15 @@ Aucun outil de formatage ni de lint n'est configuré. Le seul garde-fou automati
   `DemoProfileSeedTest` gardent leur propre base parce qu'elles assèrent ce que produit le seed
   de démarrage, et `AmountInWordsTest` est le seul test unitaire pur de la suite — ne pas lui
   donner de contexte Spring.
+- **Un test PostgreSQL hérite de `AbstractPostgresTest`** (paquet `com.promoteur.app.postgres`),
+  qui porte `@Tag("postgres")` — donc exclu par défaut, exécuté par `-Ppostgres`. Le conteneur
+  y est démarré dans un **initialiseur statique**, pas par `@Testcontainers` + `@Container` :
+  `SpringExtension` et `TestcontainersExtension` accrochent tous deux `beforeAll`, celui de
+  Spring passe en premier, et la datasource réclame le port avant que le conteneur soit lancé
+  (`Mapped port can only be obtained after the container is started`).
+- **Ne pas neutraliser `spring.jpa.database-platform` par une valeur vide** pour changer de
+  moteur : Hibernate reçoit `hibernate.dialect=""`. Le profil de test `postgres`
+  (`src/test/resources/application-postgres.properties`) pose le dialecte explicitement.
 - **`application.properties` est lu en ISO-8859-1.** Les accents s'y écrivent en échappement
   unicode (`Immobilière`), sinon ils arrivent déformés sur les documents imprimés.
   `messages_fr.properties` est à l'inverse lu en UTF-8 (`MessageSourceConfig` fixe
@@ -261,11 +273,11 @@ sauvegarde complète couvre `spi-postgres-data` **et** `spi-attachments`.
 
 ## Tests
 
-`src/test/java/com/promoteur/app/` — 21 classes, **155 exécutions** (total surefire, la seule
-source de vérité : `grep -c "@Test"` compte aussi `@TestPropertySource` et `@TestInstance`, ce
+`src/test/java/com/promoteur/app/` — 25 classes, **155 exécutions** sans Docker et **172** avec
+`-Ppostgres` (total surefire, la seule source de vérité : `grep -c "@Test"` compte aussi `@TestPropertySource` et `@TestInstance`, ce
 qui a déjà produit un faux « 177 »). Dix-huit classes partagent un contexte Spring sur H2 via
-`AbstractIntegrationTest`, deux gardent le leur, et `AmountInWordsTest` n'en a pas. Le compteur
-de `README.md` (83) est périmé ; celui de `../CLAUDE.md` est tenu à jour.
+`AbstractIntegrationTest`, deux gardent le leur, `AmountInWordsTest` n'en a pas, et quatre
+tournent contre un conteneur PostgreSQL.
 
 Une classe par règle, nommée d'après elle, et des `@DisplayName` qui énoncent la règle en clair
 (« an advance above the contract total is refused »). Toute modification d'une règle financière
@@ -288,9 +300,14 @@ s'accompagne d'un test ; les classes existantes indiquent où l'ajouter :
 | `AttachmentTest`, `AuditTrailTest`, `SearchServiceTest` | pièces jointes, journal, recherche globale |
 | `StartupSeedTest`, `DemoProfileSeedTest` | idempotence des seeds |
 | `DatabaseCleanerTest` | le nettoyage vide les tables métier et préserve les données de référence |
+| `postgres/PostgresMigrationTest` | les 12 migrations sur le dialecte réel, `numeric(19,3)`, `version`, séquences |
+| `postgres/PostgresAdvanceCeilingTest` | CONC-01 sous concurrence sur PostgreSQL |
+| `postgres/PostgresSearchTest` | recherche accentuée — documente la sensibilité aux accents |
+| `postgres/PostgresReferenceSequenceTest` | unicité des références sous concurrence, débordement `numeric` |
 
-Infrastructure : `AbstractIntegrationTest` (contexte et base partagés) et `DatabaseCleaner`
-(nettoyage entre classes), tous deux dans `com.promoteur.app`.
+Infrastructure : `AbstractIntegrationTest` (contexte et base H2 partagés),
+`AbstractPostgresTest` (conteneur PostgreSQL 16) et `DatabaseCleaner` (nettoyage entre classes,
+H2 et PostgreSQL), tous dans `com.promoteur.app`.
 
 ## Où sont les choses
 

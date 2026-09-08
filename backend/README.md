@@ -194,8 +194,52 @@ port publié) et `frontend` (build Node puis nginx sur le port 80, qui sert la c
 ## Vérifier
 
 ```bash
-mvn -q verify        # compilation + 83 tests sur H2 avec les migrations Flyway
+mvn -q verify                  # 155 tests sur H2 avec les migrations Flyway, sans Docker
+mvn -q verify -Ppostgres       # 172 tests : ajoute ceux qui tournent sur PostgreSQL 16
 ```
 
 Chaque règle financière a son test dans `src/test/java/com/promoteur/app/service`, nommé
 d'après la règle en clair.
+
+### Tests sur PostgreSQL
+
+Les classes de `src/test/java/com/promoteur/app/postgres` s'exécutent contre un vrai
+PostgreSQL 16 démarré par Testcontainers (`postgres:16-alpine`, la même version majeure que
+`docker-compose.yml`). Elles vérifient ce que H2 ne peut pas prouver : que les douze migrations
+s'appliquent sur le dialecte réel et que `ddl-auto=validate` accepte le mapping, que les
+colonnes monétaires sont bien en `numeric(19,3)`, que le verrou pessimiste du plafond
+d'encaissement (CONC-01) tient sous concurrence, et que les séquences de références restent
+uniques.
+
+**Prérequis : un démon Docker.** Ces classes portent `@Tag("postgres")` et sont **exclues par
+défaut**, pour que `mvn verify` reste utilisable sans Docker — c'est ce que fait la CI du
+backend aujourd'hui. Le profil `-Ppostgres` les réintègre.
+
+Le conteneur est déclaré `withReuse(true)` : pour le garder vivant entre deux exécutions et
+gagner une seconde par lancement, ajouter dans `~/.testcontainers.properties` :
+
+```properties
+testcontainers.reuse.enable=true
+```
+
+Rien n'en dépend — sans ce réglage, Ryuk supprime simplement le conteneur à la fin de la JVM.
+
+### Deux constats sortis de ces tests
+
+- **La recherche globale est sensible aux accents.** `lower(x) like :pattern` compare octet à
+  octet : `lower('Béchir')` vaut `béchir`, qui ne correspond pas à `%bechir%`. Chercher
+  « bechir » ne trouve donc pas « Béchir Ben Salah », sans message ni indice pour l'utilisateur.
+  Le comportement est figé par `PostgresSearchTest` pour qu'il ne change pas par accident. Le
+  corriger demande `unaccent` (extension PostgreSQL, donc indisponible sur H2) ou une colonne
+  normalisée alimentée à l'écriture : une migration et une décision, pas encore prises.
+- **Toute écriture consomme deux connexions simultanément.** La transaction métier tient la
+  sienne pendant que `AuditLogServiceImpl.create`, annoté `REQUIRES_NEW`, en ouvre une seconde
+  pour journaliser. `spring.datasource` ne fixe aucune taille de pool : Hikari applique son
+  défaut de **10**. Dix écritures concurrentes prennent donc tout le pool, puis attendent
+  chacune une onzième connexion qui n'arrivera jamais — blocage jusqu'au timeout de 30 s, puis
+  échec. Observé tel quel avant d'élargir le pool du profil de test
+  (`HikariPool-1 - Connection is not available, request timed out after 30005ms (total=10,
+  active=10, idle=0, waiting=9)`). Deux corrections possibles, à trancher : porter
+  `spring.datasource.hikari.maximum-pool-size` à au moins deux fois la concurrence attendue, ou
+  écrire le journal d'audit dans la transaction courante — mais `REQUIRES_NEW` est délibéré, il
+  garde la trace d'une tentative qui échoue.
