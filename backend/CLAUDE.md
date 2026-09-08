@@ -86,6 +86,15 @@ Aucun outil de formatage ni de lint n'est configuré. Le seul garde-fou automati
 - **Ne pas neutraliser `spring.jpa.database-platform` par une valeur vide** pour changer de
   moteur : Hibernate reçoit `hibernate.dialect=""`. Le profil de test `postgres`
   (`src/test/resources/application-postgres.properties`) pose le dialecte explicitement.
+- **Dans une slice `@WebMvcTest`**, un contrôleur sonde imbriqué dans la classe de test doit
+  être **importé** (`@Import`) en plus d'être nommé dans `controllers` : une classe imbriquée
+  n'est pas candidate au scan, et sans ça les requêtes tombent sur le gestionnaire de ressources
+  statiques et **tout** répond 500. `GlobalExceptionHandler`, `MessageServiceImpl` et
+  `MessageSourceConfig` s'importent aussi : une slice ne charge pas les `@Configuration` du
+  projet. Mockito et `@MockBean` sont réservés à ces slices, jamais dans un test de service.
+- **`getContentAsString()` sans charset retombe en ISO-8859-1** dans `MockHttpServletResponse`,
+  alors que les matchers `jsonPath` décodent en UTF-8. Lire un corps à la main sans
+  `StandardCharsets.UTF_8` fait passer un accent correct pour du mojibake.
 - **`application.properties` est lu en ISO-8859-1.** Les accents s'y écrivent en échappement
   unicode (`Immobilière`), sinon ils arrivent déformés sur les documents imprimés.
   `messages_fr.properties` est à l'inverse lu en UTF-8 (`MessageSourceConfig` fixe
@@ -140,7 +149,11 @@ Règles structurantes :
   sur les listes, agrégats en JPQL. Jamais `findAll()` suivi d'un regroupement en Java —
   `QueryCountTest` compte les requêtes et échoue si le N+1 revient.
 - **Chaînes utilisateur** : jamais concaténées en Java. Clé anglaise dans
-  `messages_fr.properties`, valeur française, lue via `MessageService.get(key, args…)`.
+  `messages_fr.properties`, valeur française, lue via `MessageService.get(key, args…)`. Les
+  messages des contraintes Jakarta sont l'exception : ils vivent dans
+  `ValidationMessages.properties`, **bundle sans suffixe de locale** — l'application est
+  francophone, donc le français y est le défaut et aucune locale de serveur ne peut le changer.
+  Hibernate Validator lit ce bundle en ISO-8859-1 : accents en échappement unicode.
 - Champs et paramètres `final` dans les implémentations, accès par `this.`, `@RequiredArgsConstructor`
   pour l'injection. Suivre le style du fichier voisin plutôt que d'en introduire un autre.
 - Les commentaires citent le code de l'exigence traitée (`PERF-02`, `CALC-01`, `UX-05`…). C'est
@@ -159,7 +172,17 @@ Règles structurantes :
 | `IllegalArgumentException` | `400` — c'est le véhicule des refus métier |
 | `OptimisticLockingFailureException` | `409` |
 | `MaxUploadSizeExceededException` | `413` |
+| `DataIntegrityViolationException` | `409` — saisie bien formée, mais contredit l'existant |
+| `MethodArgumentTypeMismatchException` | `400` — enum inconnue, identifiant non numérique |
+| `HttpMessageNotReadableException` | `400` — corps JSON illisible |
+| `MissingServletRequestParameterException` | `400` — paramètre obligatoire absent |
+| `MissingServletRequestPartException` | `400` — part multipart absente |
 | tout le reste | `500`, journalisé |
+
+Les cinq dernières lignes ont été ajoutées par le WP2 : ces cas répondaient tous `500`
+« Unexpected server error ». Toute nouvelle branche **journalise** ce qui identifie la cause
+(contrainte violée, erreur de parsing) et ne renvoie **jamais** la valeur reçue : renvoyer la
+saisie dans un message est la façon dont une charge réfléchie atteint le toast de la console.
 
 Un refus métier se lève donc en `IllegalArgumentException` avec un message issu de
 `MessageService` — pas d'exception maison par règle. Création → `201` + en-tête `Location`
@@ -273,7 +296,7 @@ sauvegarde complète couvre `spi-postgres-data` **et** `spi-attachments`.
 
 ## Tests
 
-`src/test/java/com/promoteur/app/` — 25 classes, **155 exécutions** sans Docker et **172** avec
+`src/test/java/com/promoteur/app/` — 31 classes, **204 exécutions** sans Docker et **221** avec
 `-Ppostgres` (total surefire, la seule source de vérité : `grep -c "@Test"` compte aussi `@TestPropertySource` et `@TestInstance`, ce
 qui a déjà produit un faux « 177 »). Dix-huit classes partagent un contexte Spring sur H2 via
 `AbstractIntegrationTest`, deux gardent le leur, `AmountInWordsTest` n'en a pas, et quatre
@@ -304,6 +327,12 @@ s'accompagne d'un test ; les classes existantes indiquent où l'ajouter :
 | `postgres/PostgresAdvanceCeilingTest` | CONC-01 sous concurrence sur PostgreSQL |
 | `postgres/PostgresSearchTest` | recherche accentuée — documente la sensibilité aux accents |
 | `postgres/PostgresReferenceSequenceTest` | unicité des références sous concurrence, débordement `numeric` |
+| `web/GlobalExceptionHandlerTest` | les 11 familles d'exceptions → statut, corps, aucune fuite |
+| `web/ExpenseControllerTest` | patron CRUD : 201 + `Location`, `details`, les 10 filtres, la pagination |
+| `web/AttachmentControllerTest` | multipart et flux, nom de fichier accentué encodé RFC 5987 |
+| `web/ReportControllerTest` | les trois sens de `projectId`, types MIME des exports |
+| `web/SearchControllerTest` | contrat de la recherche globale |
+| `web/CorsConfigurationTest` | origines autorisées, jamais `*` avec `allowCredentials` |
 
 Infrastructure : `AbstractIntegrationTest` (contexte et base H2 partagés),
 `AbstractPostgresTest` (conteneur PostgreSQL 16) et `DatabaseCleaner` (nettoyage entre classes,

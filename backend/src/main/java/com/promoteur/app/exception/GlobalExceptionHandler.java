@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -108,6 +110,30 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleUnreadableBody(final HttpMessageNotReadableException ex) {
         LOGGER.warn("Unreadable request body", ex);
         return this.buildResponse(HttpStatus.BAD_REQUEST, this.messageService.get("error.malformedRequestBody"));
+    }
+
+    /**
+     * A required query parameter that was not sent (API-02): {@code /api/search} without
+     * {@code q}, or an export without {@code year}. Answered 500 before, which told the caller
+     * nothing about what was missing.
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingParameter(
+            final MissingServletRequestParameterException ex) {
+        return this.buildResponse(HttpStatus.BAD_REQUEST,
+                this.messageService.get("error.missingParameter", ex.getParameterName()));
+    }
+
+    /**
+     * A multipart request that arrived without one of its parts (API-02, FE-05): an upload
+     * missing its {@code file}. Same defect shape as an unconvertible parameter — a malformed
+     * request answering 500 — so it belongs with the branch above rather than with the
+     * unexpected failures.
+     */
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingPart(final MissingServletRequestPartException ex) {
+        return this.buildResponse(HttpStatus.BAD_REQUEST,
+                this.messageService.get("error.missingRequestPart", ex.getRequestPartName()));
     }
 
     @ExceptionHandler(Exception.class)

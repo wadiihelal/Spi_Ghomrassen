@@ -147,6 +147,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("a missing required parameter answers 400 naming the parameter")
+    void aMissingRequiredParameterAnswers400NamingTheParameter() throws Exception {
+        this.mockMvc.perform(get("/probe/required-param"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value(
+                        org.hamcrest.Matchers.containsString("year")));
+    }
+
+    @Test
     @DisplayName("an unexpected failure answers 500 without saying what broke")
     void anUnexpectedFailureAnswers500() throws Exception {
         this.mockMvc.perform(get("/probe/unexpected"))
@@ -198,7 +208,7 @@ class GlobalExceptionHandlerTest {
     void everyErrorResponseCarriesTimestampStatusAndError() throws Exception {
         for (final String path : new String[]{"/probe/not-found", "/probe/illegal-argument",
                 "/probe/optimistic-lock", "/probe/upload-too-large", "/probe/data-integrity",
-                "/probe/unexpected"}) {
+                "/probe/required-param", "/probe/unexpected"}) {
             this.mockMvc.perform(get(path))
                     .andExpect(jsonPath("$.timestamp").exists())
                     .andExpect(jsonPath("$.status").exists())
@@ -249,6 +259,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/by-id/{id}")
         void byId(@PathVariable final Long id) {
             throw new IllegalStateException("never reached: the conversion fails first");
+        }
+
+        @GetMapping("/required-param")
+        void requiredParam(@RequestParam final Integer year) {
+            throw new IllegalStateException("never reached: the missing parameter fails first");
         }
 
         @GetMapping("/unexpected")

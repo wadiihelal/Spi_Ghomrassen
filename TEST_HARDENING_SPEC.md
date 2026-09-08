@@ -392,6 +392,17 @@ Même problème sur tout `@PathVariable Long id` recevant une valeur non numéri
 résolu selon la locale de la JVM : « must not be blank » sur un serveur en `en_US`, « ne doit pas
 être vide » ailleurs. L'application affiche du français partout sauf là.
 
+### E. Requêtes malformées répondant 500 — deux cas de plus, trouvés à l'exécution
+
+Au-delà des anomalies A à C, **deux autres familles** tombaient dans `handleGeneric` :
+
+- `MissingServletRequestParameterException` — `/api/search` sans `q`, ou
+  `/api/reports/export/excel` sans `year` (les deux sont obligatoires) ;
+- `MissingServletRequestPartException` — un téléversement sans sa part `file`.
+
+Même forme de défaut que l'anomalie B, donc à traiter dans la même famille : une requête
+malformée doit répondre 400 en nommant ce qui manque, jamais 500.
+
 ### D. `@ResponseStatus(CREATED)` + `ResponseEntity.created(...)`
 
 `ExpenseController.create` porte les deux. **Anomalie cosmétique, à couvrir sans corriger** :
@@ -405,6 +416,18 @@ est ignoré — et ici les deux valent 201. Un test qui atteste le 201 et l'en-t
 
 Le test le plus important du lot. Utiliser un `@RestController` de test dédié, déclaré en classe
 interne, qui lève chaque exception à la demande — plus lisible que de piloter un vrai contrôleur.
+
+⚠️ Deux pièges de mécanique, tous deux rencontrés :
+
+- **Le contrôleur sonde doit être `@Import`é**, en plus d'être nommé dans
+  `@WebMvcTest(controllers = ...)`. Une classe imbriquée dans un test n'est pas candidate au
+  scan : sans l'import, chaque requête tombe sur le gestionnaire de ressources statiques
+  (`NoResourceFoundException`) et **tous** les tests voient un 500, ce qui masque exactement ce
+  qu'on cherche à mesurer. Importer aussi `GlobalExceptionHandler`, `MessageServiceImpl` et
+  `MessageSourceConfig` : une slice ne charge pas les `@Configuration` du projet.
+- **`getContentAsString()` sans charset** retombe en ISO-8859-1, alors que les matchers
+  `jsonPath` décodent en UTF-8. Lire le corps à la main sans `StandardCharsets.UTF_8` fait
+  passer un message français correct pour du mojibake — un faux positif côté test uniquement.
 
 Un test par branche existante, **plus** un par branche manquante :
 
@@ -436,9 +459,19 @@ Une fois les tests rouges écrits, corriger `GlobalExceptionHandler` :
 2. Ajouter `@ExceptionHandler({MethodArgumentTypeMismatchException.class,
    HttpMessageNotReadableException.class})` → **400 BAD REQUEST**, message générique en français
    nommant le paramètre fautif (`ex.getName()`), jamais la valeur reçue.
-3. Déclarer un `LocalValidatorFactoryBean` branché sur le `MessageSource` existant, ou fournir
-   `ValidationMessages_fr.properties`, pour rendre les messages de validation déterministes et
-   français. Ajouter le test correspondant.
+3. Rendre les messages de validation déterministes et français. **Ne pas** viser
+   `ValidationMessages_fr.properties` : le suffixe de locale ne sert à rien ici, puisque le
+   problème est justement que la locale résolue est imprévisible. Renseigner
+   `ValidationMessages.properties`, le bundle **sans suffixe** : l'application étant francophone
+   uniquement, le français y est le défaut et aucune locale de serveur ne peut plus le changer.
+   Un `LocalValidatorFactoryBean` branché sur le `MessageSource` existant ne suffit pas non
+   plus : avec `messages_fr.properties` seul et `fallbackToSystemLocale=false`, une locale `en`
+   ne résout rien et Hibernate Validator repart sur son bundle anglais.
+   ⚠️ Hibernate Validator charge ce bundle en **ISO-8859-1** : accents en échappement unicode,
+   comme dans `application.properties`. Asserter le texte français exact, ce qui couvre
+   l'encodage.
+4. Traiter aussi les deux familles de l'anomalie E (paramètre obligatoire absent, part multipart
+   absente), même correctif, même famille.
 
 Toute nouvelle clé va dans `messages_fr.properties` en français accentué — jamais concaténée en
 Java, conformément à `CLAUDE.md`.
@@ -503,7 +536,8 @@ le filtre et rendrait le test vert pour de mauvaises raisons.
 
 ## Critères d'acceptation WP2
 
-- [ ] `GlobalExceptionHandler` traite 8 familles d'exceptions, chacune couverte par un test.
+- [ ] `GlobalExceptionHandler` traite au moins 8 familles d'exceptions — 11 après le lot, les
+      anomalies A, B et E en ajoutant cinq — chacune couverte par un test.
 - [ ] Les anomalies A, B et C sont corrigées, chacune avec le test rouge écrit **avant** la
       correction (le commit du test précède celui du correctif).
 - [ ] Aucune réponse d'erreur ne contient de stacktrace ni de fragment SQL.
