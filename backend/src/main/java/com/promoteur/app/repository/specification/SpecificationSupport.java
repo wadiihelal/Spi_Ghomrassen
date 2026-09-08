@@ -2,6 +2,7 @@ package com.promoteur.app.repository.specification;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
@@ -9,6 +10,7 @@ import jakarta.persistence.criteria.Root;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Shared building blocks for the list-endpoint specifications (PERF-02).
@@ -22,7 +24,7 @@ final class SpecificationSupport {
     static void whenId(final List<Predicate> predicates, final CriteriaBuilder builder,
                        final Root<?> root, final String association, final Long value) {
         if (value != null) {
-            predicates.add(builder.equal(root.join(association, JoinType.LEFT).get("id"), value));
+            predicates.add(builder.equal(joinOnce(root, association).get("id"), value));
         }
     }
 
@@ -37,14 +39,22 @@ final class SpecificationSupport {
     /**
      * Adds an OR of case-insensitive LIKE comparisons across the given paths, when a search term
      * is present.
+     *
+     * <p>The paths arrive as a {@link Supplier} rather than a {@code List} on purpose. Building
+     * them joins associations, and a {@code List.of(...)} argument is evaluated before this
+     * method is even entered: the joins were created on every query, including the unfiltered
+     * listing that has no search term to use them for.</p>
+     *
+     * @param paths supplier of the columns to match, invoked only when there is a term
      */
     static void whenSearch(final List<Predicate> predicates, final CriteriaBuilder builder,
-                           final String pattern, final List<Path<String>> paths) {
+                           final String pattern, final Supplier<List<Path<String>>> paths) {
         if (pattern == null) {
             return;
         }
-        final List<Predicate> matches = new ArrayList<>(paths.size());
-        for (final Path<String> path : paths) {
+        final List<Path<String>> resolved = paths.get();
+        final List<Predicate> matches = new ArrayList<>(resolved.size());
+        for (final Path<String> path : resolved) {
             matches.add(builder.like(builder.lower(path.as(String.class)), pattern));
         }
         predicates.add(builder.or(matches.toArray(Predicate[]::new)));
@@ -52,7 +62,25 @@ final class SpecificationSupport {
 
     /** Left-joins an association and returns one of its string attributes, safe when absent. */
     static Path<String> joined(final Root<?> root, final String association, final String attribute) {
-        return root.join(association, JoinType.LEFT).get(attribute);
+        return joinOnce(root, association).get(attribute);
+    }
+
+    /**
+     * Reuses the left join already made on an association, or creates it.
+     *
+     * <p>{@code root.join(...)} adds a join every time it is called, so filtering on
+     * {@code projectId} and searching a project name used to join {@code projects} twice — six
+     * joins for three associations once every filter was set. Reusing the existing join keeps
+     * one per association, whatever the combination of filters.</p>
+     */
+    private static Join<?, ?> joinOnce(final Root<?> root, final String association) {
+        for (final Join<?, ?> existing : root.getJoins()) {
+            if (existing.getAttribute().getName().equals(association)
+                    && existing.getJoinType() == JoinType.LEFT) {
+                return existing;
+            }
+        }
+        return root.join(association, JoinType.LEFT);
     }
 
     static Predicate all(final CriteriaBuilder builder, final List<Predicate> predicates) {

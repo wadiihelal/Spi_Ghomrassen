@@ -44,7 +44,7 @@ public final class ClientPurchaseSpecifications {
                 predicates.add(paymentStatusPredicate(root, query, builder, status));
             }
 
-            SpecificationSupport.whenSearch(predicates, builder, filter.normalizedSearch(), List.of(
+            SpecificationSupport.whenSearch(predicates, builder, filter.normalizedSearch(), () -> List.of(
                     root.get("reference"),
                     root.get("assetDescription"),
                     root.get("notes"),

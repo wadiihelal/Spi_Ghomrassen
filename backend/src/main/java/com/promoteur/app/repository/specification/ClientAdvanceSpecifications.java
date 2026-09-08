@@ -32,7 +32,7 @@ public final class ClientAdvanceSpecifications {
                 predicates.add(builder.lessThanOrEqualTo(root.get("advanceDate"), filter.dateTo()));
             }
 
-            SpecificationSupport.whenSearch(predicates, builder, filter.normalizedSearch(), List.of(
+            SpecificationSupport.whenSearch(predicates, builder, filter.normalizedSearch(), () -> List.of(
                     root.get("reference"),
                     root.get("notes"),
                     SpecificationSupport.joined(root, "project", "name"),

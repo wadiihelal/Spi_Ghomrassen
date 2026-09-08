@@ -23,7 +23,7 @@ public final class ApartmentSpecifications {
             SpecificationSupport.whenId(predicates, builder, root, "project", filter.projectId());
             SpecificationSupport.whenId(predicates, builder, root, "acquirer", filter.clientId());
 
-            SpecificationSupport.whenSearch(predicates, builder, filter.normalizedSearch(), List.of(
+            SpecificationSupport.whenSearch(predicates, builder, filter.normalizedSearch(), () -> List.of(
                     root.get("apartmentNumber"),
                     root.get("apartmentType"),
                     root.get("detail"),

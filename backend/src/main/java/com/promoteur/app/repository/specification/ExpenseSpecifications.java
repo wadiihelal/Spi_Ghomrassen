@@ -32,7 +32,7 @@ public final class ExpenseSpecifications {
                 predicates.add(builder.lessThanOrEqualTo(root.get("expenseDate"), filter.dateTo()));
             }
 
-            SpecificationSupport.whenSearch(predicates, builder, filter.normalizedSearch(), List.of(
+            SpecificationSupport.whenSearch(predicates, builder, filter.normalizedSearch(), () -> List.of(
                     root.get("reference"),
                     root.get("description"),
                     root.get("documentNumber"),

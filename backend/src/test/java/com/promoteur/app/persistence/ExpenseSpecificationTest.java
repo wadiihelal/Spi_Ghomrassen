@@ -117,9 +117,12 @@ class ExpenseSpecificationTest {
         final ListFilter both = new ListFilter(this.residence.getId(), null, null, null, null,
                 null, null, null, null, "bâtisse");
 
-        // whenId joins "project" to compare its id, whenSearch joins it again to read its name,
-        // and every call to root.join adds one more join to the criteria query.
-        assertThat(this.joinsOf(both)).containsExactly("project");
+        // whenId joins "project" to compare its id and whenSearch needs it again to read its
+        // name; every call to root.join used to add one more. Category and supplier are joined
+        // too, legitimately: the search reads their names as well.
+        assertThat(this.joinsOf(both))
+                .containsOnlyOnce("project")
+                .doesNotHaveDuplicates();
     }
 
     @Test

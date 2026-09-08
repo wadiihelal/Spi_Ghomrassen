@@ -30,7 +30,7 @@ public final class SupplierInvoiceSpecifications {
                 predicates.add(builder.lessThanOrEqualTo(root.get("invoiceDate"), filter.dateTo()));
             }
 
-            SpecificationSupport.whenSearch(predicates, builder, filter.normalizedSearch(), List.of(
+            SpecificationSupport.whenSearch(predicates, builder, filter.normalizedSearch(), () -> List.of(
                     root.get("invoiceNumber"),
                     root.get("detail"),
                     SpecificationSupport.joined(root, "project", "name"),
