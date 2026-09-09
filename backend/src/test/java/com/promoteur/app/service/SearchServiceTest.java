@@ -1,17 +1,21 @@
 package com.promoteur.app.service;
 
-import com.promoteur.app.dto.ApartmentRequest;
-import com.promoteur.app.dto.ClientRequest;
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.SupplierRequest;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.dto.response.SearchHitResponse;
-import com.promoteur.app.enums.ProjectStatus;
 import com.promoteur.app.AbstractIntegrationTest;
+import com.promoteur.app.apartment.ApartmentRequest;
+import com.promoteur.app.apartment.ApartmentService;
+import com.promoteur.app.client.ClientRequest;
+import com.promoteur.app.client.ClientService;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
+import com.promoteur.app.search.SearchHitResponse;
+import com.promoteur.app.search.SearchService;
+import com.promoteur.app.supplier.SupplierRequest;
+import com.promoteur.app.supplier.SupplierService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;

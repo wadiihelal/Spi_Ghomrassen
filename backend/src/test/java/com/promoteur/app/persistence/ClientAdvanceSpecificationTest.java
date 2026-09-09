@@ -1,13 +1,13 @@
 package com.promoteur.app.persistence;
 
-import com.promoteur.app.dto.ListFilter;
-import com.promoteur.app.entity.Apartment;
-import com.promoteur.app.entity.Client;
-import com.promoteur.app.entity.ClientAdvance;
-import com.promoteur.app.entity.Project;
-import com.promoteur.app.enums.PaymentMethod;
-import com.promoteur.app.repository.ClientAdvanceRepository;
-import com.promoteur.app.repository.specification.ClientAdvanceSpecifications;
+import com.promoteur.app.advance.ClientAdvance;
+import com.promoteur.app.advance.ClientAdvanceRepository;
+import com.promoteur.app.advance.ClientAdvanceSpecifications;
+import com.promoteur.app.apartment.Apartment;
+import com.promoteur.app.client.Client;
+import com.promoteur.app.project.Project;
+import com.promoteur.app.shared.ListFilter;
+import com.promoteur.app.shared.PaymentMethod;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

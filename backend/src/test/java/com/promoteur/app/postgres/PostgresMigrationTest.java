@@ -28,7 +28,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class PostgresMigrationTest extends AbstractPostgresTest {
 
-    /** Migrations delivered so far: V1 to V12. */
+    /**
+     * Migrations delivered so far: V1 to V12.
+     */
     private static final int DELIVERED_MIGRATIONS = 12;
 
     /**
@@ -38,7 +40,9 @@ class PostgresMigrationTest extends AbstractPostgresTest {
      */
     private static final Set<String> RATE_COLUMNS = Set.of("vat_rate", "default_vat_rate", "rate");
 
-    /** Money is counted in millimes: three decimals, as CLAUDE.md requires. */
+    /**
+     * Money is counted in millimes: three decimals, as CLAUDE.md requires.
+     */
     private static final int MONEY_PRECISION = 19;
     private static final int MONEY_SCALE = 3;
 
@@ -114,9 +118,9 @@ class PostgresMigrationTest extends AbstractPostgresTest {
         // called `version` too, holding the migration number as a varchar.
         final Set<String> mappedTables = this.mappedTableNames();
         final List<Map<String, Object>> versionColumns = this.jdbcTemplate.queryForList("""
-                select table_name, data_type, is_nullable from information_schema.columns
-                where table_schema = 'public' and column_name = 'version'
-                """)
+                        select table_name, data_type, is_nullable from information_schema.columns
+                        where table_schema = 'public' and column_name = 'version'
+                        """)
                 .stream()
                 .filter(column -> mappedTables.contains((String) column.get("table_name")))
                 .toList();
@@ -150,7 +154,9 @@ class PostgresMigrationTest extends AbstractPostgresTest {
         });
     }
 
-    /** Table names as the entities declare them, so the assertions follow the mapping. */
+    /**
+     * Table names as the entities declare them, so the assertions follow the mapping.
+     */
     private Set<String> mappedTableNames() {
         return this.entityManager.getMetamodel().getEntities().stream()
                 .map(EntityType::getJavaType)

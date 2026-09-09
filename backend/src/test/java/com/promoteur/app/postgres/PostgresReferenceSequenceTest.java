@@ -1,14 +1,14 @@
 package com.promoteur.app.postgres;
 
 import com.promoteur.app.AbstractPostgresTest;
-import com.promoteur.app.dto.ExpenseRequest;
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.response.ExpenseResponse;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.enums.ProjectStatus;
-import com.promoteur.app.repository.ExpenseCategoryRepository;
-import com.promoteur.app.service.ExpenseService;
-import com.promoteur.app.service.ProjectService;
+import com.promoteur.app.expense.ExpenseCategoryRepository;
+import com.promoteur.app.expense.ExpenseRequest;
+import com.promoteur.app.expense.ExpenseResponse;
+import com.promoteur.app.expense.ExpenseService;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -59,7 +59,9 @@ class PostgresReferenceSequenceTest extends AbstractPostgresTest {
     private static final int CONCURRENT_EXPENSES = 100;
     private static final int POOL_SIZE = 10;
 
-    /** numeric(19,3) leaves sixteen digits before the decimal point; this has seventeen. */
+    /**
+     * numeric(19,3) leaves sixteen digits before the decimal point; this has seventeen.
+     */
     private static final BigDecimal BEYOND_NUMERIC_19_3 = new BigDecimal("10000000000000000.000");
 
     @Autowired
@@ -71,6 +73,13 @@ class PostgresReferenceSequenceTest extends AbstractPostgresTest {
 
     private ProjectResponse project;
     private Long categoryId;
+
+    /**
+     * The five-digit counter at the end of {@code DEP-2026-00042}.
+     */
+    private static int counterOf(final String reference) {
+        return Integer.parseInt(reference.substring(reference.lastIndexOf('-') + 1));
+    }
 
     @BeforeAll
     void seedProjectAndCategory() {
@@ -146,11 +155,6 @@ class PostgresReferenceSequenceTest extends AbstractPostgresTest {
         assertThatThrownBy(() -> this.createExpense(BEYOND_NUMERIC_19_3))
                 .as("an amount of seventeen integer digits cannot be stored as numeric(19,3)")
                 .isInstanceOf(RuntimeException.class);
-    }
-
-    /** The five-digit counter at the end of {@code DEP-2026-00042}. */
-    private static int counterOf(final String reference) {
-        return Integer.parseInt(reference.substring(reference.lastIndexOf('-') + 1));
     }
 
     private ExpenseResponse createExpense(final BigDecimal amountHt) {

@@ -18,7 +18,9 @@ public record CompanyProperties(
         String email
 ) {
 
-    /** Blank fields are simply left off the letterhead rather than printed empty. */
+    /**
+     * Blank fields are simply left off the letterhead rather than printed empty.
+     */
     public boolean has(final String value) {
         return value != null && !value.isBlank();
     }

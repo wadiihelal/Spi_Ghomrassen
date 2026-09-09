@@ -5,8 +5,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -53,7 +53,9 @@ import org.testcontainers.utility.DockerImageName;
 @Tag("postgres")
 public abstract class AbstractPostgresTest {
 
-    /** Same major version as docker-compose.yml, so the tests exercise what really runs. */
+    /**
+     * Same major version as docker-compose.yml, so the tests exercise what really runs.
+     */
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))

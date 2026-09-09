@@ -1,25 +1,26 @@
 package com.promoteur.app.service;
 
-import com.promoteur.app.dto.ListFilter;
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.SupplierInvoiceRequest;
-import com.promoteur.app.dto.SupplierPaymentRequest;
-import com.promoteur.app.dto.SupplierRequest;
-import com.promoteur.app.dto.response.PayablesSummaryResponse;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.dto.response.SupplierInvoiceResponse;
-import com.promoteur.app.dto.response.SupplierResponse;
-import com.promoteur.app.enums.PaymentMethod;
-import com.promoteur.app.enums.ProjectStatus;
-import com.promoteur.app.enums.SettlementFilter;
-import com.promoteur.app.enums.SettlementStatus;
 import com.promoteur.app.AbstractIntegrationTest;
+import com.promoteur.app.invoice.PayablesSummaryResponse;
+import com.promoteur.app.invoice.SettlementFilter;
+import com.promoteur.app.invoice.SettlementStatus;
+import com.promoteur.app.invoice.SupplierInvoiceRequest;
+import com.promoteur.app.invoice.SupplierInvoiceResponse;
+import com.promoteur.app.invoice.SupplierInvoiceService;
+import com.promoteur.app.invoice.SupplierPaymentRequest;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
+import com.promoteur.app.shared.ListFilter;
+import com.promoteur.app.shared.PaymentMethod;
+import com.promoteur.app.supplier.SupplierRequest;
+import com.promoteur.app.supplier.SupplierResponse;
+import com.promoteur.app.supplier.SupplierService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
@@ -193,7 +194,7 @@ class SupplierPaymentTest extends AbstractIntegrationTest {
         SupplierInvoiceResponse notYetDue = this.createInvoice("900.000", LocalDate.now().plusDays(20));
 
         var rows = this.supplierInvoiceService.findBySettlement(
-                ListFilter.ofProject(this.project.id()), SettlementFilter.OVERDUE, PageRequest.of(0, 200))
+                        ListFilter.ofProject(this.project.id()), SettlementFilter.OVERDUE, PageRequest.of(0, 200))
                 .getContent();
 
         assertThat(rows).allSatisfy(row -> assertThat(row.overdue()).isTrue());

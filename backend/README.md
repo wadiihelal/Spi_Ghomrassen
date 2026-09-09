@@ -11,8 +11,10 @@ d'audit et rapports Excel / PDF.
 - MapStruct (DTO de réponse), Lombok, Apache POI (Excel), OpenPDF (PDF), springdoc-openapi
 - H2 en mémoire pour la suite de tests uniquement
 
-Découpage : `controller → service (interface) → service/impl → repository`. Les contrôleurs
-renvoient des records de `dto/response`, jamais d'entité. Tous les montants sont des
+Découpage : **un paquet par feature** (`expense/`, `client/`, `apartment/`…), avec la même
+discipline de dépendances qu'avant — `contrôleur → interface de service → implémentation →
+dépôt`. `shared/` porte ce qui sert à plusieurs features. Les contrôleurs renvoient des records
+`*Response`, jamais d'entité. Tous les montants sont des
 `BigDecimal` `precision = 19, scale = 3` (millimes), arrondis `HALF_UP`.
 
 ## Base de données
@@ -36,24 +38,24 @@ mvn spring-boot:run -Dspring-boot.run.profiles=test,demo -Dspring-boot.run.useTe
 
 ## Profils
 
-| Profil | Base | Usage |
-|---|---|---|
-| `dev` (défaut) | PostgreSQL `localhost:5432/spi_ghomrassen` | développement, `show-sql=true`, OpenAPI actif |
-| `demo` | s'ajoute à un autre profil | charge des projets, appartements, acquéreurs et paiements **fictifs** — jamais en production |
-| `prod` | PostgreSQL via `${DATABASE_URL}` | production, aucune valeur par défaut, OpenAPI désactivé |
-| `test` | H2 en mémoire, mêmes migrations Flyway | suite de tests, OpenAPI actif |
+| Profil         | Base                                       | Usage                                                                                        |
+|----------------|--------------------------------------------|----------------------------------------------------------------------------------------------|
+| `dev` (défaut) | PostgreSQL `localhost:5432/spi_ghomrassen` | développement, `show-sql=true`, OpenAPI actif                                                |
+| `demo`         | s'ajoute à un autre profil                 | charge des projets, appartements, acquéreurs et paiements **fictifs** — jamais en production |
+| `prod`         | PostgreSQL via `${DATABASE_URL}`           | production, aucune valeur par défaut, OpenAPI désactivé                                      |
+| `test`         | H2 en mémoire, mêmes migrations Flyway     | suite de tests, OpenAPI actif                                                                |
 
 `ReferenceDataInitializer` tourne dans tous les profils et crée uniquement ce qui manque :
 catégories de dépense, types de fournisseur, taux de TVA (0, 7, 13, 19 %).
 
 ### Variables d'environnement
 
-| Variable | Profils | Défaut |
-|---|---|---|
-| `DB_USER`, `DB_PASSWORD` | dev, prod | `spi` / `spi` en dev, obligatoires en prod |
-| `DATABASE_URL` | prod | obligatoire, ex. `jdbc:postgresql://postgres:5432/spi_ghomrassen` |
-| `APP_CORS_ALLOWED_ORIGINS` | prod | obligatoire, origine du frontend |
-| `ATTACHMENTS_ROOT` | prod | obligatoire — dossier des pièces jointes, hors du dossier de l'application |
+| Variable                   | Profils   | Défaut                                                                     |
+|----------------------------|-----------|----------------------------------------------------------------------------|
+| `DB_USER`, `DB_PASSWORD`   | dev, prod | `spi` / `spi` en dev, obligatoires en prod                                 |
+| `DATABASE_URL`             | prod      | obligatoire, ex. `jdbc:postgresql://postgres:5432/spi_ghomrassen`          |
+| `APP_CORS_ALLOWED_ORIGINS` | prod      | obligatoire, origine du frontend                                           |
+| `ATTACHMENTS_ROOT`         | prod      | obligatoire — dossier des pièces jointes, hors du dossier de l'application |
 
 ## Sécurité — décision métier
 
@@ -109,11 +111,11 @@ Bordereaux de virement, scans de chèque et pages de contrat sont de vrais fichi
 (`file_attachments`, `POST /api/attachments` en multipart, `GET /api/attachments/{id}` en flux).
 PDF, JPEG, PNG ; 10 Mo maximum. Stockage sur le système de fichiers local sous `app.storage.root` :
 
-| Profil | Racine |
-|---|---|
-| `dev` | `~/.spi-ghomrassen/attachments` |
+| Profil | Racine                                                                     |
+|--------|----------------------------------------------------------------------------|
+| `dev`  | `~/.spi-ghomrassen/attachments`                                            |
 | `prod` | `${ATTACHMENTS_ROOT}` — volume `spi-attachments` dans `docker-compose.yml` |
-| `test` | dossier temporaire |
+| `test` | dossier temporaire                                                         |
 
 Les anciennes colonnes `attachment_name` / `attachment_url` restent lisibles pour l'historique
 mais ne sont plus alimentées.
@@ -140,26 +142,26 @@ de requête : `projectId`, `clientId`, `supplierId`, `categoryId`, `apartmentId`
 `/by-client/{id}`, `/by-category/{id}`, `/by-supplier/{id}` sont dépréciées et retirées à la
 prochaine version.
 
-| Ressource | Routes |
-|---|---|
-| Projets | `/api/projects`, `/api/projects/active-context` (`GET`, `PUT /{id}`, `DELETE`) |
-| Appartements | `/api/apartments` |
-| Clients | `/api/clients` |
-| Fournisseurs, types | `/api/suppliers`, `/api/supplier-types` |
-| Catégories, taux de TVA | `/api/expense-categories`, `/api/vat-rates` |
-| Dépenses | `/api/expenses` |
-| Factures fournisseurs | `/api/supplier-invoices` |
-| Contrats de vente | `/api/client-purchases` |
-| Acomptes | `/api/client-advances` |
-| Pièces jointes | `/api/attachments?ownerType&ownerId`, `/api/attachments/{id}` |
-| Recherche globale | `/api/search?q&projectId` — cinq résultats au plus par type |
-| Journal d'audit | `/api/audit-logs?entityType&actor&dateFrom&dateTo`, `/api/audit-logs/by-entity/{type}/{id}` |
-| Tableau de bord | `/api/dashboard/summary?projectId` |
-| Plan de vente | `/api/apartments/sales-board?projectId`, `PATCH /api/apartments/{id}/sales-status?status` |
-| Échéanciers | `/api/client-purchases/{id}/schedule` (`GET`, `PUT`, `POST /generate`), `/api/installments`, `/api/installments/summary` |
-| Règlements fournisseurs | `/api/supplier-invoices/{id}/payments` (`GET`, `POST`, `DELETE /{paymentId}`), `/api/supplier-invoices/payables-summary` |
-| Documents PDF | `/api/documents/advances/{id}/receipt`, `/api/documents/clients/{id}/statement`, `/api/documents/vat/{year}/{month}?projectId` |
-| Rapports | `/api/reports/expenses/by-category`, `/by-project`, `/by-month`, `/api/reports/purchases/by-project`, `/api/reports/advances/by-payment-method`, `/api/reports/clients/statements`, `/api/reports/clients/{id}/statement`, `/api/reports/export/excel`, `/export/pdf` |
+| Ressource               | Routes                                                                                                                                                                                                                                                                |
+|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Projets                 | `/api/projects`, `/api/projects/active-context` (`GET`, `PUT /{id}`, `DELETE`)                                                                                                                                                                                        |
+| Appartements            | `/api/apartments`                                                                                                                                                                                                                                                     |
+| Clients                 | `/api/clients`                                                                                                                                                                                                                                                        |
+| Fournisseurs, types     | `/api/suppliers`, `/api/supplier-types`                                                                                                                                                                                                                               |
+| Catégories, taux de TVA | `/api/expense-categories`, `/api/vat-rates`                                                                                                                                                                                                                           |
+| Dépenses                | `/api/expenses`                                                                                                                                                                                                                                                       |
+| Factures fournisseurs   | `/api/supplier-invoices`                                                                                                                                                                                                                                              |
+| Contrats de vente       | `/api/client-purchases`                                                                                                                                                                                                                                               |
+| Acomptes                | `/api/client-advances`                                                                                                                                                                                                                                                |
+| Pièces jointes          | `/api/attachments?ownerType&ownerId`, `/api/attachments/{id}`                                                                                                                                                                                                         |
+| Recherche globale       | `/api/search?q&projectId` — cinq résultats au plus par type                                                                                                                                                                                                           |
+| Journal d'audit         | `/api/audit-logs?entityType&actor&dateFrom&dateTo`, `/api/audit-logs/by-entity/{type}/{id}`                                                                                                                                                                           |
+| Tableau de bord         | `/api/dashboard/summary?projectId`                                                                                                                                                                                                                                    |
+| Plan de vente           | `/api/apartments/sales-board?projectId`, `PATCH /api/apartments/{id}/sales-status?status`                                                                                                                                                                             |
+| Échéanciers             | `/api/client-purchases/{id}/schedule` (`GET`, `PUT`, `POST /generate`), `/api/installments`, `/api/installments/summary`                                                                                                                                              |
+| Règlements fournisseurs | `/api/supplier-invoices/{id}/payments` (`GET`, `POST`, `DELETE /{paymentId}`), `/api/supplier-invoices/payables-summary`                                                                                                                                              |
+| Documents PDF           | `/api/documents/advances/{id}/receipt`, `/api/documents/clients/{id}/statement`, `/api/documents/vat/{year}/{month}?projectId`                                                                                                                                        |
+| Rapports                | `/api/reports/expenses/by-category`, `/by-project`, `/by-month`, `/api/reports/purchases/by-project`, `/api/reports/advances/by-payment-method`, `/api/reports/clients/statements`, `/api/reports/clients/{id}/statement`, `/api/reports/export/excel`, `/export/pdf` |
 
 ### Exemple — créer une dépense
 
@@ -194,12 +196,12 @@ port publié) et `frontend` (build Node puis nginx sur le port 80, qui sert la c
 ## Vérifier
 
 ```bash
-mvn -q verify                  # 274 tests sur H2 avec les migrations Flyway, sans Docker
-mvn -q verify -Ppostgres       # 291 tests : ajoute ceux qui tournent sur PostgreSQL 16
+mvn -q verify                  # 276 tests sur H2 avec les migrations Flyway, sans Docker
+mvn -q verify -Ppostgres       # 293 tests : ajoute ceux qui tournent sur PostgreSQL 16
 ```
 
 Chaque règle financière a son test dans `src/test/java/com/promoteur/app/service`, nommé
-d'après la règle en clair.
+d'après la règle en clair. `ArchitectureTest` fait échouer le build si le découpage dérive.
 
 ### Tests sur PostgreSQL
 

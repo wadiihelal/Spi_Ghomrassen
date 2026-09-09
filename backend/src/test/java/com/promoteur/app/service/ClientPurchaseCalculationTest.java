@@ -1,23 +1,27 @@
 package com.promoteur.app.service;
 
-import com.promoteur.app.dto.ApartmentRequest;
-import com.promoteur.app.dto.ClientAdvanceRequest;
-import com.promoteur.app.dto.ClientPurchaseRequest;
-import com.promoteur.app.dto.ClientRequest;
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.response.ApartmentResponse;
-import com.promoteur.app.dto.response.ClientResponse;
-import com.promoteur.app.dto.response.ClientPurchaseResponse;
-import com.promoteur.app.entity.ClientPurchase;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.enums.ProjectStatus;
-import com.promoteur.app.enums.PurchasePaymentStatus;
-import com.promoteur.app.repository.ClientPurchaseRepository;
 import com.promoteur.app.AbstractIntegrationTest;
+import com.promoteur.app.advance.ClientAdvanceRequest;
+import com.promoteur.app.advance.ClientAdvanceService;
+import com.promoteur.app.apartment.ApartmentRequest;
+import com.promoteur.app.apartment.ApartmentResponse;
+import com.promoteur.app.apartment.ApartmentService;
+import com.promoteur.app.client.ClientRequest;
+import com.promoteur.app.client.ClientResponse;
+import com.promoteur.app.client.ClientService;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
+import com.promoteur.app.purchase.ClientPurchase;
+import com.promoteur.app.purchase.ClientPurchaseRepository;
+import com.promoteur.app.purchase.ClientPurchaseRequest;
+import com.promoteur.app.purchase.ClientPurchaseResponse;
+import com.promoteur.app.purchase.ClientPurchaseService;
+import com.promoteur.app.shared.PurchasePaymentStatus;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;

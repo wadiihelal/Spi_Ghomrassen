@@ -2,30 +2,30 @@ package com.promoteur.app.persistence;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.promoteur.app.AbstractIntegrationTest;
-import com.promoteur.app.dto.ApartmentRequest;
-import com.promoteur.app.dto.ClientAdvanceRequest;
-import com.promoteur.app.dto.ClientPurchaseRequest;
-import com.promoteur.app.dto.ClientRequest;
-import com.promoteur.app.dto.ExpenseRequest;
-import com.promoteur.app.dto.ListFilter;
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.SupplierInvoiceRequest;
-import com.promoteur.app.dto.SupplierRequest;
-import com.promoteur.app.dto.response.ApartmentResponse;
-import com.promoteur.app.dto.response.ClientResponse;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.dto.response.SupplierResponse;
-import com.promoteur.app.enums.PaymentMethod;
-import com.promoteur.app.enums.ProjectStatus;
-import com.promoteur.app.repository.ExpenseCategoryRepository;
-import com.promoteur.app.service.ApartmentService;
-import com.promoteur.app.service.ClientAdvanceService;
-import com.promoteur.app.service.ClientPurchaseService;
-import com.promoteur.app.service.ClientService;
-import com.promoteur.app.service.ExpenseService;
-import com.promoteur.app.service.ProjectService;
-import com.promoteur.app.service.SupplierInvoiceService;
-import com.promoteur.app.service.SupplierService;
+import com.promoteur.app.advance.ClientAdvanceRequest;
+import com.promoteur.app.advance.ClientAdvanceService;
+import com.promoteur.app.apartment.ApartmentRequest;
+import com.promoteur.app.apartment.ApartmentResponse;
+import com.promoteur.app.apartment.ApartmentService;
+import com.promoteur.app.client.ClientRequest;
+import com.promoteur.app.client.ClientResponse;
+import com.promoteur.app.client.ClientService;
+import com.promoteur.app.expense.ExpenseCategoryRepository;
+import com.promoteur.app.expense.ExpenseRequest;
+import com.promoteur.app.expense.ExpenseService;
+import com.promoteur.app.invoice.SupplierInvoiceRequest;
+import com.promoteur.app.invoice.SupplierInvoiceService;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
+import com.promoteur.app.purchase.ClientPurchaseRequest;
+import com.promoteur.app.purchase.ClientPurchaseService;
+import com.promoteur.app.shared.ListFilter;
+import com.promoteur.app.shared.PaymentMethod;
+import com.promoteur.app.supplier.SupplierRequest;
+import com.promoteur.app.supplier.SupplierResponse;
+import com.promoteur.app.supplier.SupplierService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -117,7 +117,9 @@ class ResponseSerializationTest extends AbstractIntegrationTest {
         assertThat(json).doesNotContain("\"supplier\":{").doesNotContain("hibernateLazyInitializer");
     }
 
-    /** Serialises what a finder returned, outside any transaction, and names it on failure. */
+    /**
+     * Serialises what a finder returned, outside any transaction, and names it on failure.
+     */
     private void assertSerialises(final String endpoint, final Supplier<Page<?>> finder) {
         final Page<?> page = finder.get();
         assertThat(page.getContent()).as("%s must have a row to serialise", endpoint).isNotEmpty();
@@ -195,7 +197,9 @@ class ResponseSerializationTest extends AbstractIntegrationTest {
         this.clientPurchaseService.create(request);
     }
 
-    /** Only the lot is sent: the service derives the client and the project from it. */
+    /**
+     * Only the lot is sent: the service derives the client and the project from it.
+     */
     private void createAdvance(final ApartmentResponse apartment) {
         final ClientAdvanceRequest request = new ClientAdvanceRequest();
         request.setAdvanceDate(LocalDate.of(2026, 9, 15));

@@ -1,13 +1,13 @@
 package com.promoteur.app.persistence;
 
-import com.promoteur.app.dto.ListFilter;
-import com.promoteur.app.entity.Expense;
-import com.promoteur.app.entity.ExpenseCategory;
-import com.promoteur.app.entity.Project;
-import com.promoteur.app.entity.Supplier;
-import com.promoteur.app.enums.PaymentMethod;
-import com.promoteur.app.repository.ExpenseRepository;
-import com.promoteur.app.repository.specification.ExpenseSpecifications;
+import com.promoteur.app.expense.Expense;
+import com.promoteur.app.expense.ExpenseCategory;
+import com.promoteur.app.expense.ExpenseRepository;
+import com.promoteur.app.expense.ExpenseSpecifications;
+import com.promoteur.app.project.Project;
+import com.promoteur.app.shared.ListFilter;
+import com.promoteur.app.shared.PaymentMethod;
+import com.promoteur.app.supplier.Supplier;
 import org.hibernate.Hibernate;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;

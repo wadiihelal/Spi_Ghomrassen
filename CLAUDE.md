@@ -7,8 +7,11 @@ Application interne d'un promoteur immobilier tunisien. `backend/` Spring Boot 3
 
 - **Argent** : `BigDecimal`, `precision = 19, scale = 3` (millimes), `RoundingMode.HALF_UP`.
   Jamais `double` ni `float`. Le serveur calcule (TVA, plafonds, totaux) ; le navigateur affiche.
-- **Découpage** : `controller → service (interface) → service/impl → repository`. Un nouveau
-  service = une interface dans `service/` + une implémentation dans `service/impl/`.
+- **Découpage** : **un paquet par feature** (`expense/`, `client/`, `apartment/`…), tout ce qui
+  la concerne dedans. La discipline de dépendances ne change pas pour autant :
+  `contrôleur → interface de service → implémentation → dépôt`. Un nouveau service = une
+  interface `XService` + une implémentation `XServiceImpl` dans le paquet de la feature.
+  `shared/` est le bas du graphe : une feature l'utilise, il n'utilise aucune feature.
 - **DTO à la frontière** : les contrôleurs ne renvoient jamais d'entité JPA. Réponses dans
   `dto/response` (records, ids à plat + libellés), mappées par MapStruct dans `mapper/`
   (`unmappedTargetPolicy = ERROR`).
@@ -50,8 +53,8 @@ Application interne d'un promoteur immobilier tunisien. `backend/` Spring Boot 3
 ## Vérifier avant de livrer
 
 ```bash
-cd backend && mvn -q verify             # 274 tests, H2 + Flyway, un contexte Spring partage
-cd backend && mvn -q verify -Ppostgres  # 291 tests : + PostgreSQL 16 reel, demande Docker
+cd backend && mvn -q verify             # 276 tests, H2 + Flyway, un contexte Spring partage
+cd backend && mvn -q verify -Ppostgres  # 293 tests : + PostgreSQL 16 reel, demande Docker
 cd frontend && npx ng build             # TypeScript strict + strictTemplates
 ```
 
@@ -66,6 +69,24 @@ cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=test,demo -Dspring-
 ```
 
 Le profil `demo` charge des acquéreurs fictifs : jamais en production.
+
+## Architecture par feature (09/09/2026)
+
+Le backend est passe d'un decoupage par couche (`controller/`, `service/`, `repository/`…) a
+**un paquet par feature**. Les 187 fichiers ont bouge, aucune ligne de logique metier n'a
+change, et les 276 tests passent a l'identique.
+
+Ce qui a bouge en plus du simple deplacement :
+
+- `SpecificationSupport` et `PdfLetterhead` etaient package-private ; leurs utilisateurs sont
+  desormais dans des paquets differents, ils sont donc **publics** dans `shared/`.
+- `ArchitectureTest` reconnait les couches **par nom de classe et annotation** et non plus par
+  paquet. La regle d'absence de cycles entre paquets a ete **retiree** : entre features, les
+  references croisees sont normales, la regle remontait plus de cent cycles sans signal. Elle
+  est remplacee par `sharedDoesNotDependOnAFeature`, l'invariant que ce decoupage a vraiment.
+- Une exclusion nommee de plus, et c'est un vrai defaut :
+  `shared/ReferenceGeneratorServiceImpl` lit trois depots de features pour verifier qu'une
+  reference tiree est libre. A corriger en inversant le controle.
 
 ## Chantier en cours : durcissement des tests
 

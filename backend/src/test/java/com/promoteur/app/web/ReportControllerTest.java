@@ -1,11 +1,11 @@
 package com.promoteur.app.web;
 
 import com.promoteur.app.config.MessageSourceConfig;
-import com.promoteur.app.controller.ReportController;
-import com.promoteur.app.dto.report.ReportFilter;
 import com.promoteur.app.exception.GlobalExceptionHandler;
-import com.promoteur.app.service.ReportService;
-import com.promoteur.app.service.impl.MessageServiceImpl;
+import com.promoteur.app.report.ReportController;
+import com.promoteur.app.report.ReportFilter;
+import com.promoteur.app.report.ReportService;
+import com.promoteur.app.shared.MessageServiceImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -128,7 +128,9 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("year")));
     }
 
-    /** The filter the controller built from the query string. */
+    /**
+     * The filter the controller built from the query string.
+     */
     private ReportFilter capturedFilter() {
         final ArgumentCaptor<ReportFilter> filter = ArgumentCaptor.forClass(ReportFilter.class);
         verify(this.reportService).expensesByCategory(filter.capture(), any());

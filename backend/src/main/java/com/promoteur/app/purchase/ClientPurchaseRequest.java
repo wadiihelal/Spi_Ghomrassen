@@ -1,0 +1,77 @@
+package com.promoteur.app.purchase;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
+import lombok.Data;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+/**
+ * Payload used to create or update a client purchase transaction.
+ */
+@Data
+public class ClientPurchaseRequest {
+
+    /**
+     * Contract reference. Left blank, it is allocated by sequence (UX-09); given, it is kept,
+     * which is how references from before the application are carried over.
+     */
+    private String reference;
+
+    /**
+     * Effective purchase date.
+     */
+    @NotNull
+    private LocalDate purchaseDate;
+
+    /**
+     * Optional contract signature date.
+     */
+    private LocalDate contractDate;
+
+    /**
+     * Commercial description of the purchased asset.
+     */
+    @NotBlank
+    private String assetDescription;
+
+    /**
+     * Total contractual amount in Tunisian dinars.
+     */
+    @NotNull
+    @Positive
+    private BigDecimal totalAmount;
+
+    /**
+     * Amount already paid directly on the purchase record.
+     */
+    @PositiveOrZero
+    private BigDecimal paidAmount;
+
+
+    /**
+     * Additional comments related to the purchase.
+     */
+    private String notes;
+
+    /**
+     * Client identifier owning the purchase.
+     */
+    @NotNull
+    private Long clientId;
+
+    /**
+     * Project identifier in which the purchase is recorded.
+     */
+    @NotNull
+    private Long projectId;
+
+    /**
+     * Apartment identifier linked to the purchase.
+     */
+    @NotNull
+    private Long apartmentId;
+}

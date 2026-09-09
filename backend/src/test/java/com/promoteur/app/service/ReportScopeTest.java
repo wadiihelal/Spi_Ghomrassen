@@ -1,23 +1,24 @@
 package com.promoteur.app.service;
 
-import com.promoteur.app.dto.ExpenseRequest;
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.report.AmountByLabelDto;
-import com.promoteur.app.dto.report.ReportFilter;
-import com.promoteur.app.dto.response.DashboardSummaryResponse;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.enums.ProjectStatus;
-import com.promoteur.app.repository.ExpenseCategoryRepository;
+import com.promoteur.app.AbstractIntegrationTest;
+import com.promoteur.app.dashboard.DashboardSummaryResponse;
+import com.promoteur.app.expense.ExpenseCategoryRepository;
+import com.promoteur.app.expense.ExpenseRequest;
+import com.promoteur.app.expense.ExpenseService;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
+import com.promoteur.app.report.AmountByLabelDto;
+import com.promoteur.app.report.ReportFilter;
+import com.promoteur.app.report.ReportService;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.data.domain.PageRequest;
 
 import java.io.ByteArrayInputStream;

@@ -1,0 +1,35 @@
+package com.promoteur.app.expense;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+/**
+ * Service exposing expense category lifecycle operations.
+ */
+public interface ExpenseCategoryService {
+
+    /**
+     * Returns expense categories using the requested pagination.
+     */
+    Page<ExpenseCategoryResponse> findAll(Pageable pageable);
+
+    /**
+     * Returns a single expense category by identifier.
+     */
+    ExpenseCategoryResponse findById(Long id);
+
+    /**
+     * Creates a new expense category.
+     */
+    ExpenseCategoryResponse create(ExpenseCategoryRequest request);
+
+    /**
+     * Updates an existing expense category.
+     */
+    ExpenseCategoryResponse update(Long id, ExpenseCategoryRequest request);
+
+    /**
+     * Deletes an expense category by identifier.
+     */
+    void delete(Long id);
+}

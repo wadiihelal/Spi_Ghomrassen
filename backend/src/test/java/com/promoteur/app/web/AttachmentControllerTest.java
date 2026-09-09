@@ -1,12 +1,12 @@
 package com.promoteur.app.web;
 
+import com.promoteur.app.attachment.AttachmentController;
+import com.promoteur.app.attachment.AttachmentOwnerType;
+import com.promoteur.app.attachment.AttachmentResponse;
+import com.promoteur.app.attachment.AttachmentService;
 import com.promoteur.app.config.MessageSourceConfig;
-import com.promoteur.app.controller.AttachmentController;
-import com.promoteur.app.dto.response.AttachmentResponse;
-import com.promoteur.app.enums.AttachmentOwnerType;
 import com.promoteur.app.exception.GlobalExceptionHandler;
-import com.promoteur.app.service.AttachmentService;
-import com.promoteur.app.service.impl.MessageServiceImpl;
+import com.promoteur.app.shared.MessageServiceImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

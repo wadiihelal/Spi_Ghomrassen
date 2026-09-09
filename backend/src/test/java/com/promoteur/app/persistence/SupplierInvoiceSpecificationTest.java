@@ -1,11 +1,11 @@
 package com.promoteur.app.persistence;
 
-import com.promoteur.app.dto.ListFilter;
-import com.promoteur.app.entity.Project;
-import com.promoteur.app.entity.Supplier;
-import com.promoteur.app.entity.SupplierInvoice;
-import com.promoteur.app.repository.SupplierInvoiceRepository;
-import com.promoteur.app.repository.specification.SupplierInvoiceSpecifications;
+import com.promoteur.app.invoice.SupplierInvoice;
+import com.promoteur.app.invoice.SupplierInvoiceRepository;
+import com.promoteur.app.invoice.SupplierInvoiceSpecifications;
+import com.promoteur.app.project.Project;
+import com.promoteur.app.shared.ListFilter;
+import com.promoteur.app.supplier.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

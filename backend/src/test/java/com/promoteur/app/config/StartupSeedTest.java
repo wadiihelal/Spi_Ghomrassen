@@ -1,11 +1,11 @@
 package com.promoteur.app.config;
 
-import com.promoteur.app.repository.ApartmentRepository;
-import com.promoteur.app.repository.ClientRepository;
-import com.promoteur.app.repository.ExpenseCategoryRepository;
-import com.promoteur.app.repository.ProjectRepository;
-import com.promoteur.app.repository.SupplierRepository;
-import com.promoteur.app.repository.SupplierTypeOptionRepository;
+import com.promoteur.app.apartment.ApartmentRepository;
+import com.promoteur.app.client.ClientRepository;
+import com.promoteur.app.expense.ExpenseCategoryRepository;
+import com.promoteur.app.project.ProjectRepository;
+import com.promoteur.app.supplier.SupplierRepository;
+import com.promoteur.app.supplier.SupplierTypeOptionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

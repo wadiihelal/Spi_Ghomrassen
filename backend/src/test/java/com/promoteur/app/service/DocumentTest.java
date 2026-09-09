@@ -1,28 +1,36 @@
 package com.promoteur.app.service;
 
-import com.promoteur.app.dto.ApartmentRequest;
-import com.promoteur.app.dto.ClientAdvanceRequest;
-import com.promoteur.app.dto.ClientPurchaseRequest;
-import com.promoteur.app.dto.ClientRequest;
-import com.promoteur.app.dto.ExpenseRequest;
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.SupplierInvoiceRequest;
-import com.promoteur.app.dto.SupplierRequest;
-import com.promoteur.app.dto.response.ApartmentResponse;
-import com.promoteur.app.dto.response.ClientAdvanceResponse;
-import com.promoteur.app.dto.response.ClientResponse;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.dto.response.SupplierResponse;
-import com.promoteur.app.enums.PaymentMethod;
-import com.promoteur.app.enums.ProjectStatus;
-import com.promoteur.app.exception.ResourceNotFoundException;
 import com.promoteur.app.AbstractIntegrationTest;
+import com.promoteur.app.advance.ClientAdvanceRequest;
+import com.promoteur.app.advance.ClientAdvanceResponse;
+import com.promoteur.app.advance.ClientAdvanceService;
+import com.promoteur.app.apartment.ApartmentRequest;
+import com.promoteur.app.apartment.ApartmentResponse;
+import com.promoteur.app.apartment.ApartmentService;
+import com.promoteur.app.client.ClientRequest;
+import com.promoteur.app.client.ClientResponse;
+import com.promoteur.app.client.ClientService;
+import com.promoteur.app.document.DocumentService;
+import com.promoteur.app.expense.ExpenseCategoryService;
+import com.promoteur.app.expense.ExpenseRequest;
+import com.promoteur.app.expense.ExpenseService;
+import com.promoteur.app.invoice.SupplierInvoiceRequest;
+import com.promoteur.app.invoice.SupplierInvoiceService;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
+import com.promoteur.app.purchase.ClientPurchaseRequest;
+import com.promoteur.app.purchase.ClientPurchaseService;
+import com.promoteur.app.shared.PaymentMethod;
+import com.promoteur.app.shared.ResourceNotFoundException;
+import com.promoteur.app.supplier.SupplierRequest;
+import com.promoteur.app.supplier.SupplierResponse;
+import com.promoteur.app.supplier.SupplierService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
@@ -39,7 +47,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class DocumentTest extends AbstractIntegrationTest {
 
-    /** Every PDF begins with this signature; a truncated stream would not. */
+    /**
+     * Every PDF begins with this signature; a truncated stream would not.
+     */
     private static final byte[] PDF_MAGIC = {'%', 'P', 'D', 'F'};
 
     private final AtomicInteger sequence = new AtomicInteger();
@@ -178,7 +188,9 @@ class DocumentTest extends AbstractIntegrationTest {
 
     // --- fixtures -------------------------------------------------------------
 
-    /** A contract on a fresh lot, plus one payment against it. */
+    /**
+     * A contract on a fresh lot, plus one payment against it.
+     */
     private ClientAdvanceResponse collect(String amount) {
         ApartmentRequest apartmentRequest = new ApartmentRequest();
         apartmentRequest.setApartmentNumber("D-" + this.sequence.incrementAndGet());

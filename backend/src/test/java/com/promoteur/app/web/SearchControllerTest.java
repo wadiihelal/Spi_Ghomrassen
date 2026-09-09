@@ -1,11 +1,11 @@
 package com.promoteur.app.web;
 
 import com.promoteur.app.config.MessageSourceConfig;
-import com.promoteur.app.controller.SearchController;
-import com.promoteur.app.dto.response.SearchHitResponse;
 import com.promoteur.app.exception.GlobalExceptionHandler;
-import com.promoteur.app.service.SearchService;
-import com.promoteur.app.service.impl.MessageServiceImpl;
+import com.promoteur.app.search.SearchController;
+import com.promoteur.app.search.SearchHitResponse;
+import com.promoteur.app.search.SearchService;
+import com.promoteur.app.shared.MessageServiceImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

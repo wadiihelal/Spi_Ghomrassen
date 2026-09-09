@@ -1,6 +1,8 @@
 package com.promoteur.app.service;
 
-import com.promoteur.app.service.impl.AmountInWordsServiceImpl;
+import com.promoteur.app.document.AmountInWordsService;
+
+import com.promoteur.app.document.AmountInWordsServiceImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

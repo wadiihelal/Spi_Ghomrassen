@@ -1,11 +1,11 @@
 package com.promoteur.app.persistence;
 
-import com.promoteur.app.dto.ListFilter;
-import com.promoteur.app.entity.Apartment;
-import com.promoteur.app.entity.Client;
-import com.promoteur.app.entity.Project;
-import com.promoteur.app.repository.ApartmentRepository;
-import com.promoteur.app.repository.specification.ApartmentSpecifications;
+import com.promoteur.app.apartment.Apartment;
+import com.promoteur.app.apartment.ApartmentRepository;
+import com.promoteur.app.apartment.ApartmentSpecifications;
+import com.promoteur.app.client.Client;
+import com.promoteur.app.project.Project;
+import com.promoteur.app.shared.ListFilter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

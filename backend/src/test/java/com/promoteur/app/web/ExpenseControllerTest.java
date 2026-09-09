@@ -1,13 +1,13 @@
 package com.promoteur.app.web;
 
 import com.promoteur.app.config.MessageSourceConfig;
-import com.promoteur.app.controller.ExpenseController;
-import com.promoteur.app.dto.ListFilter;
-import com.promoteur.app.dto.response.ExpenseResponse;
-import com.promoteur.app.enums.PaymentMethod;
 import com.promoteur.app.exception.GlobalExceptionHandler;
-import com.promoteur.app.service.ExpenseService;
-import com.promoteur.app.service.impl.MessageServiceImpl;
+import com.promoteur.app.expense.ExpenseController;
+import com.promoteur.app.expense.ExpenseResponse;
+import com.promoteur.app.expense.ExpenseService;
+import com.promoteur.app.shared.ListFilter;
+import com.promoteur.app.shared.MessageServiceImpl;
+import com.promoteur.app.shared.PaymentMethod;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

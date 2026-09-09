@@ -1,38 +1,38 @@
 package com.promoteur.app.config;
 
-import com.promoteur.app.dto.ApartmentRequest;
-import com.promoteur.app.dto.ClientAdvanceRequest;
-import com.promoteur.app.dto.ClientPurchaseRequest;
-import com.promoteur.app.dto.ExpenseRequest;
-import com.promoteur.app.dto.ScheduleTemplateRequest;
-import com.promoteur.app.dto.SupplierInvoiceRequest;
-import com.promoteur.app.dto.SupplierPaymentRequest;
-import com.promoteur.app.dto.ListFilter;
-import com.promoteur.app.dto.response.ApartmentResponse;
-import com.promoteur.app.entity.Apartment;
-import com.promoteur.app.entity.Client;
-import com.promoteur.app.entity.ExpenseCategory;
-import com.promoteur.app.entity.Project;
-import com.promoteur.app.entity.Supplier;
-import com.promoteur.app.entity.SupplierTypeOption;
-import com.promoteur.app.enums.PaymentMethod;
-import com.promoteur.app.enums.ProjectStatus;
-import com.promoteur.app.enums.SalesStatus;
-import com.promoteur.app.repository.ApartmentRepository;
-import com.promoteur.app.repository.ClientAdvanceRepository;
-import com.promoteur.app.repository.ClientPurchaseRepository;
-import com.promoteur.app.repository.PaymentInstallmentRepository;
-import com.promoteur.app.repository.ClientRepository;
-import com.promoteur.app.repository.ExpenseCategoryRepository;
-import com.promoteur.app.repository.ProjectRepository;
-import com.promoteur.app.repository.SupplierRepository;
-import com.promoteur.app.repository.SupplierTypeOptionRepository;
-import com.promoteur.app.service.ApartmentService;
-import com.promoteur.app.service.ClientAdvanceService;
-import com.promoteur.app.service.ClientPurchaseService;
-import com.promoteur.app.service.PaymentScheduleService;
-import com.promoteur.app.service.SupplierInvoiceService;
-import com.promoteur.app.service.ExpenseService;
+import com.promoteur.app.advance.ClientAdvanceRepository;
+import com.promoteur.app.advance.ClientAdvanceRequest;
+import com.promoteur.app.advance.ClientAdvanceService;
+import com.promoteur.app.apartment.Apartment;
+import com.promoteur.app.apartment.ApartmentRepository;
+import com.promoteur.app.apartment.ApartmentRequest;
+import com.promoteur.app.apartment.ApartmentResponse;
+import com.promoteur.app.apartment.ApartmentService;
+import com.promoteur.app.apartment.SalesStatus;
+import com.promoteur.app.client.Client;
+import com.promoteur.app.client.ClientRepository;
+import com.promoteur.app.expense.ExpenseCategory;
+import com.promoteur.app.expense.ExpenseCategoryRepository;
+import com.promoteur.app.expense.ExpenseRequest;
+import com.promoteur.app.expense.ExpenseService;
+import com.promoteur.app.invoice.SupplierInvoiceRequest;
+import com.promoteur.app.invoice.SupplierInvoiceService;
+import com.promoteur.app.invoice.SupplierPaymentRequest;
+import com.promoteur.app.project.Project;
+import com.promoteur.app.project.ProjectRepository;
+import com.promoteur.app.project.ProjectStatus;
+import com.promoteur.app.purchase.ClientPurchaseRepository;
+import com.promoteur.app.purchase.ClientPurchaseRequest;
+import com.promoteur.app.purchase.ClientPurchaseService;
+import com.promoteur.app.schedule.PaymentInstallmentRepository;
+import com.promoteur.app.schedule.PaymentScheduleService;
+import com.promoteur.app.schedule.ScheduleTemplateRequest;
+import com.promoteur.app.shared.ListFilter;
+import com.promoteur.app.shared.PaymentMethod;
+import com.promoteur.app.supplier.Supplier;
+import com.promoteur.app.supplier.SupplierRepository;
+import com.promoteur.app.supplier.SupplierTypeOption;
+import com.promoteur.app.supplier.SupplierTypeOptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,23 +67,35 @@ public class DemoDataInitializer implements CommandLineRunner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DemoDataInitializer.class);
 
-    /** Number of floors generated for each SPI demo residence. */
+    /**
+     * Number of floors generated for each SPI demo residence.
+     */
     private static final int DEMO_RESIDENCE_FLOORS = 6;
-    /** Apartments created on each floor of a demo residence. */
+    /**
+     * Apartments created on each floor of a demo residence.
+     */
     private static final int DEMO_APARTMENTS_PER_FLOOR = 4;
-    /** Maximum demo clients assigned as acquirers per residence. */
+    /**
+     * Maximum demo clients assigned as acquirers per residence.
+     */
     private static final int DEMO_CLIENTS_PER_RESIDENCE = 15;
-    /** Rotating given names for synthetic demo clients. */
+    /**
+     * Rotating given names for synthetic demo clients.
+     */
     private static final String[] DEMO_FIRST_NAMES = {
             "Ahmed", "Amine", "Sami", "Youssef", "Mohamed", "Karim", "Walid", "Hatem",
             "Imen", "Sarra", "Nour", "Rim", "Nadia", "Meriem", "Ines", "Amani"
     };
-    /** Rotating family names paired with {@link #DEMO_FIRST_NAMES}. */
+    /**
+     * Rotating family names paired with {@link #DEMO_FIRST_NAMES}.
+     */
     private static final String[] DEMO_LAST_NAMES = {
             "Ben Salem", "Trabelsi", "Gharbi", "Kchaou", "Bouzid", "Dammak", "Mansouri", "Jemai",
             "Ayari", "Mejri", "Abidi", "Haddad", "Khemiri", "Sassi", "Ltaief", "Mrad"
     };
-    /** Payment methods cycled when generating demo client advances. */
+    /**
+     * Payment methods cycled when generating demo client advances.
+     */
     private static final PaymentMethod[] DEMO_PAYMENT_METHODS = {
             PaymentMethod.BANK_TRANSFER, PaymentMethod.CHECK, PaymentMethod.CASH, PaymentMethod.CARD
     };
@@ -144,7 +156,7 @@ public class DemoDataInitializer implements CommandLineRunner {
 
     /**
      * @return {@code true} when at least one client, supplier, or project already exists so the
-     *         full business seed (projects, suppliers, sample expenses, etc.) is skipped.
+     * full business seed (projects, suppliers, sample expenses, etc.) is skipped.
      */
     private boolean shouldSkipBusinessSeed() {
         return clientRepository.count() > 0 || supplierRepository.count() > 0 || projectRepository.count() > 0;
@@ -365,7 +377,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         }
     }
 
-    /** Picks apartment type, base surface, and cellar count from the unit index on a floor. */
+    /**
+     * Picks apartment type, base surface, and cellar count from the unit index on a floor.
+     */
     private DemoApartmentProfile demoApartmentProfile(int unit) {
         return switch (unit) {
             case 1 -> new DemoApartmentProfile("S+1", new BigDecimal("72.000"), 0);
@@ -375,7 +389,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         };
     }
 
-    /** Share of sale price recorded as direct payment on the purchase, for demo data only. */
+    /**
+     * Share of sale price recorded as direct payment on the purchase, for demo data only.
+     */
     private BigDecimal demoDirectPaymentRatio(ProjectStatus status, int sequence) {
         if (status == ProjectStatus.COMPLETED) {
             return switch (sequence % 4) {
@@ -402,7 +418,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         };
     }
 
-    /** Ratios of total price used to generate client advance lines (demo). */
+    /**
+     * Ratios of total price used to generate client advance lines (demo).
+     */
     private List<BigDecimal> demoAdvanceRatios(ProjectStatus status, int sequence) {
         if (status == ProjectStatus.COMPLETED) {
             return List.of(BigDecimal.ONE.subtract(demoDirectPaymentRatio(status, sequence)));
@@ -420,7 +438,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         };
     }
 
-    /** Creates the fixed demo supplier set and returns them keyed by legal name. */
+    /**
+     * Creates the fixed demo supplier set and returns them keyed by legal name.
+     */
     private Map<String, Supplier> seedSuppliers(Map<String, SupplierTypeOption> supplierTypes) {
         Supplier materials = buildSupplier("Comptoir des Matériaux du Sud", "MF-1289456/A/M/000", "75200110", "contact@cmsud.tn", "Zone industrielle, Médenine", supplierTypes.get("Fournisseur"));
         Supplier contractor = buildSupplier("Entreprise Bâtir Ghomrassen", "MF-1297754/B/M/000", "75311422", "direction@batir-ghomrassen.tn", "Rue Habib Bourguiba, Ghomrassen", supplierTypes.get("Entrepreneur"));
@@ -434,7 +454,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         return saved.stream().collect(Collectors.toMap(Supplier::getName, value -> value));
     }
 
-    /** Builds a transient {@link Supplier} entity for batch persistence. */
+    /**
+     * Builds a transient {@link Supplier} entity for batch persistence.
+     */
     private Supplier buildSupplier(String name, String fiscalId, String phone, String email, String address, SupplierTypeOption type) {
         Supplier supplier = new Supplier();
         supplier.setName(name);
@@ -447,7 +469,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         return supplier;
     }
 
-    /** Seeds the six narrative demo clients keyed by full name. */
+    /**
+     * Seeds the six narrative demo clients keyed by full name.
+     */
     private Map<String, Client> seedClients(Map<String, Project> projects) {
         Client c1 = buildClient("Sami Ben Youssef", "98111222", "sami.benyoussef@email.tn", "Ghomrassen centre, Tataouine", "09876543", "Client intéressé par un appartement S+2.", projects.get("Résidence Oasis Ghomrassen"));
         Client c2 = buildClient("Imen Trabelsi", "96700331", "imen.trabelsi@email.tn", "Medenine ville", "11223344", "Préférence pour une villa avec jardin.", projects.get("Villas El Waha"));
@@ -460,7 +484,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         return saved.stream().collect(Collectors.toMap(Client::getFullName, value -> value));
     }
 
-    /** Builds a transient {@link Client} entity for batch persistence. */
+    /**
+     * Builds a transient {@link Client} entity for batch persistence.
+     */
     private Client buildClient(String fullName, String phone, String email, String address, String cin, String notes, Project project) {
         Client client = new Client();
         client.setFullName(fullName);
@@ -474,7 +500,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         return client;
     }
 
-    /** Seeds the four main Ghomrassen projects keyed by display name. */
+    /**
+     * Seeds the four main Ghomrassen projects keyed by display name.
+     */
     private Map<String, Project> seedProjects() {
         Project p1 = buildProject("SPI-GHOM-RES-01", "Résidence Oasis Ghomrassen", "Ghomrassen, Tataouine", "Projet résidentiel principal de SP Immobilière GHOMRASSEN avec appartements S+2 et S+3.", LocalDate.of(2025, 10, 1), LocalDate.of(2027, 3, 31), new BigDecimal("1250000.000"), ProjectStatus.IN_PROGRESS);
         Project p2 = buildProject("SPI-GHOM-COM-02", "Immeuble Jasmin", "Centre-ville Ghomrassen", "Immeuble à usage mixte commerce et habitation.", LocalDate.of(2026, 2, 1), LocalDate.of(2027, 12, 15), new BigDecimal("890000.000"), ProjectStatus.PLANNED);
@@ -485,7 +513,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         return saved.stream().collect(Collectors.toMap(Project::getName, value -> value));
     }
 
-    /** Builds a transient {@link Project} entity; marks {@code SPI-GHOM-RES-01} as active context. */
+    /**
+     * Builds a transient {@link Project} entity; marks {@code SPI-GHOM-RES-01} as active context.
+     */
     private Project buildProject(String code, String name, String location, String description, LocalDate startDate, LocalDate expectedEndDate, BigDecimal budget, ProjectStatus status) {
         Project project = new Project();
         project.setCode(code);
@@ -554,13 +584,17 @@ public class DemoDataInitializer implements CommandLineRunner {
         }
     }
 
-    /** Persists an apartment through {@link ApartmentService}. */
+    /**
+     * Persists an apartment through {@link ApartmentService}.
+     */
     private ApartmentResponse createApartment(String number, String type, String detail, BigDecimal totalSurface, BigDecimal gardenSurface, String parkingCount, Integer cellarCount, BigDecimal totalSalePrice, Long projectId, Long acquirerId) {
         return createApartment(number, type, detail, totalSurface, gardenSurface, parkingCount, cellarCount,
                 totalSalePrice, projectId, acquirerId, null, null);
     }
 
-    /** Same, with the block and floor the sales board lays out (UX-05). */
+    /**
+     * Same, with the block and floor the sales board lays out (UX-05).
+     */
     private ApartmentResponse createApartment(String number, String type, String detail, BigDecimal totalSurface, BigDecimal gardenSurface, String parkingCount, Integer cellarCount, BigDecimal totalSalePrice, Long projectId, Long acquirerId, String block, Integer floorNumber) {
         ApartmentRequest request = new ApartmentRequest();
         request.setBlock(block);
@@ -578,7 +612,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         return apartmentService.create(request);
     }
 
-    /** Inserts the fixed demo expense rows for the main projects. */
+    /**
+     * Inserts the fixed demo expense rows for the main projects.
+     */
     private void seedExpenses(Map<String, ExpenseCategory> categories, Map<String, Supplier> suppliers, Map<String, Project> projects) {
         createExpense("DEP-2026-001", LocalDate.of(2026, 3, 3), "Achat ciment et ferraillage tranche A", new BigDecimal("18500.000"), new BigDecimal("3515.000"), new BigDecimal("22015.000"), PaymentMethod.BANK_TRANSFER, "FAC-CMS-2026-031", "Approvisionnement principal chantier mars 2026.", categories.get("Frais Fournisseurs").getId(), projects.get("Résidence Oasis Ghomrassen").getId(), suppliers.get("Comptoir des Matériaux du Sud").getId());
         createExpense("DEP-2026-002", LocalDate.of(2026, 3, 7), "Situation travaux gros oeuvre lot B", new BigDecimal("42000.000"), new BigDecimal("7980.000"), new BigDecimal("49980.000"), PaymentMethod.CHECK, "SIT-BG-2026-007", "Situation mensuelle entrepreneur, lot B.", categories.get("Frais Fournisseurs").getId(), projects.get("Résidence Oasis Ghomrassen").getId(), suppliers.get("Entreprise Bâtir Ghomrassen").getId());
@@ -594,7 +630,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         createExpense("DEP-2026-012", LocalDate.of(2026, 4, 23), "Levés architecturaux complémentaires", new BigDecimal("2600.000"), new BigDecimal("494.000"), new BigDecimal("3094.000"), PaymentMethod.BANK_TRANSFER, "ATM-APS-2026-012", "Compléments plans façade et circulation.", categories.get("Autres").getId(), projects.get("Immeuble Jasmin").getId(), suppliers.get("Atelier Architecture El Medina").getId());
     }
 
-    /** Seeds client advances tied to seeded apartments (resolved by client and project). */
+    /**
+     * Seeds client advances tied to seeded apartments (resolved by client and project).
+     */
     private void seedClientAdvances(Map<String, Client> clients, Map<String, Project> projects) {
         createAdvance("ACC-2026-001", LocalDate.of(2026, 2, 10), new BigDecimal("15000.000"), PaymentMethod.BANK_TRANSFER, "Réservation appartement A-12.", clients.get("Sami Ben Youssef").getId(), projects.get("Résidence Oasis Ghomrassen").getId());
         createAdvance("ACC-2026-002", LocalDate.of(2026, 2, 22), new BigDecimal("22000.000"), PaymentMethod.CHECK, "Premier acompte villa V2.", clients.get("Imen Trabelsi").getId(), projects.get("Villas El Waha").getId());
@@ -604,7 +642,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         createAdvance("ACC-2026-006", LocalDate.of(2026, 4, 21), new BigDecimal("35000.000"), PaymentMethod.CHECK, "Deuxième acompte villa C4.", clients.get("Rim Bouzid").getId(), projects.get("Villas El Waha").getId());
     }
 
-    /** Seeds client purchases for the narrative demo lots. */
+    /**
+     * Seeds client purchases for the narrative demo lots.
+     */
     private void seedClientPurchases(Map<String, Client> clients, Map<String, Project> projects) {
         createPurchase("ACH-2026-001", LocalDate.of(2026, 2, 10), LocalDate.of(2026, 2, 14), "Appartement S+2 A-12 - 2ème étage", new BigDecimal("185000.000"), new BigDecimal("5000.000"), "Paiement échelonné sur 18 mois.", clients.get("Sami Ben Youssef").getId(), projects.get("Résidence Oasis Ghomrassen").getId());
         createPurchase("ACH-2026-002", LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 6), "Local commercial RDC-03", new BigDecimal("240000.000"), BigDecimal.ZERO, "Livraison prévue après achèvement du gros oeuvre.", clients.get("Mohamed Gharbi").getId(), projects.get("Immeuble Jasmin").getId());
@@ -614,7 +654,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         createPurchase("ACH-2026-005", LocalDate.of(2026, 4, 18), LocalDate.of(2026, 4, 22), "Villa C4 avec jardin", new BigDecimal("295000.000"), new BigDecimal("260000.000"), "Paiement mixte bancaire et fonds propres.", clients.get("Rim Bouzid").getId(), projects.get("Villas El Waha").getId());
     }
 
-    /** Maps parameters to an {@link ExpenseRequest} and persists via {@link ExpenseService}. */
+    /**
+     * Maps parameters to an {@link ExpenseRequest} and persists via {@link ExpenseService}.
+     */
     private void createExpense(String reference, LocalDate date, String description, BigDecimal amountHt, BigDecimal vatAmount, BigDecimal amountTtc, PaymentMethod paymentMethod, String documentNumber, String notes, Long categoryId, Long projectId, Long supplierId) {
         ExpenseRequest request = new ExpenseRequest();
         request.setReference(reference);
@@ -635,7 +677,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         expenseService.create(request);
     }
 
-    /** Creates a client advance for the apartment matching the client and project in seeded data. */
+    /**
+     * Creates a client advance for the apartment matching the client and project in seeded data.
+     */
     private void createAdvance(String reference, LocalDate date, BigDecimal amount, PaymentMethod paymentMethod, String notes, Long clientId, Long projectId) {
         ClientAdvanceRequest request = new ClientAdvanceRequest();
         request.setReference(reference);
@@ -660,7 +704,9 @@ public class DemoDataInitializer implements CommandLineRunner {
                 .orElseThrow(() -> new IllegalStateException("No apartment seed found for client " + clientId + " and project " + projectId));
     }
 
-    /** Creates a client purchase for the apartment matching the client and project in seeded data. */
+    /**
+     * Creates a client purchase for the apartment matching the client and project in seeded data.
+     */
     private void createPurchase(String reference, LocalDate purchaseDate, LocalDate contractDate, String assetDescription, BigDecimal totalAmount, BigDecimal paidAmount, String notes, Long clientId, Long projectId) {
         ClientPurchaseRequest request = new ClientPurchaseRequest();
         request.setReference(reference);
@@ -753,7 +799,7 @@ public class DemoDataInitializer implements CommandLineRunner {
         List<Project> residences = projectRepository.findAll().stream()
                 .filter(project -> project.getCode() != null
                         && (project.getCode().startsWith("SPI-DEMO-RES-")
-                            || "SPI-GHOM-RES-01".equals(project.getCode())))
+                        || "SPI-GHOM-RES-01".equals(project.getCode())))
                 .sorted(Comparator.comparing(Project::getCode))
                 .toList();
 
@@ -785,11 +831,6 @@ public class DemoDataInitializer implements CommandLineRunner {
                         spec.supplierName() == null ? null : suppliers.get(spec.supplierName()).getId());
             }
         }
-    }
-
-    /** One line of the repeating expense pattern used for the demo residences. */
-    private record DemoExpenseSpec(String description, String categoryName, String supplierName,
-                                   BigDecimal amountHt, BigDecimal vatRate) {
     }
 
     /**
@@ -901,7 +942,16 @@ public class DemoDataInitializer implements CommandLineRunner {
         return line;
     }
 
-    /** Static definition of one SPI demo residence (code, marketing data, budget, dates). */
+    /**
+     * One line of the repeating expense pattern used for the demo residences.
+     */
+    private record DemoExpenseSpec(String description, String categoryName, String supplierName,
+                                   BigDecimal amountHt, BigDecimal vatRate) {
+    }
+
+    /**
+     * Static definition of one SPI demo residence (code, marketing data, budget, dates).
+     */
     private record DemoResidenceSpec(
             String code,
             String name,
@@ -914,7 +964,9 @@ public class DemoDataInitializer implements CommandLineRunner {
     ) {
     }
 
-    /** Typology and surfaces for a generated demo apartment on one floor. */
+    /**
+     * Typology and surfaces for a generated demo apartment on one floor.
+     */
     private record DemoApartmentProfile(String type, BigDecimal baseSurface, Integer cellarCount) {
     }
 }

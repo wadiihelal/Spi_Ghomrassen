@@ -49,7 +49,9 @@ public class DatabaseCleaner {
             "supplier_type_options",
             "vat_rate_options");
 
-    /** Document reference counters (V6 and V12), reset so each class numbers from one. */
+    /**
+     * Document reference counters (V6 and V12), reset so each class numbers from one.
+     */
     private static final List<String> REFERENCE_SEQUENCES = List.of(
             "expense_ref_seq",
             "advance_ref_seq",

@@ -1,27 +1,31 @@
 package com.promoteur.app.service;
 
-import com.promoteur.app.dto.ApartmentRequest;
-import com.promoteur.app.dto.ClientAdvanceRequest;
-import com.promoteur.app.dto.ClientPurchaseRequest;
-import com.promoteur.app.dto.ClientRequest;
-import com.promoteur.app.dto.ListFilter;
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.report.ReportFilter;
-import com.promoteur.app.dto.response.ApartmentResponse;
-import com.promoteur.app.dto.response.ClientResponse;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.enums.ProjectStatus;
+import com.promoteur.app.AbstractIntegrationTest;
+import com.promoteur.app.advance.ClientAdvanceRequest;
+import com.promoteur.app.advance.ClientAdvanceService;
+import com.promoteur.app.apartment.ApartmentRequest;
+import com.promoteur.app.apartment.ApartmentResponse;
+import com.promoteur.app.apartment.ApartmentService;
+import com.promoteur.app.client.ClientRequest;
+import com.promoteur.app.client.ClientResponse;
+import com.promoteur.app.client.ClientService;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
+import com.promoteur.app.purchase.ClientPurchaseRequest;
+import com.promoteur.app.purchase.ClientPurchaseService;
+import com.promoteur.app.report.ReportFilter;
+import com.promoteur.app.report.ReportService;
+import com.promoteur.app.shared.ListFilter;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
-import com.promoteur.app.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;

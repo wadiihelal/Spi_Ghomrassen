@@ -1,6 +1,7 @@
 package com.promoteur.app.exception;
 
-import com.promoteur.app.service.MessageService;
+import com.promoteur.app.shared.MessageService;
+import com.promoteur.app.shared.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,11 +13,11 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
-import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -68,7 +69,9 @@ public class GlobalExceptionHandler {
         return this.buildResponse(HttpStatus.CONFLICT, this.messageService.get("error.optimisticLock"));
     }
 
-    /** The servlet layer rejects the upload before the service sees it (FE-05). */
+    /**
+     * The servlet layer rejects the upload before the service sees it (FE-05).
+     */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, Object>> handleUploadTooLarge(final MaxUploadSizeExceededException ex) {
         return this.buildResponse(HttpStatus.PAYLOAD_TOO_LARGE, this.messageService.get("error.uploadTooLarge"));

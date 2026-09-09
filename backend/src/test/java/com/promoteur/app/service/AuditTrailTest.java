@@ -1,17 +1,19 @@
 package com.promoteur.app.service;
 
-import com.promoteur.app.dto.ExpenseRequest;
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.response.AuditLogResponse;
-import com.promoteur.app.dto.response.ExpenseResponse;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.enums.ProjectStatus;
-import com.promoteur.app.repository.ExpenseCategoryRepository;
 import com.promoteur.app.AbstractIntegrationTest;
+import com.promoteur.app.audit.AuditLogResponse;
+import com.promoteur.app.audit.AuditLogService;
+import com.promoteur.app.expense.ExpenseCategoryRepository;
+import com.promoteur.app.expense.ExpenseRequest;
+import com.promoteur.app.expense.ExpenseResponse;
+import com.promoteur.app.expense.ExpenseService;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 

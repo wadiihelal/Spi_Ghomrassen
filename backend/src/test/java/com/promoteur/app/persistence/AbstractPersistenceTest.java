@@ -1,10 +1,10 @@
 package com.promoteur.app.persistence;
 
-import com.promoteur.app.entity.Apartment;
-import com.promoteur.app.entity.Client;
-import com.promoteur.app.entity.Project;
-import com.promoteur.app.entity.Supplier;
-import com.promoteur.app.enums.ProjectStatus;
+import com.promoteur.app.apartment.Apartment;
+import com.promoteur.app.client.Client;
+import com.promoteur.app.project.Project;
+import com.promoteur.app.project.ProjectStatus;
+import com.promoteur.app.supplier.Supplier;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -95,7 +95,9 @@ abstract class AbstractPersistenceTest {
         return apartment;
     }
 
-    /** Flushes the fixture and clears the session, so finders read from the database. */
+    /**
+     * Flushes the fixture and clears the session, so finders read from the database.
+     */
     protected void settleFixture() {
         this.entityManager.flush();
         this.entityManager.clear();

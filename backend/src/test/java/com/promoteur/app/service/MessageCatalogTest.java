@@ -1,6 +1,7 @@
 package com.promoteur.app.service;
 
 import com.promoteur.app.AbstractIntegrationTest;
+import com.promoteur.app.shared.MessageService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,11 +25,21 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class MessageCatalogTest extends AbstractIntegrationTest {
 
-    /** An apostrophe that is neither preceded nor followed by another one. */
+    /**
+     * An apostrophe that is neither preceded nor followed by another one.
+     */
     private static final Pattern SINGLE_APOSTROPHE = Pattern.compile("(?<!')'(?!')");
 
     @Autowired
     private MessageService messageService;
+
+    private static Properties catalogue() throws IOException {
+        final Properties properties = new Properties();
+        try (InputStream stream = MessageCatalogTest.class.getResourceAsStream("/messages_fr.properties")) {
+            properties.load(new java.io.InputStreamReader(stream, StandardCharsets.UTF_8));
+        }
+        return properties;
+    }
 
     @Test
     @DisplayName("no message without a placeholder shows a doubled apostrophe to the user")
@@ -72,13 +83,5 @@ class MessageCatalogTest extends AbstractIntegrationTest {
         }
 
         assertThat(offenders).isEmpty();
-    }
-
-    private static Properties catalogue() throws IOException {
-        final Properties properties = new Properties();
-        try (InputStream stream = MessageCatalogTest.class.getResourceAsStream("/messages_fr.properties")) {
-            properties.load(new java.io.InputStreamReader(stream, StandardCharsets.UTF_8));
-        }
-        return properties;
     }
 }

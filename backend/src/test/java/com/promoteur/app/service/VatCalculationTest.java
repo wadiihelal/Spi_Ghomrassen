@@ -1,25 +1,28 @@
 package com.promoteur.app.service;
 
-import com.promoteur.app.dto.ExpenseRequest;
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.SupplierInvoiceRequest;
-import com.promoteur.app.dto.SupplierRequest;
-import com.promoteur.app.dto.response.ExpenseResponse;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.dto.response.SupplierResponse;
-import com.promoteur.app.dto.response.SupplierInvoiceResponse;
-import com.promoteur.app.dto.response.VatRateOptionResponse;
-import com.promoteur.app.enums.ProjectStatus;
-import com.promoteur.app.repository.ExpenseCategoryRepository;
 import com.promoteur.app.AbstractIntegrationTest;
+import com.promoteur.app.expense.ExpenseCategoryRepository;
+import com.promoteur.app.expense.ExpenseRequest;
+import com.promoteur.app.expense.ExpenseResponse;
+import com.promoteur.app.expense.ExpenseService;
+import com.promoteur.app.invoice.SupplierInvoiceRequest;
+import com.promoteur.app.invoice.SupplierInvoiceResponse;
+import com.promoteur.app.invoice.SupplierInvoiceService;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
+import com.promoteur.app.supplier.SupplierRequest;
+import com.promoteur.app.supplier.SupplierResponse;
+import com.promoteur.app.supplier.SupplierService;
+import com.promoteur.app.vat.VatRateOptionResponse;
+import com.promoteur.app.vat.VatRateOptionService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;

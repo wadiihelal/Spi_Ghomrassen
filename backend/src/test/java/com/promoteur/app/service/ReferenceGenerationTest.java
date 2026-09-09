@@ -1,25 +1,29 @@
 package com.promoteur.app.service;
 
-import com.promoteur.app.dto.ApartmentRequest;
-import com.promoteur.app.dto.ClientAdvanceRequest;
-import com.promoteur.app.dto.ClientRequest;
-import com.promoteur.app.dto.ExpenseRequest;
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.response.ApartmentResponse;
-import com.promoteur.app.dto.response.ClientResponse;
-import com.promoteur.app.dto.response.ExpenseResponse;
-import com.promoteur.app.dto.response.ClientAdvanceResponse;
-import com.promoteur.app.entity.Expense;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.enums.ProjectStatus;
-import com.promoteur.app.repository.ClientAdvanceRepository;
-import com.promoteur.app.repository.ExpenseCategoryRepository;
-import com.promoteur.app.repository.ExpenseRepository;
 import com.promoteur.app.AbstractIntegrationTest;
+import com.promoteur.app.advance.ClientAdvanceRepository;
+import com.promoteur.app.advance.ClientAdvanceRequest;
+import com.promoteur.app.advance.ClientAdvanceResponse;
+import com.promoteur.app.advance.ClientAdvanceService;
+import com.promoteur.app.apartment.ApartmentRequest;
+import com.promoteur.app.apartment.ApartmentResponse;
+import com.promoteur.app.apartment.ApartmentService;
+import com.promoteur.app.client.ClientRequest;
+import com.promoteur.app.client.ClientResponse;
+import com.promoteur.app.client.ClientService;
+import com.promoteur.app.expense.Expense;
+import com.promoteur.app.expense.ExpenseCategoryRepository;
+import com.promoteur.app.expense.ExpenseRepository;
+import com.promoteur.app.expense.ExpenseRequest;
+import com.promoteur.app.expense.ExpenseResponse;
+import com.promoteur.app.expense.ExpenseService;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;

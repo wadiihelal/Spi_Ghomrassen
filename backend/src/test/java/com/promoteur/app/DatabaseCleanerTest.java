@@ -1,14 +1,14 @@
 package com.promoteur.app;
 
-import com.promoteur.app.dto.ProjectRequest;
-import com.promoteur.app.dto.response.ProjectResponse;
-import com.promoteur.app.enums.ProjectStatus;
-import com.promoteur.app.repository.ExpenseCategoryRepository;
-import com.promoteur.app.repository.ProjectRepository;
-import com.promoteur.app.repository.SupplierTypeOptionRepository;
-import com.promoteur.app.repository.VatRateOptionRepository;
-import com.promoteur.app.service.ProjectService;
-import com.promoteur.app.service.ReferenceGeneratorService;
+import com.promoteur.app.expense.ExpenseCategoryRepository;
+import com.promoteur.app.project.ProjectRepository;
+import com.promoteur.app.project.ProjectRequest;
+import com.promoteur.app.project.ProjectResponse;
+import com.promoteur.app.project.ProjectService;
+import com.promoteur.app.project.ProjectStatus;
+import com.promoteur.app.shared.ReferenceGeneratorService;
+import com.promoteur.app.supplier.SupplierTypeOptionRepository;
+import com.promoteur.app.vat.VatRateOptionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

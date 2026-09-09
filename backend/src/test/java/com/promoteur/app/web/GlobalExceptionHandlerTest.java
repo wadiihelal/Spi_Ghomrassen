@@ -2,8 +2,8 @@ package com.promoteur.app.web;
 
 import com.promoteur.app.config.MessageSourceConfig;
 import com.promoteur.app.exception.GlobalExceptionHandler;
-import com.promoteur.app.exception.ResourceNotFoundException;
-import com.promoteur.app.service.impl.MessageServiceImpl;
+import com.promoteur.app.shared.MessageServiceImpl;
+import com.promoteur.app.shared.ResourceNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -217,6 +217,13 @@ class GlobalExceptionHandlerTest {
     }
 
     /**
+     * Stands in for {@code AttachmentOwnerType}, which the upload endpoint takes as a param.
+     */
+    enum ProbeOwnerType {
+        EXPENSE, CLIENT_ADVANCE
+    }
+
+    /**
      * Raises one exception per route, so each branch of the handler is reachable on its own.
      */
     @RestController
@@ -243,7 +250,9 @@ class GlobalExceptionHandlerTest {
             throw new MaxUploadSizeExceededException(10_485_760L);
         }
 
-        /** What a duplicate reference or a broken foreign key really raises. */
+        /**
+         * What a duplicate reference or a broken foreign key really raises.
+         */
         @GetMapping("/data-integrity")
         void dataIntegrity() {
             throw new DataIntegrityViolationException(
@@ -277,12 +286,9 @@ class GlobalExceptionHandlerTest {
         }
     }
 
-    /** Stands in for {@code AttachmentOwnerType}, which the upload endpoint takes as a param. */
-    enum ProbeOwnerType {
-        EXPENSE, CLIENT_ADVANCE
-    }
-
-    /** Two constraints, so a single request produces two field errors. */
+    /**
+     * Two constraints, so a single request produces two field errors.
+     */
     static class ProbePayload {
 
         @NotBlank

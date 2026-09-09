@@ -1,12 +1,12 @@
 package com.promoteur.app.config;
 
-import com.promoteur.app.dto.SupplierTypeOptionRequest;
-import com.promoteur.app.entity.ExpenseCategory;
-import com.promoteur.app.entity.VatRateOption;
-import com.promoteur.app.repository.ExpenseCategoryRepository;
-import com.promoteur.app.repository.SupplierTypeOptionRepository;
-import com.promoteur.app.repository.VatRateOptionRepository;
-import com.promoteur.app.service.SupplierTypeOptionService;
+import com.promoteur.app.expense.ExpenseCategory;
+import com.promoteur.app.expense.ExpenseCategoryRepository;
+import com.promoteur.app.supplier.SupplierTypeOptionRepository;
+import com.promoteur.app.supplier.SupplierTypeOptionRequest;
+import com.promoteur.app.supplier.SupplierTypeOptionService;
+import com.promoteur.app.vat.VatRateOption;
+import com.promoteur.app.vat.VatRateOptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
@@ -26,7 +26,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReferenceDataInitializer implements CommandLineRunner {
 
-    /** Default expense categories offered by the console. */
+    /**
+     * Default expense categories offered by the console.
+     */
     private static final List<String> DEFAULT_CATEGORIES = List.of(
             "Frais Baladiya",
             "Frais Ingénieurs",
@@ -36,7 +38,9 @@ public class ReferenceDataInitializer implements CommandLineRunner {
             "Autres"
     );
 
-    /** Default supplier type options offered by the console. */
+    /**
+     * Default supplier type options offered by the console.
+     */
     private static final List<String> DEFAULT_SUPPLIER_TYPES = List.of(
             "Fournisseur",
             "Ingénieur",
@@ -74,7 +78,9 @@ public class ReferenceDataInitializer implements CommandLineRunner {
         ensureVatRates();
     }
 
-    /** Creates each default expense category that is not already present. */
+    /**
+     * Creates each default expense category that is not already present.
+     */
     private void ensureCategories() {
         DEFAULT_CATEGORIES.stream()
                 .filter(name -> !expenseCategoryRepository.existsByName(name))
@@ -82,14 +88,18 @@ public class ReferenceDataInitializer implements CommandLineRunner {
                 .forEach(expenseCategoryRepository::save);
     }
 
-    /** Creates each default supplier type option that is not already present. */
+    /**
+     * Creates each default supplier type option that is not already present.
+     */
     private void ensureSupplierTypes() {
         DEFAULT_SUPPLIER_TYPES.stream()
                 .filter(label -> !supplierTypeOptionRepository.existsByLabel(label))
                 .forEach(this::saveSupplierType);
     }
 
-    /** Creates each Tunisian VAT rate that is not already present. */
+    /**
+     * Creates each Tunisian VAT rate that is not already present.
+     */
     private void ensureVatRates() {
         DEFAULT_VAT_RATES.stream()
                 .filter(rate -> !vatRateOptionRepository.existsByRate(rate))
@@ -97,7 +107,9 @@ public class ReferenceDataInitializer implements CommandLineRunner {
                 .forEach(vatRateOptionRepository::save);
     }
 
-    /** Builds one VAT rate option, labelled as a percentage. */
+    /**
+     * Builds one VAT rate option, labelled as a percentage.
+     */
     private VatRateOption buildVatRate(BigDecimal rate) {
         VatRateOption option = new VatRateOption();
         option.setRate(rate);
@@ -106,7 +118,9 @@ public class ReferenceDataInitializer implements CommandLineRunner {
         return option;
     }
 
-    /** Persists one supplier type option with the given label. */
+    /**
+     * Persists one supplier type option with the given label.
+     */
     private void saveSupplierType(String label) {
         SupplierTypeOptionRequest request = new SupplierTypeOptionRequest();
         request.setLabel(label);
@@ -114,7 +128,9 @@ public class ReferenceDataInitializer implements CommandLineRunner {
         supplierTypeOptionService.create(request);
     }
 
-    /** Builds a bare {@link ExpenseCategory} for {@link #ensureCategories()} inserts. */
+    /**
+     * Builds a bare {@link ExpenseCategory} for {@link #ensureCategories()} inserts.
+     */
     private ExpenseCategory buildCategory(String name) {
         ExpenseCategory category = new ExpenseCategory();
         category.setName(name);

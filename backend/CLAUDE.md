@@ -101,11 +101,14 @@ Aucun outil de formatage ni de lint n'est configuré. Le seul garde-fou automati
   change aucune ligne, et Hibernate peut élaguer celle qu'il n'utilise pas — le SQL cacherait
   donc un défaut bien présent dans la requête que le code construit.
 - **`ArchitectureTest` fait échouer le build sur les règles de ce fichier** : couches, frontière
-  DTO, `double`/`float` interdits, `precision`/`scale` des colonnes monétaires, finders en
-  `readOnly`, `findAll()` sans argument, `java.util.Date`, `System.out`, injection par champ,
-  cycles de paquets. Une règle ArchUnit ne porte **pas** de `@DisplayName` (c'est un champ, pas
-  une méthode) : la phrase passe par `as(...)`. Les trois exclusions existantes sont nominatives
-  et commentées — ne pas en ajouter une sans la justifier dans le javadoc de la règle.
+  DTO, `shared` au bas du graphe, `double`/`float` interdits, `precision`/`scale` des colonnes
+  monétaires, finders en `readOnly`, `findAll()` sans argument, `java.util.Date`, `System.out`,
+  injection par champ. Le découpage étant par feature, **les règles reconnaissent une couche par
+  le nom de classe ou l'annotation**, pas par le paquet : `@RestController`, `*ServiceImpl`,
+  tout ce qui dérive de `Repository`, `@Entity`, `*Response`. Une règle ArchUnit ne porte
+  **pas** de `@DisplayName` (c'est un champ, pas une méthode) : la phrase passe par `as(...)`.
+  Les quatre exclusions existantes sont nominatives et commentées — ne pas en ajouter une sans
+  la justifier dans le javadoc de la règle.
 - **`whenSearch` prend un `Supplier<List<Path<String>>>`**, pas une `List`. Construire ces chemins
   joint des associations, et un argument est évalué avant l'appel : passer un `List.of(...)`
   joindrait à chaque requête, terme de recherche ou pas.
@@ -125,22 +128,47 @@ Aucun outil de formatage ni de lint n'est configuré. Le seul garde-fou automati
 
 ## Découpage
 
+**Un paquet par feature**, tout ce qui la concerne dedans — contrôleur, interface de service,
+implémentation, dépôt, entité, mapper, spécification, DTO, énumérations propres à la feature :
+
 ```
-controller/            @RestController, un par ressource, /api/**
-  ↓ DTO de requête (dto/) validés par Jakarta Validation
-service/               interfaces — le contrat métier
-service/impl/          implémentations @Service, où vivent les règles
-  ↓ entités (entity/)
-repository/            Spring Data JPA
-repository/specification/  prédicats des listes filtrées
-mapper/                MapStruct entité → dto/response
+com/promoteur/app/
+  expense/     Expense, ExpenseController, ExpenseService, ExpenseServiceImpl,
+               ExpenseRepository, ExpenseMapper, ExpenseSpecifications,
+               ExpenseRequest, ExpenseResponse  (+ toute la sous-feature ExpenseCategory)
+  apartment/  client/  project/  purchase/  advance/  schedule/
+  supplier/   invoice/  vat/  attachment/  audit/
+  document/   report/  search/  dashboard/
+  shared/      BaseEntity, ListFilter, PaymentMethod, PurchasePaymentStatus,
+               MessageService, ReferenceGeneratorService, SpecificationSupport,
+               PdfLetterhead, ResourceNotFoundException
+  config/      CorsConfig, MessageSourceConfig, OpenApiConfig, les deux seeds
+  exception/   GlobalExceptionHandler
 ```
+
+**La discipline de dépendances n'a pas changé** : `contrôleur → interface de service →
+implémentation → dépôt`. Seul l'emplacement des classes a changé. Un contrôleur ne connaît
+toujours que l'interface, jamais le `*ServiceImpl` ni le dépôt.
+
+Deux règles propres à ce découpage :
+
+- **`shared` est le bas du graphe.** Une feature utilise `shared` ; `shared` n'utilise aucune
+  feature. `ArchitectureTest.sharedDoesNotDependOnAFeature` le vérifie, avec une exclusion
+  nommée : `ReferenceGeneratorServiceImpl` lit trois dépôts de features pour vérifier qu'une
+  référence tirée est libre. C'est un défaut connu, pas un cas légitime — le corriger demande
+  d'inverser le contrôle (le contrôle « déjà pris ? » passé par l'appelant).
+- **Entre features, les références croisées sont normales** : un contrat cite un lot, le plan de
+  vente lit les contrats. Il n'y a donc plus de règle d'absence de cycles entre paquets — elle
+  en remontait plus de cent, aucun actionnable. C'est le prix assumé de ce découpage.
 
 Règles structurantes :
 
-- **Un nouveau service = une interface dans `service/` + une implémentation dans
-  `service/impl/`.** Jamais de `@Service` sans interface, jamais de logique métier dans un
-  contrôleur.
+- **Un nouveau service = une interface `XService` + une implémentation `XServiceImpl`, dans le
+  paquet de la feature.** Jamais de `@Service` sans interface, jamais de logique métier dans un
+  contrôleur. `ArchitectureTest` vérifie que tout `*ServiceImpl` implémente le `*Service`
+  correspondant.
+- **Une nouvelle feature = un nouveau paquet** sous `com.promoteur.app`. Ce qui sert à plus
+  d'une feature descend dans `shared` ; ce qui ne sert qu'à une seule reste chez elle.
 - **Les contrôleurs ne renvoient jamais d'entité JPA.** Les réponses sont des `record` de
   `dto/response`, avec les identifiants à plat et les libellés à côté (`projectId` +
   `projectName`), jamais d'objet imbriqué. Le mapping est fait par MapStruct.
@@ -182,19 +210,19 @@ Règles structurantes :
 `GlobalExceptionHandler` est le seul endroit qui traduit une exception en réponse. Corps JSON
 `{ timestamp, status, error, details? }`, message en français.
 
-| Exception | Statut |
-|---|---|
-| `ResourceNotFoundException` | `404` |
-| `MethodArgumentNotValidException` | `400` + `details` champ par champ |
-| `IllegalArgumentException` | `400` — c'est le véhicule des refus métier |
-| `OptimisticLockingFailureException` | `409` |
-| `MaxUploadSizeExceededException` | `413` |
-| `DataIntegrityViolationException` | `409` — saisie bien formée, mais contredit l'existant |
-| `MethodArgumentTypeMismatchException` | `400` — enum inconnue, identifiant non numérique |
-| `HttpMessageNotReadableException` | `400` — corps JSON illisible |
-| `MissingServletRequestParameterException` | `400` — paramètre obligatoire absent |
-| `MissingServletRequestPartException` | `400` — part multipart absente |
-| tout le reste | `500`, journalisé |
+| Exception                                 | Statut                                                |
+|-------------------------------------------|-------------------------------------------------------|
+| `ResourceNotFoundException`               | `404`                                                 |
+| `MethodArgumentNotValidException`         | `400` + `details` champ par champ                     |
+| `IllegalArgumentException`                | `400` — c'est le véhicule des refus métier            |
+| `OptimisticLockingFailureException`       | `409`                                                 |
+| `MaxUploadSizeExceededException`          | `413`                                                 |
+| `DataIntegrityViolationException`         | `409` — saisie bien formée, mais contredit l'existant |
+| `MethodArgumentTypeMismatchException`     | `400` — enum inconnue, identifiant non numérique      |
+| `HttpMessageNotReadableException`         | `400` — corps JSON illisible                          |
+| `MissingServletRequestParameterException` | `400` — paramètre obligatoire absent                  |
+| `MissingServletRequestPartException`      | `400` — part multipart absente                        |
+| tout le reste                             | `500`, journalisé                                     |
 
 Les cinq dernières lignes ont été ajoutées par le WP2 : ces cas répondaient tous `500`
 « Unexpected server error ». Toute nouvelle branche **journalise** ce qui identifie la cause
@@ -225,7 +253,7 @@ resynchroniser, et rien de tel ne doit être ajouté en colonne. L'unique except
 
 - Plafond d'acompte : total du contrat s'il existe, sinon prix de vente du lot, sinon refus.
   Le contrôle est sérialisé par un verrou pessimiste sur la ligne appartement
-  (`ApartmentRepository`, `@Lock(PESSIMISTIC_WRITE)`) — deux encaissements simultanés ne peuvent
+  (`apartment/ApartmentRepository`, `@Lock(PESSIMISTIC_WRITE)`) — deux encaissements simultanés ne peuvent
   pas passer le plafond ensemble.
 - TVA : le client envoie `amountHt` + `vatRate`, le serveur produit `vatAmount` et `amountTtc`.
   Taux en base (`vat_rate_options`), pas en dur. Pas de retenue à la source (colonnes supprimées
@@ -252,8 +280,8 @@ pour qu'un reçu réimprimé reste le même document.
 
 ## Documents imprimés et rapports
 
-`DocumentServiceImpl` produit trois PDF en lecture seule à partir des chiffres enregistrés :
-reçu, situation de compte, récapitulatif de TVA. `PdfLetterhead` (package-private) tient
+`document/DocumentServiceImpl` produit trois PDF en lecture seule à partir des chiffres enregistrés :
+reçu, situation de compte, récapitulatif de TVA. `shared/PdfLetterhead` tient
 l'en-tête, l'échelle typographique et le format monétaire communs — les services décident *ce
 que* dit un document, `PdfLetterhead` décide *à quoi il ressemble*. L'identité de la société
 vient de `app.company.*` via `CompanyProperties`. `AmountInWordsServiceImpl` écrit le montant en
@@ -268,12 +296,12 @@ couvre que la TVA déductible et le dit explicitement.
 
 ## Profils et configuration
 
-| Profil | Base | Notes |
-|---|---|---|
+| Profil         | Base                                       | Notes                                                                                |
+|----------------|--------------------------------------------|--------------------------------------------------------------------------------------|
 | `dev` (défaut) | PostgreSQL `localhost:5432/spi_ghomrassen` | `show-sql=true`, OpenAPI ouvert, pièces jointes dans `~/.spi-ghomrassen/attachments` |
-| `test` | H2 en mémoire, mêmes migrations | suite de tests, OpenAPI ouvert |
-| `demo` | s'ajoute à un autre profil | acquéreurs, lots et paiements **fictifs** — jamais en production |
-| `prod` | PostgreSQL via `${DATABASE_URL}` | aucune valeur par défaut, OpenAPI fermé |
+| `test`         | H2 en mémoire, mêmes migrations            | suite de tests, OpenAPI ouvert                                                       |
+| `demo`         | s'ajoute à un autre profil                 | acquéreurs, lots et paiements **fictifs** — jamais en production                     |
+| `prod`         | PostgreSQL via `${DATABASE_URL}`           | aucune valeur par défaut, OpenAPI fermé                                              |
 
 Variables obligatoires en `prod` : `DATABASE_URL`, `DB_USER`, `DB_PASSWORD`,
 `APP_CORS_ALLOWED_ORIGINS`, `ATTACHMENTS_ROOT`.
@@ -314,7 +342,8 @@ sauvegarde complète couvre `spi-postgres-data` **et** `spi-attachments`.
 ## Tests
 
 `src/test/java/com/promoteur/app/` — 39 classes, **274 exécutions** sans Docker et **291** avec
-`-Ppostgres` (total surefire, la seule source de vérité : `grep -c "@Test"` compte aussi `@TestPropertySource` et `@TestInstance`, ce
+`-Ppostgres` (total surefire, la seule source de vérité : `grep -c "@Test"` compte aussi `@TestPropertySource` et
+`@TestInstance`, ce
 qui a déjà produit un faux « 177 »). Dix-huit classes partagent un contexte Spring sur H2 via
 `AbstractIntegrationTest`, deux gardent le leur, `AmountInWordsTest` n'en a pas, et quatre
 tournent contre un conteneur PostgreSQL.
@@ -323,37 +352,37 @@ Une classe par règle, nommée d'après elle, et des `@DisplayName` qui énoncen
 (« an advance above the contract total is refused »). Toute modification d'une règle financière
 s'accompagne d'un test ; les classes existantes indiquent où l'ajouter :
 
-| Classe | Ce qu'elle garde |
-|---|---|
-| `VatCalculationTest` | TVA calculée côté serveur, tout taux tunisien, scale 3 |
-| `AdvanceCeilingTest` | plafond d'encaissement |
-| `ClientPurchaseCalculationTest` | encaissé et statut dérivés d'un contrat |
-| `PaymentScheduleTest` | échéanciers, cascade d'imputation, statuts |
-| `SupplierPaymentTest` | règlements fournisseurs, dépassement, retard |
-| `SalesBoardTest` | transitions de `sales_status` |
-| `ClientStatementTest`, `DocumentTest`, `AmountInWordsTest` | situations de compte et documents |
-| `ReferenceGenerationTest`, `PurchaseReferenceTest` | séquences de références |
-| `ReportScopeTest` | périmètre projet/période des rapports |
-| `QueryCountTest` | non-régression N+1 (compte les requêtes Hibernate) |
-| `ServerSideFilteringTest` | filtres et pagination faits en SQL |
-| `MessageCatalogTest` | catalogue français (apostrophes `MessageFormat`) |
-| `AttachmentTest`, `AuditTrailTest`, `SearchServiceTest` | pièces jointes, journal, recherche globale |
-| `StartupSeedTest`, `DemoProfileSeedTest` | idempotence des seeds |
-| `DatabaseCleanerTest` | le nettoyage vide les tables métier et préserve les données de référence |
-| `postgres/PostgresMigrationTest` | les 12 migrations sur le dialecte réel, `numeric(19,3)`, `version`, séquences |
-| `postgres/PostgresAdvanceCeilingTest` | CONC-01 sous concurrence sur PostgreSQL |
-| `postgres/PostgresSearchTest` | recherche accentuée — documente la sensibilité aux accents |
-| `postgres/PostgresReferenceSequenceTest` | unicité des références sous concurrence, débordement `numeric` |
-| `web/GlobalExceptionHandlerTest` | les 11 familles d'exceptions → statut, corps, aucune fuite |
-| `web/ExpenseControllerTest` | patron CRUD : 201 + `Location`, `details`, les 10 filtres, la pagination |
-| `web/AttachmentControllerTest` | multipart et flux, nom de fichier accentué encodé RFC 5987 |
-| `web/ReportControllerTest` | les trois sens de `projectId`, types MIME des exports |
-| `web/SearchControllerTest` | contrat de la recherche globale |
-| `web/CorsConfigurationTest` | origines autorisées, jamais `*` avec `allowCredentials` |
-| `persistence/*SpecificationTest` | les 5 spécifications : filtre vide, filtres isolés et combinés, `totalElements`, une jointure par association |
-| `persistence/ExpenseFetchGraphTest` | l'`@EntityGraph` de la liste : une requête, pas une par ligne |
-| `persistence/ResponseSerializationTest` | aucun DTO ne déclenche un chargement paresseux hors transaction |
-| `ArchitectureTest` | les 16 règles de `CLAUDE.md` rendues vérifiables (ArchUnit) |
+| Classe                                                     | Ce qu'elle garde                                                                                              |
+|------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| `VatCalculationTest`                                       | TVA calculée côté serveur, tout taux tunisien, scale 3                                                        |
+| `AdvanceCeilingTest`                                       | plafond d'encaissement                                                                                        |
+| `ClientPurchaseCalculationTest`                            | encaissé et statut dérivés d'un contrat                                                                       |
+| `PaymentScheduleTest`                                      | échéanciers, cascade d'imputation, statuts                                                                    |
+| `SupplierPaymentTest`                                      | règlements fournisseurs, dépassement, retard                                                                  |
+| `SalesBoardTest`                                           | transitions de `sales_status`                                                                                 |
+| `ClientStatementTest`, `DocumentTest`, `AmountInWordsTest` | situations de compte et documents                                                                             |
+| `ReferenceGenerationTest`, `PurchaseReferenceTest`         | séquences de références                                                                                       |
+| `ReportScopeTest`                                          | périmètre projet/période des rapports                                                                         |
+| `QueryCountTest`                                           | non-régression N+1 (compte les requêtes Hibernate)                                                            |
+| `ServerSideFilteringTest`                                  | filtres et pagination faits en SQL                                                                            |
+| `MessageCatalogTest`                                       | catalogue français (apostrophes `MessageFormat`)                                                              |
+| `AttachmentTest`, `AuditTrailTest`, `SearchServiceTest`    | pièces jointes, journal, recherche globale                                                                    |
+| `StartupSeedTest`, `DemoProfileSeedTest`                   | idempotence des seeds                                                                                         |
+| `DatabaseCleanerTest`                                      | le nettoyage vide les tables métier et préserve les données de référence                                      |
+| `postgres/PostgresMigrationTest`                           | les 12 migrations sur le dialecte réel, `numeric(19,3)`, `version`, séquences                                 |
+| `postgres/PostgresAdvanceCeilingTest`                      | CONC-01 sous concurrence sur PostgreSQL                                                                       |
+| `postgres/PostgresSearchTest`                              | recherche accentuée — documente la sensibilité aux accents                                                    |
+| `postgres/PostgresReferenceSequenceTest`                   | unicité des références sous concurrence, débordement `numeric`                                                |
+| `web/GlobalExceptionHandlerTest`                           | les 11 familles d'exceptions → statut, corps, aucune fuite                                                    |
+| `web/ExpenseControllerTest`                                | patron CRUD : 201 + `Location`, `details`, les 10 filtres, la pagination                                      |
+| `web/AttachmentControllerTest`                             | multipart et flux, nom de fichier accentué encodé RFC 5987                                                    |
+| `web/ReportControllerTest`                                 | les trois sens de `projectId`, types MIME des exports                                                         |
+| `web/SearchControllerTest`                                 | contrat de la recherche globale                                                                               |
+| `web/CorsConfigurationTest`                                | origines autorisées, jamais `*` avec `allowCredentials`                                                       |
+| `persistence/*SpecificationTest`                           | les 5 spécifications : filtre vide, filtres isolés et combinés, `totalElements`, une jointure par association |
+| `persistence/ExpenseFetchGraphTest`                        | l'`@EntityGraph` de la liste : une requête, pas une par ligne                                                 |
+| `persistence/ResponseSerializationTest`                    | aucun DTO ne déclenche un chargement paresseux hors transaction                                               |
+| `ArchitectureTest`                                         | les 16 règles de `CLAUDE.md` rendues vérifiables (ArchUnit)                                                   |
 
 Infrastructure : `AbstractIntegrationTest` (contexte et base H2 partagés),
 `AbstractPostgresTest` (conteneur PostgreSQL 16) et `DatabaseCleaner` (nettoyage entre classes,
@@ -362,20 +391,20 @@ canevas `@DataJpaTest` et le comptage de jointures.
 
 ## Où sont les choses
 
-| Besoin | Emplacement |
-|---|---|
-| Règles d'encaissement | `service/impl/ClientAdvanceServiceImpl`, `ClientPurchaseCalculationServiceImpl` |
-| Échéanciers | `service/impl/PaymentScheduleServiceImpl`, table `payment_installments` (V9) |
-| Règlements fournisseurs | `service/impl/SupplierInvoiceServiceImpl`, table `supplier_payments` (V10) |
-| Statut commercial des lots | `service/impl/ApartmentServiceImpl` (`salesBoard`, `changeSalesStatus`), V11 |
-| Documents imprimés | `service/impl/DocumentServiceImpl`, `PdfLetterhead`, `AmountInWordsServiceImpl` |
-| En-tête des documents | `app.company.*` dans `application.properties`, `config/CompanyProperties` |
-| TVA | `service/impl/VatCalculationServiceImpl`, table `vat_rate_options` |
-| Rapports et périmètre | `dto/report/ReportFilter`, `ReportScope`, `service/impl/ReportServiceImpl` |
-| Filtres des listes | `dto/ListFilter`, `repository/specification/*` |
-| Références de documents | `service/impl/ReferenceGeneratorServiceImpl`, séquences V6 et V12 |
-| Recherche globale | `service/impl/SearchServiceImpl`, `GET /api/search?q=` |
-| Pièces jointes | `service/impl/AttachmentServiceImpl`, `LocalFileSystemStorageService` |
-| Messages français | `src/main/resources/messages_fr.properties` |
-| Traduction des exceptions | `exception/GlobalExceptionHandler` |
-| OpenAPI | `/swagger-ui.html`, profils `dev` et `test` uniquement |
+| Besoin                     | Emplacement                                                                     |
+|----------------------------|---------------------------------------------------------------------------------|
+| Règles d'encaissement      | `advance/ClientAdvanceServiceImpl`, `purchase/ClientPurchaseCalculationServiceImpl` |
+| Échéanciers                | `schedule/PaymentScheduleServiceImpl`, table `payment_installments` (V9)    |
+| Règlements fournisseurs    | `invoice/SupplierInvoiceServiceImpl`, table `supplier_payments` (V10)      |
+| Statut commercial des lots | `apartment/ApartmentServiceImpl` (`salesBoard`, `changeSalesStatus`), V11    |
+| Documents imprimés         | `document/DocumentServiceImpl`, `shared/PdfLetterhead`, `document/AmountInWordsServiceImpl` |
+| En-tête des documents      | `app.company.*` dans `application.properties`, `config/CompanyProperties`       |
+| TVA                        | `vat/VatCalculationServiceImpl`, table `vat_rate_options`              |
+| Rapports et périmètre      | `report/ReportFilter`, `report/ReportScope`, `report/ReportServiceImpl`      |
+| Filtres des listes         | `shared/ListFilter`, `<feature>/*Specifications`                                  |
+| Références de documents    | `shared/ReferenceGeneratorServiceImpl`, séquences V6 et V12               |
+| Recherche globale          | `search/SearchServiceImpl`, `GET /api/search?q=`                          |
+| Pièces jointes             | `attachment/AttachmentServiceImpl`, `attachment/LocalFileSystemStorageService`           |
+| Messages français          | `src/main/resources/messages_fr.properties`                                     |
+| Traduction des exceptions  | `exception/GlobalExceptionHandler`                                              |
+| OpenAPI                    | `/swagger-ui.html`, profils `dev` et `test` uniquement                          |
