@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,6 +23,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * verbatim, so a doubled apostrophe there reaches the user as « n''a pas ».</p>
  */
 class MessageCatalogTest extends AbstractIntegrationTest {
+
+    /** An apostrophe that is neither preceded nor followed by another one. */
+    private static final Pattern SINGLE_APOSTROPHE = Pattern.compile("(?<!')'(?!')");
 
     @Autowired
     private MessageService messageService;
@@ -48,6 +52,26 @@ class MessageCatalogTest extends AbstractIntegrationTest {
         assertThat(this.messageService.get("validation.apartment.soldNeedsContract", "A12"))
                 .contains("L'appartement A12")
                 .doesNotContain("''");
+    }
+
+    @Test
+    @DisplayName("no message with a placeholder loses an apostrophe to MessageFormat")
+    void noMessageWithAPlaceholderLosesAnApostrophe() throws IOException {
+        final Properties catalogue = MessageCatalogTest.catalogue();
+        final List<String> offenders = new ArrayList<>();
+
+        // The mirror of the test above, and the case it missed. In a message that has a
+        // placeholder, MessageFormat reads a lone apostrophe as a quoting character and drops
+        // it: « n'est » reaches the user as « nest ». It has to be doubled — and a doubled one
+        // is only correct here, which is why the two tests must both exist.
+        for (final String key : catalogue.stringPropertyNames()) {
+            final String pattern = catalogue.getProperty(key);
+            if (pattern.matches("(?s).*\\{\\d.*") && SINGLE_APOSTROPHE.matcher(pattern).find()) {
+                offenders.add(key + " → " + pattern);
+            }
+        }
+
+        assertThat(offenders).isEmpty();
     }
 
     private static Properties catalogue() throws IOException {
