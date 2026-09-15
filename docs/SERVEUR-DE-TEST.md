@@ -38,12 +38,19 @@ Le fichier est ignoré par git.
 
 ## 4. Mot de passe de démonstration (`htpasswd`)
 
-C'est ce que le client tapera dans son navigateur. La commande demande le mot de passe deux fois ;
-l'identifiant est `spi` (changez-le si vous voulez). Le fichier est ignoré par git.
+C'est ce que le client tapera dans son navigateur. La commande demande le mot de passe deux fois.
+**L'identifiant est `spi`** — c'est celui qu'il faudra saisir, pas le nom de la société. Le fichier
+est ignoré par git.
 
 ```bash
-(umask 077; printf 'spi:%s\n' "$(openssl passwd -apr1)" > htpasswd) && test -s htpasswd && echo "htpasswd écrit"
+printf 'spi:%s\n' "$(openssl passwd -apr1)" > htpasswd && chmod 644 htpasswd && test -s htpasswd && echo "htpasswd écrit"
 ```
+
+`chmod 644` n'est pas un oubli : les processus ouvriers de nginx tournent sous l'utilisateur
+`nginx`, pas root. Un fichier en `600 root:root` leur est illisible et nginx répond **500** sur
+toutes les pages, sans jamais vérifier le mot de passe. Le fichier ne contient qu'un hachage
+salé — pas le mot de passe —, et le rendre lisible par les autres comptes du serveur est un
+compromis assumé pour une démonstration à données fictives.
 
 **Ce fichier doit exister avant le premier `up`** : Docker remplace un chemin absent par un
 dossier vide, et nginx refuse alors de démarrer (§ 11).
@@ -157,7 +164,9 @@ docker compose logs --tail=200 backend
 
 | Symptôme | Cause | Remède |
 |---|---|---|
+| Toutes les pages en **500**, log nginx `open() "/etc/nginx/htpasswd" failed (13: Permission denied)` | fichier illisible par l'utilisateur `nginx` | `chmod 644 htpasswd` — effet immédiat, aucun redémarrage |
 | `frontend` en `Restarting`, log nginx `open() "/etc/nginx/htpasswd" failed` ou `is a directory` | `htpasswd` absent au premier `up` : Docker a créé un dossier | `rm -rf htpasswd`, refaire § 4, puis `up -d` |
+| Le navigateur redemande sans cesse l'identifiant | mauvais identifiant | c'est `spi`, pas le nom de la société |
 | `backend` en `Restarting` | Flyway ou semis en erreur | `logs backend`, m'envoyer les 50 dernières lignes |
 | Page blanche ou 502 juste après `up` | l'API démarre encore | attendre une minute, recharger |
 | `password authentication failed` dans `logs backend` | `.env` changé après la création du volume | § 9 (remise à zéro) ou remettre l'ancien mot de passe |

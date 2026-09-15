@@ -47,6 +47,36 @@ jobs:
       - name: docker compose build (serveur de test)
         run: docker compose -f docker-compose.yml -f docker-compose.demo.yml build
 
+  demo:
+    name: Démonstration de bout en bout
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Cette etape execute les commandes de docs/SERVEUR-DE-TEST.md, telles quelles : si le
+      # guide se trompe, la CI se trompe avec lui et echoue. C'est ainsi qu'un htpasswd illisible
+      # par l'utilisateur nginx — 500 sur toutes les pages, constate le 15/09/2026 — se voit ici
+      # plutot que chez le client.
+      - name: Mots de passe, comme dans le guide
+        run: |
+          printf 'spi:%s\n' "$(openssl passwd -apr1 mot-de-passe-de-ci)" > htpasswd && chmod 644 htpasswd
+          printf 'DB_PASSWORD=%s\nDEMO_HTTP_PORT=8088\n' "$(openssl rand -base64 24)" > .env
+      - name: Lancer la démonstration
+        run: docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+      - name: L'interface et l'API répondent derrière le mot de passe
+        run: |
+          for i in $(seq 1 60); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8088/api/projects)" = "401" ] && break
+            sleep 5
+          done
+          echo "401 sans identifiant :"; test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8088/api/projects)" = "401"
+          echo "200 avec identifiant :"; test "$(curl -s -o /dev/null -u spi:mot-de-passe-de-ci -w '%{http_code}' http://localhost:8088/api/projects)" = "200"
+          echo "l'interface est servie :"; test "$(curl -s -o /dev/null -u spi:mot-de-passe-de-ci -w '%{http_code}' http://localhost:8088/)" = "200"
+          echo "les résidences de démonstration sont chargées :"
+          curl -s -u spi:mot-de-passe-de-ci http://localhost:8088/api/projects | grep -q "SPI-DEMO-RES-A"
+      - name: Journaux en cas d'échec
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.demo.yml logs --tail=80
+
   postgres:
     name: Backend (PostgreSQL)
     runs-on: ubuntu-latest
