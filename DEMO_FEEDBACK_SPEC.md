@@ -122,7 +122,8 @@ comment lancer en local, et un renvoi vers `docs/`. En français.
 
 - [x] Le rapport d'hygiène a été présenté et Wadii a confirmé avant le push.
 - [x] `git remote -v` montre `origin` sur `github.com/wadiihelal/Spi_Ghomrassen`.
-- [ ] Le workflow `CI` est vert sur GitHub pour le commit poussé.
+- [x] Le workflow `CI` est vert sur GitHub pour le commit poussé (run `34978124952` sur `03d38a0`,
+      après le correctif `frontend/.npmrc`).
 - [x] La question de la licence a une réponse (MIT), et le fichier correspondant est en place.
 
 ---
@@ -157,8 +158,12 @@ vandaliser par le premier scanner venu, même avec des données fictives.
   `auth_basic_user_file /etc/nginx/htpasswd`. Le compose de démo la monte à la place de la
   configuration par défaut, ainsi que le fichier `htpasswd` généré par Wadii
   (`openssl passwd -apr1`). Un identifiant partagé, donné au client de vive voix.
-- Pare-feu du VPS : 22 et 80 seulement (443 si TLS) ; le port 8080 ne sort jamais de la
-  machine — c'est déjà l'intention de `docker-compose.yml`, le vérifier.
+- Pare-feu du VPS : 22 et 80 seulement (443 si TLS). Le port 8080 ne sort pas de la machine
+  (`docker-compose.yml` n'a pas de `ports:` sur `backend`, vérifié). En revanche **`postgres`
+  publie `5432:5432` sur toutes les interfaces** — indispensable en dev (`mvn spring-boot:run`
+  depuis le Mac), dangereux sur un VPS : `spi`/`spi` exposé à Internet. Passer le compose de
+  base à `127.0.0.1:5432:5432` — même confort en dev, plus rien d'exposé sur le serveur, et
+  l'override n'a rien à retirer (Compose fusionne les listes `ports`, il ne les remplace pas).
 - TLS non exigé pour une démonstration à données fictives ; le guide indique comment l'ajouter
   (Caddy devant nginx, ou certbot) si l'URL doit circuler plus largement.
 
@@ -175,7 +180,8 @@ sur base vide), lecture des logs (`docker compose logs -f backend`).
 - [ ] Sur une machine vierge, la commande compose de démonstration affiche le tableau de bord
       avec les résidences « Démo » ; `mvn -q verify` et `npx ng build` restent verts.
 - [ ] `curl http://<ip>/api/projects` répond 401 sans identifiant et 200 avec.
-- [ ] Le port 8080 n'est pas joignable depuis l'extérieur du VPS.
+- [ ] Ni 5432 ni 8080 ne sont joignables depuis l'extérieur du VPS (`nc -zv <ip> 5432` depuis une
+      autre machine échoue).
 - [ ] Le test PostgreSQL du semis `demo` passe avec `-Ppostgres`.
 - [ ] `docs/SERVEUR-DE-TEST.md` existe et Wadii l'a suivi pour le premier déploiement — Claude
       Code n'a pas d'accès au VPS et ne le vérifie pas.
