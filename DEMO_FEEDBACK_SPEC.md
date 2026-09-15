@@ -146,8 +146,9 @@ serveur se remet à zéro d'une commande.
   test `@Tag("postgres")` dans `postgres/` qui démarre le contexte en `demo` et compte les
   résidences « Démo » — la suite H2 (`DemoProfileSeedTest`) ne couvre pas le dialecte.
 - Les variables obligatoires de `prod` (`DATABASE_URL`, `DB_USER`, `DB_PASSWORD`,
-  `APP_CORS_ALLOWED_ORIGINS`, `ATTACHMENTS_ROOT`) viennent d'un `.env` **non versionné** :
-  fournir `.env.example` et ajouter `.env` et `htpasswd` au `.gitignore`.
+  `APP_CORS_ALLOWED_ORIGINS`, `ATTACHMENTS_ROOT`) restent fixées par le compose ; `.env` **non
+  versionné** ne porte que `DB_PASSWORD` et `DEMO_HTTP_PORT` : fournir `.env.example` et ajouter
+  `.env` et `htpasswd` au `.gitignore`.
 
 ## 1b.2 — Protection minimale (SEC-01 sur un serveur exposé)
 
@@ -158,12 +159,13 @@ vandaliser par le premier scanner venu, même avec des données fictives.
   `auth_basic_user_file /etc/nginx/htpasswd`. Le compose de démo la monte à la place de la
   configuration par défaut, ainsi que le fichier `htpasswd` généré par Wadii
   (`openssl passwd -apr1`). Un identifiant partagé, donné au client de vive voix.
-- Pare-feu du VPS : 22 et 80 seulement (443 si TLS). Le port 8080 ne sort pas de la machine
-  (`docker-compose.yml` n'a pas de `ports:` sur `backend`, vérifié). En revanche **`postgres`
-  publie `5432:5432` sur toutes les interfaces** — indispensable en dev (`mvn spring-boot:run`
-  depuis le Mac), dangereux sur un VPS : `spi`/`spi` exposé à Internet. Passer le compose de
-  base à `127.0.0.1:5432:5432` — même confort en dev, plus rien d'exposé sur le serveur, et
-  l'override n'a rien à retirer (Compose fusionne les listes `ports`, il ne les remplace pas).
+- **Le VPS est partagé** (constaté au déploiement) : Apache y sert déjà Akaunting sur le port 80,
+  Odoo répond sur 8069, Dockge sur 5001, `ufw` est inactif. Conséquences : pas de `ufw enable` à
+  l'aveugle (il couperait ces services) ; la démonstration est publiée sur `DEMO_HTTP_PORT` (8088)
+  grâce à `ports: !override` dans l'override, qui **remplace** la liste du compose de base au lieu
+  de s'y ajouter (Compose ≥ 2.24) ; PostgreSQL n'est **pas publié du tout** sur l'hôte en démo
+  (`ports: !override []`). Le compose de base, lui, le lie à `127.0.0.1:5432` pour le poste de
+  développement au lieu de toutes les interfaces, et lit `DB_PASSWORD` dans `.env`.
 - TLS non exigé pour une démonstration à données fictives ; le guide indique comment l'ajouter
   (Caddy devant nginx, ou certbot) si l'URL doit circuler plus largement.
 
@@ -179,7 +181,7 @@ sur base vide), lecture des logs (`docker compose logs -f backend`).
 
 - [ ] Sur une machine vierge, la commande compose de démonstration affiche le tableau de bord
       avec les résidences « Démo » ; `mvn -q verify` et `npx ng build` restent verts.
-- [ ] `curl http://<ip>/api/projects` répond 401 sans identifiant et 200 avec.
+- [ ] `curl http://<ip>:8088/api/projects` répond 401 sans identifiant et 200 avec.
 - [ ] Ni 5432 ni 8080 ne sont joignables depuis l'extérieur du VPS (`nc -zv <ip> 5432` depuis une
       autre machine échoue).
 - [ ] Le test PostgreSQL du semis `demo` passe avec `-Ppostgres`.
