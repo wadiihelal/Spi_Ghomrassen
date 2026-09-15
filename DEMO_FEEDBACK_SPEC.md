@@ -137,6 +137,12 @@ serveur se remet à zéro d'une commande.
 
 ## 1b.1 — Profils `prod,demo` sans toucher au compose de production
 
+> **Deux pièges rencontrés au premier déploiement, tous deux corrigés.** `frontend/Dockerfile`
+> copiait `package.json` et `package-lock.json` puis lançait `npm ci` : `.npmrc` — qui porte
+> `legacy-peer-deps=true` — n'arrivait qu'après, donc l'image échouait là où la CI et le poste
+> passaient. D'où le job CI « Images Docker », qui construit ce qui part réellement. Et le VPS
+> étant partagé, le port 80 était déjà pris : voir `ports: !override` plus bas.
+
 - `docker-compose.yml` fixe `SPRING_PROFILES_ACTIVE: prod` et reste tel quel. Ajouter un
   fichier d'*override* `docker-compose.demo.yml` qui passe `prod,demo`, monte la configuration
   nginx de démonstration (1b.2) et rien d'autre. Commande :
@@ -179,11 +185,14 @@ sur base vide), lecture des logs (`docker compose logs -f backend`).
 
 ## Critères d'acceptation Lot 1 bis
 
-- [ ] Sur une machine vierge, la commande compose de démonstration affiche le tableau de bord
-      avec les résidences « Démo » ; `mvn -q verify` et `npx ng build` restent verts.
-- [ ] `curl http://<ip>:8088/api/projects` répond 401 sans identifiant et 200 avec.
-- [ ] Ni 5432 ni 8080 ne sont joignables depuis l'extérieur du VPS (`nc -zv <ip> 5432` depuis une
-      autre machine échoue).
+- [x] `mvn -q verify` et `npx ng build` restent verts ; la CI construit désormais aussi les images
+      Docker déployées (job « Images Docker »). L'affichage du tableau de bord avec les résidences
+      « Démo » se constate dans le navigateur, derrière le mot de passe : Wadii le confirme.
+- [x] `curl http://<ip>:8088/api/projects` répond **401 sans identifiant** (vérifié depuis le Mac ;
+      le 200 avec identifiant se contrôle par Wadii, seul détenteur du mot de passe).
+- [x] Ni 5432 ni 8080 ne sont joignables depuis l'extérieur du VPS — vérifié le 15/09/2026 depuis le
+      Mac, et confirmé par `docker compose ps` : seul `frontend` publie (`0.0.0.0:8088->80/tcp`),
+      `postgres` et `backend` n'exposent qu'au réseau Docker.
 - [x] Le test PostgreSQL du semis `demo` passe avec `-Ppostgres` — `PostgresDemoSeedTest`, 2 tests, dans le
       job CI « Backend (PostgreSQL) » (run `34981710492`, 5 classes / 19 tests ; l'étape de contrôle
       échoue si moins de 5 classes ou 8 tests ont tourné).

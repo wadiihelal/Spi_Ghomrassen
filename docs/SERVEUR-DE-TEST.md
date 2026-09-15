@@ -104,10 +104,18 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost/api/projects
 curl -s -u spi -o /dev/null -w '%{http_code}\n' http://localhost/api/projects
 ```
 
-Depuis le Mac — 80 ouvert, 5432 et 8080 refusés :
+Sur le serveur, la répartition des ports — c'est la vérification la plus parlante : seul
+`frontend` doit montrer `0.0.0.0:...->80/tcp` ; `postgres` et `backend` n'affichent qu'un port
+nu (`5432/tcp`, `8080/tcp`), signe qu'ils ne sont joignables que par le réseau Docker :
 
 ```bash
-nc -zv <IP> 80; nc -zv <IP> 5432; nc -zv <IP> 8080
+docker compose ps
+```
+
+Depuis le Mac — le port de la démonstration ouvert, 5432 et 8080 refusés :
+
+```bash
+nc -zv <IP> 8088; nc -zv <IP> 5432; nc -zv <IP> 8080
 ```
 
 Dans le navigateur : `http://<IP>/` — ou `http://<IP>:8088/` si `DEMO_HTTP_PORT` est fixé, et
