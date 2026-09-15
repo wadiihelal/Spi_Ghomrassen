@@ -181,6 +181,64 @@ class ReferenceGenerationTest extends AbstractIntegrationTest {
         return this.apartmentService.create(request);
     }
 
+    @Test
+    @DisplayName("a project created without a code receives one from the sequence")
+    void aProjectCreatedWithoutACodeReceivesOneFromTheSequence() {
+        final ProjectRequest request = new ProjectRequest();
+        request.setName("Projet sans code " + this.sequence.incrementAndGet());
+        request.setStartDate(LocalDate.of(2026, 4, 1));
+        request.setStatus(ProjectStatus.PLANNED);
+
+        final ProjectResponse created = this.projectService.create(request);
+
+        // The year comes from the start date, like every other reference in the application.
+        assertThat(created.code()).matches("PRJ-2026-\\d{5}");
+    }
+
+    @Test
+    @DisplayName("a project code typed by hand is kept exactly as entered")
+    void aProjectCodeTypedByHandIsKeptExactlyAsEntered() {
+        final ProjectRequest request = new ProjectRequest();
+        request.setCode("SPI-GHOM-RES-" + this.sequence.incrementAndGet());
+        request.setName("Projet nomenclature maison");
+        request.setStatus(ProjectStatus.PLANNED);
+
+        final ProjectResponse created = this.projectService.create(request);
+
+        assertThat(created.code()).isEqualTo(request.getCode());
+    }
+
+    @Test
+    @DisplayName("two projects created without a code never share one")
+    void twoProjectsCreatedWithoutACodeNeverShareOne() {
+        final ProjectResponse first = this.createProjectWithoutCode();
+        final ProjectResponse second = this.createProjectWithoutCode();
+
+        assertThat(first.code()).isNotEqualTo(second.code());
+    }
+
+    @Test
+    @DisplayName("updating a project without resending its code keeps the code it already carries")
+    void updatingAProjectWithoutItsCodeKeepsTheExistingCode() {
+        final ProjectResponse created = this.createProjectWithoutCode();
+
+        final ProjectRequest update = new ProjectRequest();
+        update.setName("Projet renommé");
+        update.setStatus(ProjectStatus.IN_PROGRESS);
+        final ProjectResponse updated = this.projectService.update(created.id(), update);
+
+        assertThat(updated.code()).isEqualTo(created.code());
+        assertThat(updated.name()).isEqualTo("Projet renommé");
+    }
+
+    private ProjectResponse createProjectWithoutCode() {
+        final ProjectRequest request = new ProjectRequest();
+        request.setName("Projet auto " + this.sequence.incrementAndGet());
+        request.setStartDate(LocalDate.of(2026, 4, 1));
+        request.setStatus(ProjectStatus.PLANNED);
+        return this.projectService.create(request);
+    }
+
     private ProjectResponse createProject() {
         ProjectRequest request = new ProjectRequest();
         request.setCode("REF-PRJ");

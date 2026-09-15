@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, ViewChild, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { FieldLabels, missingFieldsMessage } from '../../core/services/required-fields';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -12,6 +13,12 @@ import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { Client, Project } from '../../shared/models/models';
+
+
+const CLIENT_FIELDS: FieldLabels = {
+  fullName: 'Nom complet',
+  projectId: 'Projet',
+};
 
 @Component({
   selector: 'app-clients',
@@ -85,7 +92,8 @@ export class ClientsComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.ui.info('Formulaire incomplet', 'Merci de remplir les champs obligatoires du client.');
+      this.ui.info('Formulaire incomplet',
+        missingFieldsMessage(this.form, CLIENT_FIELDS, 'Merci de remplir les champs obligatoires du client.'));
       return;
     }
 

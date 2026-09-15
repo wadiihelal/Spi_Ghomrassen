@@ -6,4 +6,9 @@ import java.util.Optional;
 
 public interface ProjectRepository extends JpaRepository<Project, Long> {
     Optional<Project> findFirstByActiveContextTrue();
+
+    /**
+     * Used to check that a generated project code is free before it is handed out.
+     */
+    Optional<Project> findByCode(String code);
 }

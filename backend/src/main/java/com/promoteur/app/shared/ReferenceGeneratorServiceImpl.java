@@ -19,6 +19,7 @@ public class ReferenceGeneratorServiceImpl implements ReferenceGeneratorService 
     private static final String EXPENSE_SEQUENCE = "expense_ref_seq";
     private static final String ADVANCE_SEQUENCE = "advance_ref_seq";
     private static final String PURCHASE_SEQUENCE = "purchase_ref_seq";
+    private static final String PROJECT_SEQUENCE = "project_code_seq";
 
     /**
      * Guards against an endless loop if every candidate were somehow taken. A reference is
@@ -48,6 +49,11 @@ public class ReferenceGeneratorServiceImpl implements ReferenceGeneratorService 
     public String nextPurchaseReference(final LocalDate date) {
         return this.nextReference("ACH", PURCHASE_SEQUENCE, date,
                 reference -> this.clientPurchaseRepository.findByReference(reference).isPresent());
+    }
+
+    @Override
+    public String nextProjectCode(final LocalDate date, final Predicate<String> alreadyTaken) {
+        return this.nextReference("PRJ", PROJECT_SEQUENCE, date, alreadyTaken);
     }
 
     /**

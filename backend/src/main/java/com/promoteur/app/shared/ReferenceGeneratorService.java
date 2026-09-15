@@ -1,6 +1,7 @@
 package com.promoteur.app.shared;
 
 import java.time.LocalDate;
+import java.util.function.Predicate;
 
 /**
  * Allocates the sequential document references shown in the console and in exports (DATA-03).
@@ -28,4 +29,18 @@ public interface ReferenceGeneratorService {
      * @param date date the reference year is taken from; today when null
      */
     String nextPurchaseReference(LocalDate date);
+
+    /**
+     * Next project code, e.g. {@code PRJ-2026-00042}, for a project created without one.
+     *
+     * <p>Unlike the three methods above, the caller supplies the «&nbsp;is this one taken&nbsp;»
+     * check instead of this service reaching into a feature repository to run it. That is the
+     * inversion {@code ArchitectureTest.sharedDoesNotDependOnAFeature} names as the fix for its
+     * one exclusion: the three older methods still owe it, this one does not, so {@code shared}
+     * gains no new dependency on a feature.</p>
+     *
+     * @param date         date the code year is taken from; today when null
+     * @param alreadyTaken answers whether a candidate code is already used
+     */
+    String nextProjectCode(LocalDate date, Predicate<String> alreadyTaken);
 }

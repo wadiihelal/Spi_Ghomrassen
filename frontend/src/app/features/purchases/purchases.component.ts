@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
+import { FieldLabels, missingFieldsMessage } from '../../core/services/required-fields';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -29,6 +30,16 @@ import {
   Project,
   PurchasePaymentStatus
 } from '../../shared/models/models';
+
+
+const PURCHASE_FIELDS: FieldLabels = {
+  purchaseDate: 'Date achat',
+  totalAmount: 'Montant total',
+  assetDescription: 'Bien / description',
+  clientId: 'Client',
+  apartmentId: 'Appartement',
+  projectId: 'Projet',
+};
 
 @Component({
   selector: 'app-purchases',
@@ -287,7 +298,8 @@ export class PurchasesComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.ui.info('Formulaire incomplet', 'Merci de remplir les champs obligatoires de l’achat client.');
+      this.ui.info('Formulaire incomplet',
+        missingFieldsMessage(this.form, PURCHASE_FIELDS, 'Merci de remplir les champs obligatoires de l’achat client.'));
       return;
     }
     if (this.isCurrentPurchaseOverLimit) {

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
+import { FieldLabels, missingFieldsMessage } from '../../core/services/required-fields';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -32,6 +33,16 @@ import { AttachmentsPanelComponent } from '../../shared/attachments/attachments-
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { LazyTable } from '../../core/services/lazy-table';
 import { SupplierPaymentsComponent } from '../../shared/supplier-payments/supplier-payments.component';
+
+
+const INVOICE_FIELDS: FieldLabels = {
+  invoiceNumber: 'Numéro facture',
+  invoiceDate: 'Date facture',
+  amountHt: 'Montant HT',
+  vatRate: 'Taux de TVA',
+  supplierId: 'Fournisseur',
+  projectId: 'Projet',
+};
 
 @Component({
   selector: 'app-supplier-invoices',
@@ -140,7 +151,8 @@ export class SupplierInvoicesComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.ui.info('Formulaire incomplet', 'Merci de remplir les champs obligatoires de la facture.');
+      this.ui.info('Formulaire incomplet',
+        missingFieldsMessage(this.form, INVOICE_FIELDS, 'Merci de remplir les champs obligatoires de la facture.'));
       return;
     }
 

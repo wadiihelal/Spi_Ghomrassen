@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FieldLabels, missingFieldsMessage } from '../../core/services/required-fields';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -12,6 +13,13 @@ import { ApiService } from '../../core/services/api.service';
 import { DinarPipe } from '../../shared/pipes/dinar.pipe';
 import { UiService } from '../../core/services/ui.service';
 import { Project } from '../../shared/models/models';
+
+
+const PROJECT_FIELDS: FieldLabels = {
+  code: 'Code projet',
+  name: 'Nom du projet',
+  status: 'Statut',
+};
 
 @Component({
   selector: 'app-projects',
@@ -42,7 +50,8 @@ export class ProjectsComponent implements OnInit {
   ];
 
   form = this.fb.group({
-    code: ['', [Validators.required]],
+    // Laisse vide, le serveur attribue PRJ-2026-00042 comme pour les depenses et les acomptes.
+    code: [''],
     name: ['', [Validators.required]],
     location: [''],
     description: [''],
@@ -77,7 +86,8 @@ export class ProjectsComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.ui.info('Formulaire incomplet', 'Merci de remplir les champs obligatoires du projet.');
+      this.ui.info('Formulaire incomplet',
+        missingFieldsMessage(this.form, PROJECT_FIELDS, 'Merci de remplir les champs obligatoires du projet.'));
       return;
     }
     const payload = this.form.getRawValue() as Project;

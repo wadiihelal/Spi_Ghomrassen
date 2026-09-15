@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
+import { FieldLabels, missingFieldsMessage } from '../../core/services/required-fields';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -18,6 +19,23 @@ import { UiService } from '../../core/services/ui.service';
 import { ProjectContextService } from '../../core/services/project-context.service';
 import { LazyTable } from '../../core/services/lazy-table';
 import { forkJoin } from 'rxjs';
+
+
+const APARTMENT_FIELDS: FieldLabels = {
+  apartmentNumber: 'Numéro appartement',
+  apartmentType: 'Type',
+  totalSurface: 'Surface',
+  projectId: 'Projet',
+};
+
+const BULK_FIELDS: FieldLabels = {
+  blockCode: 'Bloc',
+  floorCount: 'Nombre d’étages',
+  apartmentsPerFloor: 'Appartements / étage',
+  apartmentType: 'Type standard',
+  totalSurface: 'Surface standard m²',
+  projectId: 'Projet',
+};
 
 @Component({
   selector: 'app-apartments',
@@ -179,7 +197,8 @@ export class ApartmentsComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.ui.info('Formulaire incomplet', 'Merci de remplir les champs obligatoires de l’appartement.');
+      this.ui.info('Formulaire incomplet',
+        missingFieldsMessage(this.form, APARTMENT_FIELDS, 'Merci de remplir les champs obligatoires de l’appartement.'));
       return;
     }
 
@@ -197,7 +216,8 @@ export class ApartmentsComponent implements OnInit {
   submitBulk(): void {
     if (this.bulkForm.invalid) {
       this.bulkForm.markAllAsTouched();
-      this.ui.info('Formulaire incomplet', 'Merci de remplir les champs obligatoires de génération du bloc.');
+      this.ui.info('Formulaire incomplet',
+        missingFieldsMessage(this.bulkForm, BULK_FIELDS, 'Merci de remplir les champs obligatoires de génération du bloc.'));
       return;
     }
 

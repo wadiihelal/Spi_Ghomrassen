@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
+import { FieldLabels, missingFieldsMessage } from '../../core/services/required-fields';
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -19,6 +20,20 @@ import { Expense, ExpenseCategory, ListFilter, Project, Supplier, VatRateOption 
 
 /** Rate proposed when the supplier has none of its own. */
 const FALLBACK_VAT_RATE = 0.19;
+
+
+const EXPENSE_FIELDS: FieldLabels = {
+  description: 'Description',
+  expenseDate: 'Date',
+  amountHt: 'Montant HT',
+  vatRate: 'Taux de TVA',
+  categoryId: 'Catégorie',
+  projectId: 'Projet',
+};
+
+const EXPENSE_CATEGORY_FIELDS: FieldLabels = {
+  name: 'Nom',
+};
 
 @Component({
   selector: 'app-expenses',
@@ -149,7 +164,8 @@ export class ExpensesComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.ui.info('Formulaire incomplet', 'Merci de remplir les champs obligatoires de la dépense.');
+      this.ui.info('Formulaire incomplet',
+        missingFieldsMessage(this.form, EXPENSE_FIELDS, 'Merci de remplir les champs obligatoires de la dépense.'));
       return;
     }
 
@@ -259,7 +275,8 @@ export class ExpensesComponent implements OnInit {
   submitCategory(): void {
     if (this.categoryForm.invalid) {
       this.categoryForm.markAllAsTouched();
-      this.ui.info('Formulaire incomplet', 'Merci de remplir les champs obligatoires de la catégorie.');
+      this.ui.info('Formulaire incomplet',
+        missingFieldsMessage(this.categoryForm, EXPENSE_CATEGORY_FIELDS, 'Merci de remplir les champs obligatoires de la catégorie.'));
       return;
     }
 

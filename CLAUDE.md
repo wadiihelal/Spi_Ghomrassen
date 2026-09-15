@@ -83,8 +83,8 @@ Sur ce poste, si `mvn` n'est pas dans le PATH : `~/.m2/wrapper/dists/apache-mave
 - **Sauvegardes : lacune assumée**, documentée dans `backend/README.md`.
 - **La TVA collectée n'est pas suivie** : les ventes sont enregistrées TTC. Le document de TVA ne
   couvre que la TVA déductible et le dit.
-- **Références par séquence** (`DEP-`, `ACC-`, `ACH-` + année + numéro), attribuées avant le
-  premier enregistrement ; une référence saisie est conservée (reprise d'un contrat antérieur).
+- **Références par séquence** (`DEP-`, `ACC-`, `ACH-`, `PRJ-` + année + numéro), attribuées avant
+  le premier enregistrement ; une référence saisie est conservée (reprise d'un contrat antérieur).
   Le numéro d'une facture fournisseur vient du fournisseur et reste saisi.
 - **Le reçu ne consomme pas de séquence** : il porte la référence de l'encaissement, pour qu'un
   reçu réimprimé reste le même document.
@@ -180,6 +180,9 @@ Dettes connues et nommées :
 - `shared/ReferenceGeneratorServiceImpl` lit trois dépôts de features pour vérifier qu'une
   référence tirée est libre — seule exclusion de `sharedDoesNotDependOnAFeature`, à corriger en
   inversant le contrôle.
+- `shared/ReferenceGeneratorServiceImpl.nextProjectCode` prend le contrôle « déjà pris ? » de
+  son appelant (V13, 15/09/2026) : c'est l'inversion que la règle ArchUnit réclame, appliquée à la
+  seule méthode neuve. Les trois anciennes la doivent encore.
 - `frontend/.npmrc` force `legacy-peer-deps=true` : PrimeNG 17 ne déclare qu'Angular 17/18 en
   peer dependency alors que le projet est sur Angular 19, et `npm ci` refuserait sinon toute
   installation sur machine neuve (CI, `frontend-maven-plugin`, release). La sortie est la

@@ -14,9 +14,10 @@ import java.time.LocalDate;
 public class ProjectRequest {
 
     /**
-     * Unique business code for the project.
+     * Unique business code for the project. Optional since 15/09/2026: left blank, the server
+     * allocates {@code PRJ-2026-00042} from a sequence, exactly as it does for expenses, advances
+     * and sale contracts. A code that is supplied is kept as entered.
      */
-    @NotBlank
     private String code;
 
     /**

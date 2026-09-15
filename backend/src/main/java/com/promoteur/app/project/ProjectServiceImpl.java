@@ -2,12 +2,14 @@ package com.promoteur.app.project;
 
 import com.promoteur.app.audit.AuditLogService;
 import com.promoteur.app.shared.MessageService;
+import com.promoteur.app.shared.ReferenceGeneratorService;
 import com.promoteur.app.shared.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @Transactional
@@ -18,6 +20,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final AuditLogService auditLogService;
     private final MessageService messageService;
     private final ProjectMapper projectMapper;
+    private final ReferenceGeneratorService referenceGeneratorService;
 
     @Override
     @Transactional(readOnly = true)
@@ -113,7 +116,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private void map(final Project project, final ProjectRequest request) {
-        project.setCode(request.getCode());
+        project.setCode(this.resolveCode(project, request));
         project.setName(request.getName());
         project.setLocation(request.getLocation());
         project.setDescription(request.getDescription());
@@ -123,5 +126,25 @@ public class ProjectServiceImpl implements ProjectService {
         if (request.getStatus() != null) {
             project.setStatus(request.getStatus());
         }
+    }
+
+    /**
+     * Same rule as the other document references: a code typed by the promoter is kept exactly as
+     * entered — the existing nomenclature ({@code SPI-GHOM-RES-01}) is never rewritten — and only
+     * a blank one draws {@code PRJ-2026-00042} from the sequence. On an update, a field left blank
+     * keeps the code the project already carries rather than issuing a new one.
+     *
+     * <p>The «&nbsp;is this code taken&nbsp;» check is passed to the generator rather than looked
+     * up by it, so {@code shared} keeps no dependency on this feature.</p>
+     */
+    private String resolveCode(final Project project, final ProjectRequest request) {
+        if (StringUtils.hasText(request.getCode())) {
+            return request.getCode().trim();
+        }
+        if (StringUtils.hasText(project.getCode())) {
+            return project.getCode();
+        }
+        return this.referenceGeneratorService.nextProjectCode(request.getStartDate(),
+                candidate -> this.projectRepository.findByCode(candidate).isPresent());
     }
 }

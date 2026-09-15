@@ -29,9 +29,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PostgresMigrationTest extends AbstractPostgresTest {
 
     /**
-     * Migrations delivered so far: V1 to V12.
+     * Migrations delivered so far: V1 to V13.
      */
-    private static final int DELIVERED_MIGRATIONS = 12;
+    private static final int DELIVERED_MIGRATIONS = 13;
 
     /**
      * The three columns that hold a VAT <em>rate</em> rather than an amount. A rate is a
@@ -50,7 +50,7 @@ class PostgresMigrationTest extends AbstractPostgresTest {
     private static final int RATE_SCALE = 4;
 
     private static final List<String> REFERENCE_SEQUENCES =
-            List.of("advance_ref_seq", "expense_ref_seq", "purchase_ref_seq");
+            List.of("advance_ref_seq", "expense_ref_seq", "project_code_seq", "purchase_ref_seq");
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -67,7 +67,7 @@ class PostgresMigrationTest extends AbstractPostgresTest {
         assertThat(history).hasSize(DELIVERED_MIGRATIONS);
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
         assertThat(history).extracting(row -> row.get("version"))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13");
     }
 
     @Test

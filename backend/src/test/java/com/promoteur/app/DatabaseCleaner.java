@@ -55,7 +55,8 @@ public class DatabaseCleaner {
     private static final List<String> REFERENCE_SEQUENCES = List.of(
             "expense_ref_seq",
             "advance_ref_seq",
-            "purchase_ref_seq");
+            "purchase_ref_seq",
+            "project_code_seq");
 
     private final DataSource dataSource;
 

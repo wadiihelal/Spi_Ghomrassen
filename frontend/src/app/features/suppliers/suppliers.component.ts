@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { FieldLabels, missingFieldsMessage } from '../../core/services/required-fields';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
@@ -12,6 +13,15 @@ import { DialogModule } from 'primeng/dialog';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
 import { Supplier, SupplierTypeOption, VatRateOption } from '../../shared/models/models';
+
+
+const SUPPLIER_FIELDS: FieldLabels = {
+  name: 'Nom',
+};
+
+const SUPPLIER_TYPE_FIELDS: FieldLabels = {
+  label: 'Libellé',
+};
 
 @Component({
   selector: 'app-suppliers',
@@ -81,7 +91,8 @@ export class SuppliersComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.ui.info('Formulaire incomplet', 'Merci de remplir les champs obligatoires du fournisseur.');
+      this.ui.info('Formulaire incomplet',
+        missingFieldsMessage(this.form, SUPPLIER_FIELDS, 'Merci de remplir les champs obligatoires du fournisseur.'));
       return;
     }
 
@@ -164,7 +175,8 @@ export class SuppliersComponent implements OnInit {
   submitSupplierType(): void {
     if (this.supplierTypeForm.invalid) {
       this.supplierTypeForm.markAllAsTouched();
-      this.ui.info('Formulaire incomplet', 'Merci de remplir les champs obligatoires du type fournisseur.');
+      this.ui.info('Formulaire incomplet',
+        missingFieldsMessage(this.supplierTypeForm, SUPPLIER_TYPE_FIELDS, 'Merci de remplir les champs obligatoires du type fournisseur.'));
       return;
     }
 

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
+import { FieldLabels, missingFieldsMessage } from '../../core/services/required-fields';
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -27,6 +28,14 @@ import {
   Project,
   PurchasePaymentStatus
 } from '../../shared/models/models';
+
+
+const ADVANCE_FIELDS: FieldLabels = {
+  advanceDate: 'Date acompte',
+  amount: 'Montant',
+  paymentMethod: 'Mode de paiement',
+  apartmentId: 'Appartement',
+};
 
 @Component({
   selector: 'app-advances',
@@ -264,7 +273,8 @@ export class AdvancesComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.ui.info('Formulaire incomplet', 'Merci de remplir les champs obligatoires de l’acompte.');
+      this.ui.info('Formulaire incomplet',
+        missingFieldsMessage(this.form, ADVANCE_FIELDS, 'Merci de remplir les champs obligatoires de l’acompte.'));
       return;
     }
     if (this.isCurrentAdvanceOverLimit) {
