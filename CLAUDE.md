@@ -139,14 +139,16 @@ Les tests PostgreSQL sont exclus par défaut et ne tournent qu'avec `-Ppostgres`
 
 ## Chantier en cours : retours de la démonstration client (15/09/2026)
 
-`DEMO_FEEDBACK_SPEC.md` découpe les trois demandes du client en quatre lots : publication sur
-GitHub (dépôt public, après un passage d'hygiène), justificatif embarqué dans le reçu PDF,
+`DEMO_FEEDBACK_SPEC.md` découpe les demandes du client en cinq lots : publication sur GitHub
+(livré le 15/09/2026 : `github.com/wadiihelal/Spi_Ghomrassen`), serveur de test sur un VPS avec
+le jeu `demo` pour une démonstration supplémentaire, justificatif embarqué dans le reçu PDF,
 profil `laptop` (un seul exécutable, H2 en mode fichier, port lié à `127.0.0.1`) et installateur
-Windows produit par GitHub Actions avec ses deux guides.
+Windows produit par GitHub Actions avec ses deux guides. Séquence réelle chez le client : serveur
+de test d'abord, portable ensuite et **sans urgence** — le client acquiert le PC après validation.
 
 ```
 /demo-feedback status   # où en est-on, sans rien écrire
-/demo-feedback lot1     # puis lot2, lot3, lot4 — dans cet ordre
+/demo-feedback lot1bis  # puis lot2, lot3, lot4 — dans cet ordre (lot1 est livré)
 ```
 
 ## Où sont les choses
@@ -170,6 +172,13 @@ Windows produit par GitHub Actions avec ses deux guides.
 | Données de démo | `config/DemoDataInitializer` (profil `demo`), `config/ReferenceDataInitializer` |
 | OpenAPI | `/swagger-ui.html`, profils `dev` et `test` uniquement |
 
-Dette connue et nommée : `shared/ReferenceGeneratorServiceImpl` lit trois dépôts de features pour
-vérifier qu'une référence tirée est libre — seule exclusion de `sharedDoesNotDependOnAFeature`,
-à corriger en inversant le contrôle.
+Dettes connues et nommées :
+
+- `shared/ReferenceGeneratorServiceImpl` lit trois dépôts de features pour vérifier qu'une
+  référence tirée est libre — seule exclusion de `sharedDoesNotDependOnAFeature`, à corriger en
+  inversant le contrôle.
+- `frontend/.npmrc` force `legacy-peer-deps=true` : PrimeNG 17 ne déclare qu'Angular 17/18 en
+  peer dependency alors que le projet est sur Angular 19, et `npm ci` refuserait sinon toute
+  installation sur machine neuve (CI, `frontend-maven-plugin`, release). La sortie est la
+  migration vers PrimeNG 19 (nouveau système de thèmes, `components.css` à reprendre) — un
+  chantier à part, pas un correctif.

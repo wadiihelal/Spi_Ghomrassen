@@ -54,15 +54,16 @@ Le profil `demo` charge des acquéreurs fictifs : **jamais en production**.
 
 ## Déploiement
 
-Deux modes sont prévus, selon que le client dispose d'un serveur ou non.
+La mise en service se fait en deux étapes, avec le même code et deux profils Spring.
 
-| Mode | État | Principe |
-|---|---|---|
-| **Serveur** (`prod`) | disponible | PostgreSQL + API + nginx via `docker-compose.yml`, sur un serveur ou un VPS |
-| **Poste isolé** (`laptop`) | *en préparation* | un exécutable unique installé sur le portable du client, base en mode fichier, aucun serveur |
+| Étape | Profil | État | Principe |
+|---|---|---|---|
+| 1. **Serveur de test** | `prod,demo` | *en cours* | PostgreSQL + API + nginx via `docker-compose.yml` sur un VPS, rempli du jeu de données **fictif** : le client essaie l'application depuis son navigateur avant toute installation |
+| 2. **Poste du client** | `laptop` | *en préparation* | un exécutable unique installé sur son portable Windows, base en mode fichier et **vide**, aucun serveur |
 
-Le mode « poste isolé » et son installateur Windows sont en cours de réalisation ; les guides
-correspondants arriveront dans [`docs/`](docs/).
+Le profil `demo` charge des acquéreurs fictifs et ne sert qu'à l'étape 1 — jamais sur des
+données réelles. L'édition « poste isolé » et son installateur Windows sont en cours de
+réalisation ; les guides correspondants arriveront dans [`docs/`](docs/).
 
 ## Intégration continue
 

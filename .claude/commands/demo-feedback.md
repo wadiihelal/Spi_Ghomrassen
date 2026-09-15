@@ -1,6 +1,6 @@
 ---
 description: Livre un lot des retours de la demo client du 15/09/2026 (lot1 a lot4)
-argument-hint: lot1 | lot2 | lot3 | lot4 | status
+argument-hint: lot1 | lot1bis | lot2 | lot3 | lot4 | status
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(mvn *), Bash(npm *), Bash(npx *), Bash(git *), Bash(gh *), Bash(java *), Bash(curl *), Bash(find *), Bash(ls *), Bash(unzip *)
 ---
 
@@ -17,10 +17,10 @@ Lot demande : **$1**
    « Etat du depot » s'appliquent a tous les lots.
 
 2. **Si `$1` vaut `status`** : n'ecris aucun code. Verifie `git remote -v`, l'existence des
-   fichiers attendus par chaque lot (profil `laptop`, `release.yml`, `docs/`), et rends un
+   fichiers attendus par chaque lot (`docker-compose.demo.yml`, `docs/SERVEUR-DE-TEST.md`, profil `laptop`, `release.yml`, `docs/`), et rends un
    tableau : par lot, ce qui est fait, ce qui reste, la prochaine action. Arrete-toi la.
 
-3. **Sinon, livre le lot `$1` et lui seul**, dans l'ordre lot1 → lot2 → lot3 → lot4. Si le lot
+3. **Sinon, livre le lot `$1` et lui seul**, dans l'ordre lot1 → lot1bis → lot2 → lot3 → lot4. Si le lot
    demande depend d'un lot non livre, dis-le et propose de commencer par celui-la.
 
 ## Points d'arret obligatoires
@@ -32,7 +32,9 @@ Tu **t'arretes et attends la confirmation de Wadii** avant :
 - **toute reecriture d'historique** (`git filter-repo`, `git push --force`) ;
 - **la creation du depot GitHub** : confirme le nom `spi-ghomrassen` et le compte affiche par
   `gh auth status` ;
-- **le premier tag `v*`** au Lot 4 : il declenche une Release publique.
+- **le premier tag `v*`** au Lot 4 : il declenche une Release publique ;
+- **tout deploiement sur le VPS de test** au Lot 1 bis : tu prepares fichiers et guide, c'est
+  Wadii qui execute les commandes sur la machine — tu n'as ni acces SSH ni identifiants.
 
 ## Regles de travail
 
@@ -67,6 +69,9 @@ cd frontend && npx ng build          # vert
 Lot 3 en plus : `mvn -q package -Pembed-frontend` puis
 `java -jar target/*.jar --spring.profiles.active=laptop` sur un `APP_DATA` vide → le tableau
 de bord repond sur `http://localhost:8080`, `backups/` contient une paire de zips.
+
+Lot 1 bis en plus : `docker compose -f docker-compose.yml -f docker-compose.demo.yml config`
+valide, le test PostgreSQL du semis `demo` passe, le guide est relu.
 
 Lot 4 en plus : un tag `v0.9.0-rc1` pousse produit une Release avec un `.msi`.
 

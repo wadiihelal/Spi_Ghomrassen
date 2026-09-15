@@ -1,8 +1,8 @@
 # Spec — Retours de la démonstration client (15/09/2026)
 
 > Document de travail destiné à Claude Code, exécuté par la commande `/demo-feedback`.
-> Quatre lots, **dans l'ordre**. `mvn -q verify` et `npx ng build` restent verts à la fin de
-> chacun. Les conventions de `CLAUDE.md` s'appliquent partout.
+> Cinq lots, **dans l'ordre** (le Lot 1 bis date du 15/09/2026). `mvn -q verify` et
+> `npx ng build` restent verts à la fin de chacun. Les conventions de `CLAUDE.md` s'appliquent partout.
 
 ## Ce que le client a demandé
 
@@ -12,6 +12,21 @@
 | 2 | Le code doit être publié sur le GitHub personnel de Wadii, avec un guide de déploiement | Lots 1 et 4 |
 | 3 | L'application tourne **sur le portable du client** (Windows), sans serveur ni VPS | Lots 3 et 4 |
 
+## Séquence de mise en service (corrigée le 15/09/2026)
+
+La première version de cette spec traitait le serveur comme une hypothèse lointaine. La séquence
+réelle chez le client est en deux étapes, avec le même code et deux profils Spring :
+
+1. **Serveur de test** — un VPS Linux avec Docker, chez Wadii, qui fait tourner l'application
+   avec le jeu de données **fictif** (`prod,demo`) pour une démonstration supplémentaire au
+   client, depuis son navigateur, sans rien installer chez lui. C'est le **Lot 1 bis**.
+2. **Portable du client** — installation sur son PC Windows, base **vide** (profil `laptop`,
+   Lots 3 et 4). Le client acquiert le PC **après** avoir validé sur le serveur de test : cette
+   étape n'est **pas urgente**.
+
+Le profil `prod` n'est donc plus une cible hypothétique : il sert dès maintenant au serveur de
+test.
+
 ## Décisions prises avec Wadii, à ne pas rouvrir
 
 - **Dépôt GitHub public.** Conséquence : un passage d'hygiène est obligatoire avant le premier
@@ -19,7 +34,8 @@
 - **Édition « poste isolé » : un seul exécutable, H2 en mode fichier, JRE embarqué.** Pas de
   Docker Desktop, pas de PostgreSQL à installer chez le client. L'application s'ouvre dans le
   navigateur par défaut. Le profil `prod` (PostgreSQL + docker-compose) est **conservé** tel
-  quel : il reste la cible si un serveur apparaît un jour.
+  quel : il fait tourner le serveur de test (Lot 1 bis) et resterait la cible si le client
+  passait un jour sur un serveur.
 - **Le portable du client est sous Windows.** L'installateur est un `.msi` produit par
   `jpackage`. Wadii travaille sur macOS : `jpackage` ne produit un installateur que pour l'OS
   qui l'exécute, donc **le `.msi` est construit par GitHub Actions sur `windows-latest`**,
@@ -34,20 +50,27 @@
   `shared/`…) depuis le commit `fbdc33a`. `CLAUDE.md` est à jour ; `TEST_HARDENING_SPEC.md`
   cite encore d'anciens chemins `service/impl/…` mais ses cinq lots sont livrés — ne pas le
   reprendre. Cette spec utilise les nouveaux chemins.
-- `git remote -v` est **vide** : le dépôt n'a jamais été poussé.
+- `origin` pointe sur `github.com/wadiihelal/Spi_Ghomrassen` depuis le 15/09/2026 (Lot 1). Le nom
+  `spi-ghomrassen` et l'usage de `gh` prévus au §1.2 sont périmés : `gh` n'est pas installé sur le Mac.
 - `.github/workflows/ci.yml` existe déjà (Maven + Angular sur `ubuntu-latest`).
 - `h2` est en portée `test` dans `backend/pom.xml`.
 - `frontend/src/environments/environment.prod.ts` pointe déjà sur `apiUrl: '/api'`.
 - `frontend/nginx.conf` contient la règle SPA (`try_files … /index.html`) et le proxy `/api`
   qu'il faudra reproduire côté Spring Boot.
-- `CLAUDE_CODE_PROMPT.md` (35 Ko) est **suivi en git** ; `CLAUDE_CODE_PROMPT copy.md` est
-  suivi mais supprimé du répertoire de travail.
+- `CLAUDE_CODE_PROMPT.md` et sa copie ont été **retirés de tout l'historique** (`git filter-repo`)
+  avant le premier push, avec l'adresse professionnelle des commits (Lot 1, 15/09/2026).
 
 ---
 
 # Lot 1 — Dépôt GitHub public
 
 Objectif : le code est sauvegardé hors du Mac, et rien de confidentiel n'est publié.
+
+> **État au 15/09/2026.** Rapport d'hygiène présenté et validé ; historique réécrit (prompts
+> internes et adresse professionnelle retirés) ; poussé sur `wadiihelal/Spi_Ghomrassen` ;
+> licence MIT ; manuel dans `docs/`. Le premier run de la CI a révélé que `npm ci` refusait le
+> conflit de peer dependency PrimeNG 17 / Angular 19 sur toute machine neuve — réglé par
+> `frontend/.npmrc` (`legacy-peer-deps=true`), dette nommée dans `CLAUDE.md`.
 
 ## 1.1 — Hygiène avant publication (bloquant)
 
@@ -84,7 +107,9 @@ gh auth status                       # le compte authentifié est le compte cibl
 gh repo create spi-ghomrassen --public --source=. --remote=origin --push
 ```
 
-Nom du dépôt : `spi-ghomrassen`. Branche `main`. Vérifier ensuite que le workflow `CI` se
+Nom du dépôt : `spi-ghomrassen`. Branche `main`. *Réalisé autrement : `gh` absent du Mac, dépôt
+`wadiihelal/Spi_Ghomrassen` créé par Wadii, `git remote add origin` puis `git push --force` sur le
+stub initial de GitHub.* Vérifier ensuite que le workflow `CI` se
 déclenche et passe sur GitHub (`gh run watch`). S'il échoue, corriger avant de continuer.
 
 ## 1.3 — README public
@@ -95,10 +120,65 @@ comment lancer en local, et un renvoi vers `docs/`. En français.
 
 ## Critères d'acceptation Lot 1
 
-- [ ] Le rapport d'hygiène a été présenté et Wadii a confirmé avant le push.
-- [ ] `git remote -v` montre `origin` sur `github.com/<compte>/spi-ghomrassen`.
+- [x] Le rapport d'hygiène a été présenté et Wadii a confirmé avant le push.
+- [x] `git remote -v` montre `origin` sur `github.com/wadiihelal/Spi_Ghomrassen`.
 - [ ] Le workflow `CI` est vert sur GitHub pour le commit poussé.
-- [ ] La question de la licence a une réponse, et le fichier correspondant est en place.
+- [x] La question de la licence a une réponse (MIT), et le fichier correspondant est en place.
+
+---
+
+# Lot 1 bis — Serveur de test avec données de démonstration
+
+Ajouté le 15/09/2026, voir « Séquence de mise en service ». Objectif : le client manipule
+l'application, remplie du jeu `demo`, depuis son navigateur, sur un VPS Linux de Wadii — sans
+rien installer chez lui. Ce n'est **pas** la production : les acquéreurs sont fictifs, et le
+serveur se remet à zéro d'une commande.
+
+## 1b.1 — Profils `prod,demo` sans toucher au compose de production
+
+- `docker-compose.yml` fixe `SPRING_PROFILES_ACTIVE: prod` et reste tel quel. Ajouter un
+  fichier d'*override* `docker-compose.demo.yml` qui passe `prod,demo`, monte la configuration
+  nginx de démonstration (1b.2) et rien d'autre. Commande :
+  `docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build`.
+- `DemoDataInitializer` (`@Profile("demo")`) ne dépend pas de H2 et ne ressème pas si des
+  clients, fournisseurs ou projets existent déjà. Prouver qu'il passe sur PostgreSQL 16 : un
+  test `@Tag("postgres")` dans `postgres/` qui démarre le contexte en `demo` et compte les
+  résidences « Démo » — la suite H2 (`DemoProfileSeedTest`) ne couvre pas le dialecte.
+- Les variables obligatoires de `prod` (`DATABASE_URL`, `DB_USER`, `DB_PASSWORD`,
+  `APP_CORS_ALLOWED_ORIGINS`, `ATTACHMENTS_ROOT`) viennent d'un `.env` **non versionné** :
+  fournir `.env.example` et ajouter `.env` et `htpasswd` au `.gitignore`.
+
+## 1b.2 — Protection minimale (SEC-01 sur un serveur exposé)
+
+Sans authentification, tout `DELETE` est ouvert : un serveur joignable depuis Internet se fait
+vandaliser par le premier scanner venu, même avec des données fictives.
+
+- `frontend/nginx.demo.conf` : copie de `nginx.conf` avec `auth_basic` et
+  `auth_basic_user_file /etc/nginx/htpasswd`. Le compose de démo la monte à la place de la
+  configuration par défaut, ainsi que le fichier `htpasswd` généré par Wadii
+  (`openssl passwd -apr1`). Un identifiant partagé, donné au client de vive voix.
+- Pare-feu du VPS : 22 et 80 seulement (443 si TLS) ; le port 8080 ne sort jamais de la
+  machine — c'est déjà l'intention de `docker-compose.yml`, le vérifier.
+- TLS non exigé pour une démonstration à données fictives ; le guide indique comment l'ajouter
+  (Caddy devant nginx, ou certbot) si l'URL doit circuler plus largement.
+
+## 1b.3 — Guide `docs/SERVEUR-DE-TEST.md`
+
+Pour Wadii, pas à pas : Docker sur le VPS, clonage du dépôt, `.env` et `htpasswd`, premier
+lancement, vérifications (`http://<ip>/` demande un identifiant ; `/api/projects` répond 401
+sans, 200 avec), **mise à jour** après un push (`git pull` puis la commande compose avec
+`--build`), **remise à zéro** du jeu de démonstration (`down -v` puis relance : `demo` ressème
+sur base vide), lecture des logs (`docker compose logs -f backend`).
+
+## Critères d'acceptation Lot 1 bis
+
+- [ ] Sur une machine vierge, la commande compose de démonstration affiche le tableau de bord
+      avec les résidences « Démo » ; `mvn -q verify` et `npx ng build` restent verts.
+- [ ] `curl http://<ip>/api/projects` répond 401 sans identifiant et 200 avec.
+- [ ] Le port 8080 n'est pas joignable depuis l'extérieur du VPS.
+- [ ] Le test PostgreSQL du semis `demo` passe avec `-Ppostgres`.
+- [ ] `docs/SERVEUR-DE-TEST.md` existe et Wadii l'a suivi pour le premier déploiement — Claude
+      Code n'a pas d'accès au VPS et ne le vérifie pas.
 
 ---
 
@@ -385,12 +465,15 @@ Pas de jargon : ni « JVM », ni « port », ni « H2 » dans ce document.
 ## Ordre
 
 ```
-Lot 1 (GitHub)  →  Lot 2 (reçu)  →  Lot 3 (profil laptop)  →  Lot 4 (installateur + guides)
+Lot 1 (GitHub)  →  Lot 1 bis (serveur de test)  →  Lot 2 (reçu)  →  Lot 3 (profil laptop)  →  Lot 4 (installateur + guides)
 ```
 
 Le Lot 1 en premier : le code est en sécurité hors du Mac avant qu'on n'y touche, et la CI
-GitHub valide chaque lot suivant. Le Lot 4 dépend du Lot 3 (le jar à empaqueter) et du Lot 1
-(le dépôt où publier la Release).
+GitHub valide chaque lot suivant. Le Lot 1 bis suit immédiatement : c'est surtout de la
+configuration, et c'est l'instrument de validation du client ; le Lot 2 s'y déploie ensuite par
+simple mise à jour. Les Lots 3 et 4 ne sont **pas urgents** : le client acquiert le PC après
+validation. Le Lot 4 dépend du Lot 3 (le jar à empaqueter) et du Lot 1 (le dépôt où publier la
+Release).
 
 ## Commits
 
