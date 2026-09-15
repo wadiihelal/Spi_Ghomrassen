@@ -6,6 +6,10 @@
 # Le fichier ./htpasswd doit exister AVANT le premier « up » : un chemin absent est cree comme
 # dossier par Docker, et nginx refuse alors de demarrer. Voir docs/SERVEUR-DE-TEST.md.
 services:
+  postgres:
+    # Sur le serveur, PostgreSQL n'a pas a etre joignable depuis l'hote : le backend le trouve par
+    # le reseau Docker. Rien n'est publie, donc aucun conflit avec une autre base deja sur 5432.
+    ports: !override []
   backend:
     environment:
       SPRING_PROFILES_ACTIVE: prod,demo
