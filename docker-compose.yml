@@ -6,9 +6,12 @@ services:
     environment:
       POSTGRES_DB: spi_ghomrassen
       POSTGRES_USER: spi
-      POSTGRES_PASSWORD: spi
+      # Surchargeable par un fichier .env (serveur de test) ; « spi » reste le defaut du poste.
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-spi}
     ports:
-      - "5432:5432"
+      # Lie a la boucle locale : « mvn spring-boot:run » sur le poste y accede toujours, mais
+      # sur un serveur PostgreSQL n'est plus expose a Internet (Lot 1 bis).
+      - "127.0.0.1:5432:5432"
     volumes:
       - spi-postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -28,7 +31,7 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       DATABASE_URL: jdbc:postgresql://postgres:5432/spi_ghomrassen
       DB_USER: spi
-      DB_PASSWORD: spi
+      DB_PASSWORD: ${DB_PASSWORD:-spi}
       # L'interface est servie par nginx sur le meme hote et appelle /api : aucune origine
       # externe n'est autorisee par defaut.
       APP_CORS_ALLOWED_ORIGINS: http://localhost

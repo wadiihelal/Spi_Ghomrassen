@@ -1,0 +1,15 @@
+# Serveur de test (Lot 1 bis, 15/09/2026) : le compose de production, plus le jeu de donnees
+# fictif « demo » et un mot de passe nginx devant tout le site. Jamais sur des donnees reelles.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+#
+# Le fichier ./htpasswd doit exister AVANT le premier « up » : un chemin absent est cree comme
+# dossier par Docker, et nginx refuse alors de demarrer. Voir docs/SERVEUR-DE-TEST.md.
+services:
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod,demo
+  frontend:
+    volumes:
+      - ./frontend/nginx.demo.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./htpasswd:/etc/nginx/htpasswd:ro

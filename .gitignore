@@ -17,3 +17,7 @@ backend/.idea/
 
 # Local environment overrides
 frontend/src/environments/environment.local.ts
+
+# Serveur de test (Lot 1 bis) : secrets propres au serveur, jamais versionnes
+.env
+htpasswd
