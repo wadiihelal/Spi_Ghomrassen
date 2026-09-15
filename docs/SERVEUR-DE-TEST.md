@@ -50,7 +50,9 @@ dossier vide, et nginx refuse alors de démarrer (§ 11).
 
 ## 5. Ports déjà pris et pare-feu
 
-Ce serveur héberge déjà d'autres services (Odoo, Dockge). Avant de lancer, voir ce qui écoute :
+Ce serveur héberge déjà d'autres services — constaté le 15/09/2026 : Apache y sert Akaunting sur le
+port 80, Odoo répond sur 8069, Dockge sur 5001. La démonstration vit donc sur **8088**. Avant de
+lancer, voir ce qui écoute :
 
 ```bash
 ss -tlnp | grep -E ':(80|443|5432|8080)\s' || echo "80, 443, 5432 et 8080 libres"

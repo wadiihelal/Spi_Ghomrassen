@@ -184,7 +184,9 @@ sur base vide), lecture des logs (`docker compose logs -f backend`).
 - [ ] `curl http://<ip>:8088/api/projects` répond 401 sans identifiant et 200 avec.
 - [ ] Ni 5432 ni 8080 ne sont joignables depuis l'extérieur du VPS (`nc -zv <ip> 5432` depuis une
       autre machine échoue).
-- [ ] Le test PostgreSQL du semis `demo` passe avec `-Ppostgres`.
+- [x] Le test PostgreSQL du semis `demo` passe avec `-Ppostgres` — `PostgresDemoSeedTest`, 2 tests, dans le
+      job CI « Backend (PostgreSQL) » (run `34981710492`, 5 classes / 19 tests ; l'étape de contrôle
+      échoue si moins de 5 classes ou 8 tests ont tourné).
 - [ ] `docs/SERVEUR-DE-TEST.md` existe et Wadii l'a suivi pour le premier déploiement — Claude
       Code n'a pas d'accès au VPS et ne le vérifie pas.
 
