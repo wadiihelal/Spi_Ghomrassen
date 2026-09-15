@@ -137,7 +137,10 @@ serveur se remet à zéro d'une commande.
 
 ## 1b.1 — Profils `prod,demo` sans toucher au compose de production
 
-> **Deux pièges rencontrés au premier déploiement, tous deux corrigés.** `frontend/Dockerfile`
+> **Trois pièges rencontrés au premier déploiement, tous corrigés.** Le fichier `htpasswd` créé en
+> `600 root:root` était illisible par les ouvriers nginx, qui tournent sous l'utilisateur `nginx` :
+> **500 sur toutes les pages**, sans que le mot de passe soit même vérifié (`chmod 644` ; le fichier
+> ne porte qu'un hachage salé). Et surtout : `frontend/Dockerfile`
 > copiait `package.json` et `package-lock.json` puis lançait `npm ci` : `.npmrc` — qui porte
 > `legacy-peer-deps=true` — n'arrivait qu'après, donc l'image échouait là où la CI et le poste
 > passaient. D'où le job CI « Images Docker », qui construit ce qui part réellement. Et le VPS
@@ -185,11 +188,14 @@ sur base vide), lecture des logs (`docker compose logs -f backend`).
 
 ## Critères d'acceptation Lot 1 bis
 
-- [x] `mvn -q verify` et `npx ng build` restent verts ; la CI construit désormais aussi les images
-      Docker déployées (job « Images Docker »). L'affichage du tableau de bord avec les résidences
-      « Démo » se constate dans le navigateur, derrière le mot de passe : Wadii le confirme.
-- [x] `curl http://<ip>:8088/api/projects` répond **401 sans identifiant** (vérifié depuis le Mac ;
-      le 200 avec identifiant se contrôle par Wadii, seul détenteur du mot de passe).
+- [x] `mvn -q verify` et `npx ng build` verts ; la CI construit aussi les images Docker déployées
+      (« Images Docker ») et sert les résidences « Démo » par l'API derrière le mot de passe
+      (« Démonstration de bout en bout »). Reste à Wadii le seul constat visuel du tableau de bord
+      dans un navigateur.
+- [x] `curl /api/projects` répond **401 sans identifiant et 200 avec** — prouvé sur machine vierge
+      par le job CI « Démonstration de bout en bout » (run `34985001965`), qui exécute les commandes
+      du guide telles quelles. **Attention** : un 401 seul ne prouve rien, nginx l'émet sans ouvrir
+      `htpasswd` ni joindre le backend ; seul le 200 authentifié atteste que l'ensemble fonctionne.
 - [x] Ni 5432 ni 8080 ne sont joignables depuis l'extérieur du VPS — vérifié le 15/09/2026 depuis le
       Mac, et confirmé par `docker compose ps` : seul `frontend` publie (`0.0.0.0:8088->80/tcp`),
       `postgres` et `backend` n'exposent qu'au réseau Docker.
