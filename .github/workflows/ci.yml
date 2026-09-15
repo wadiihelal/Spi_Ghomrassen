@@ -53,34 +53,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Cette etape execute les commandes de docs/SERVEUR-DE-TEST.md, telles quelles : si le
-      # guide se trompe, la CI se trompe avec lui et echoue. C'est ainsi qu'un htpasswd illisible
-      # par l'utilisateur nginx — 500 sur toutes les pages, constate le 15/09/2026 — se voit ici
+      # guide se trompe, la CI se trompe avec lui et echoue. C'est ainsi qu'un fichier oublie dans
+      # une image ou une configuration nginx fautive — deux pannes du 15/09/2026 — se voient ici
       # plutot que chez le client.
-      - name: Mots de passe, comme dans le guide
-        run: |
-          printf 'spi:%s\n' "$(openssl passwd -apr1 mot-de-passe-de-ci)" > htpasswd && chmod 644 htpasswd
-          printf 'DB_PASSWORD=%s\nDEMO_HTTP_PORT=8088\n' "$(openssl rand -base64 24)" > .env
+      - name: Configuration, comme dans le guide
+        run: printf 'DB_PASSWORD=%s\nDEMO_HTTP_PORT=8088\n' "$(openssl rand -base64 24)" > .env
       - name: Lancer la démonstration
         run: docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
-      - name: L'interface et l'API répondent derrière le mot de passe
+      - name: L'interface et l'API répondent, sans rien demander
         run: |
-          # nginx emet le defi 401 sans ouvrir htpasswd ni joindre le backend : attendre un 401
-          # ne prouve donc RIEN — c'est ce qui a fait passer une authentification cassee pour
-          # saine le 15/09/2026. On attend le 200 AUTHENTIFIE, seul signal qui prouve a la fois
-          # que nginx lit le fichier et que le backend a fini de demarrer et de semer.
-          AUTH='spi:mot-de-passe-de-ci'
+          # L'acces est libre depuis le 15/09/2026 : le client entre directement. On attend donc
+          # le 200 de l'API, seul signal prouvant que le backend a fini de demarrer et de semer —
+          # nginx, lui, sert des le depart et ne prouve rien a lui seul.
           code() { curl -s -o /dev/null -m 5 -w '%{http_code}' "$@" || true; }
           for i in $(seq 1 60); do
-            [ "$(code -u "$AUTH" http://localhost:8088/api/projects)" = "200" ] && break
+            [ "$(code http://localhost:8088/api/projects)" = "200" ] && break
             sleep 5
           done
-          SANS=$(code http://localhost:8088/api/projects)
-          AVEC=$(code -u "$AUTH" http://localhost:8088/api/projects)
-          PAGE=$(code -u "$AUTH" http://localhost:8088/)
-          DEMO=$(curl -s -m 10 -u "$AUTH" http://localhost:8088/api/projects | grep -c SPI-DEMO-RES-A || true)
+          API=$(code http://localhost:8088/api/projects)
+          PAGE=$(code http://localhost:8088/)
+          ROUTE=$(code http://localhost:8088/dashboard)
+          DEMO=$(curl -s -m 10 http://localhost:8088/api/projects | grep -c SPI-DEMO-RES-A || true)
           # Les journaux d'un run ne sont pas lisibles sans compte GitHub ; une annotation, si.
-          echo "::notice title=Démonstration de bout en bout::sans identifiant=$SANS (attendu 401) | avec identifiant=$AVEC (200) | interface=$PAGE (200) | résidences démo=$DEMO (>=1)"
-          test "$SANS" = "401" && test "$AVEC" = "200" && test "$PAGE" = "200" && test "$DEMO" -ge 1
+          echo "::notice title=Démonstration de bout en bout::api=$API (attendu 200) | interface=$PAGE (200) | route SPA=$ROUTE (200) | résidences démo=$DEMO (>=1)"
+          test "$API" = "200" && test "$PAGE" = "200" && test "$ROUTE" = "200" && test "$DEMO" -ge 1
       - name: Journaux en cas d'échec
         if: failure()
         run: docker compose -f docker-compose.yml -f docker-compose.demo.yml logs --tail=80

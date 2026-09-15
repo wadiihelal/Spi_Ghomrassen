@@ -194,9 +194,12 @@ port publié) et `frontend` (build Node puis nginx sur le port 80, qui sert la c
 `/api/`). Voir « Sécurité » ci-dessus avant d'exposer le port 80.
 
 **Serveur de test** (15/09/2026) : `docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build`
-ajoute le profil `demo` et un mot de passe nginx devant tout le site (`frontend/nginx.demo.conf`,
-fichier `htpasswd` non versionné). PostgreSQL n'est publié qu'en `127.0.0.1:5432` et `DB_PASSWORD`
-vient d'un `.env` (défaut `spi` sur le poste). Pas à pas : `docs/SERVEUR-DE-TEST.md`.
+ajoute le profil `demo` et sert la démonstration via `frontend/nginx.demo.conf` (sur le
+port choisi par `DEMO_HTTP_PORT`). **L'accès y est libre** — décision du 15/09/2026 : la
+démonstration doit s'ouvrir sans écran d'identification, et les données y sont fictives. Le
+corollaire est qu'elle s'arrête entre deux séances. PostgreSQL n'est publié qu'en
+`127.0.0.1:5432` (pas du tout sur le serveur) et `DB_PASSWORD` vient d'un `.env` (défaut `spi`
+sur le poste). Pas à pas : `docs/SERVEUR-DE-TEST.md`.
 
 ## Vérifier
 

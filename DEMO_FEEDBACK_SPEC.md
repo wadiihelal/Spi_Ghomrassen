@@ -157,17 +157,19 @@ serveur se remet à zéro d'une commande.
 - Les variables obligatoires de `prod` (`DATABASE_URL`, `DB_USER`, `DB_PASSWORD`,
   `APP_CORS_ALLOWED_ORIGINS`, `ATTACHMENTS_ROOT`) restent fixées par le compose ; `.env` **non
   versionné** ne porte que `DB_PASSWORD` et `DEMO_HTTP_PORT` : fournir `.env.example` et ajouter
-  `.env` et `htpasswd` au `.gitignore`.
+  `.env` au `.gitignore` (`htpasswd` y reste, au cas où le mot de passe serait rétabli).
 
 ## 1b.2 — Protection minimale (SEC-01 sur un serveur exposé)
 
 Sans authentification, tout `DELETE` est ouvert : un serveur joignable depuis Internet se fait
 vandaliser par le premier scanner venu, même avec des données fictives.
 
-- `frontend/nginx.demo.conf` : copie de `nginx.conf` avec `auth_basic` et
-  `auth_basic_user_file /etc/nginx/htpasswd`. Le compose de démo la monte à la place de la
-  configuration par défaut, ainsi que le fichier `htpasswd` généré par Wadii
-  (`openssl passwd -apr1`). Un identifiant partagé, donné au client de vive voix.
+- `frontend/nginx.demo.conf` : copie de `nginx.conf`, montée par le compose de démo à la place de
+  la configuration par défaut. **Accès libre, décidé le 15/09/2026** : le mot de passe partagé
+  initialement prévu a été retiré à la demande de Wadii — une fenêtre d'identification avant
+  d'entrer dans l'application dénature la démonstration. Les deux lignes `auth_basic` restent en
+  commentaire, prêtes à rétablir. Contrepartie assumée : les données étant fictives et la remise
+  à zéro immédiate, la démonstration **s'arrête entre deux séances** (`down`), ce que le guide dit.
 - **Le VPS est partagé** (constaté au déploiement) : Apache y sert déjà Akaunting sur le port 80,
   Odoo répond sur 8069, Dockge sur 5001, `ufw` est inactif. Conséquences : pas de `ufw enable` à
   l'aveugle (il couperait ces services) ; la démonstration est publiée sur `DEMO_HTTP_PORT` (8088)
@@ -180,7 +182,7 @@ vandaliser par le premier scanner venu, même avec des données fictives.
 
 ## 1b.3 — Guide `docs/SERVEUR-DE-TEST.md`
 
-Pour Wadii, pas à pas : Docker sur le VPS, clonage du dépôt, `.env` et `htpasswd`, premier
+Pour Wadii, pas à pas : Docker sur le VPS, clonage du dépôt, `.env`, premier
 lancement, vérifications (`http://<ip>/` demande un identifiant ; `/api/projects` répond 401
 sans, 200 avec), **mise à jour** après un push (`git pull` puis la commande compose avec
 `--build`), **remise à zéro** du jeu de démonstration (`down -v` puis relance : `demo` ressème
@@ -192,10 +194,11 @@ sur base vide), lecture des logs (`docker compose logs -f backend`).
       (« Images Docker ») et sert les résidences « Démo » par l'API derrière le mot de passe
       (« Démonstration de bout en bout »). Reste à Wadii le seul constat visuel du tableau de bord
       dans un navigateur.
-- [x] `curl /api/projects` répond **401 sans identifiant et 200 avec** — prouvé sur machine vierge
-      par le job CI « Démonstration de bout en bout » (run `34985001965`), qui exécute les commandes
-      du guide telles quelles. **Attention** : un 401 seul ne prouve rien, nginx l'émet sans ouvrir
-      `htpasswd` ni joindre le backend ; seul le 200 authentifié atteste que l'ensemble fonctionne.
+- [x] `curl /api/projects` répond **200 sans rien demander**, l'interface et une route SPA aussi —
+      prouvé sur machine vierge par le job CI « Démonstration de bout en bout », qui exécute les
+      commandes du guide telles quelles. **Leçon conservée** : tant que le mot de passe existait, un
+      `401` ne prouvait rien (nginx l'émet sans ouvrir `htpasswd` ni joindre le backend) — d'où la
+      règle générale, n'attendre que le signal qui traverse toute la pile.
 - [x] Ni 5432 ni 8080 ne sont joignables depuis l'extérieur du VPS — vérifié le 15/09/2026 depuis le
       Mac, et confirmé par `docker compose ps` : seul `frontend` publie (`0.0.0.0:8088->80/tcp`),
       `postgres` et `backend` n'exposent qu'au réseau Docker.

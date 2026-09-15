@@ -1,11 +1,11 @@
 # Serveur de test — déployer la démonstration
 
 Pour Wadii. Un VPS Linux avec Docker, joignable par son adresse IP, qui fait tourner **l'interface
-et l'API** avec le jeu de données **fictif** (`demo`), derrière un mot de passe partagé. Le client
-essaie l'application depuis son navigateur ; rien n'est installé chez lui.
+et l'API** avec le jeu de données **fictif** (`demo`). Le client ouvre l'adresse et se trouve
+directement dans l'application — aucun mot de passe, rien d'installé chez lui.
 
-**Ce n'est pas la production** : les acquéreurs sont inventés, rien n'est sauvegardé, et tout se
-remet à zéro d'une commande (§ 9). Ne jamais y saisir de vraies données.
+**Ce n'est pas la production** : les acquéreurs sont inventés, rien n'est sauvegardé, l'accès est
+libre (§ 4), et tout se remet à zéro d'une commande (§ 9). Ne jamais y saisir de vraies données.
 
 Conventions : les commandes se lancent dans la session SSH, en `root` — sinon, les préfixer de
 `sudo`. `<IP>` est l'adresse publique du serveur. Le dépôt vit dans `/opt/spi-ghomrassen`.
@@ -36,24 +36,22 @@ Partagé entre les conteneurs `postgres` et `backend` ; personne n'a besoin de l
 Il n'est lu qu'à la **création** du volume PostgreSQL : le fixer avant le premier `up` (§ 6).
 Le fichier est ignoré par git.
 
-## 4. Mot de passe de démonstration (`htpasswd`)
+## 4. Accès libre — ce que cela implique
 
-C'est ce que le client tapera dans son navigateur. La commande demande le mot de passe deux fois.
-**L'identifiant est `spi`** — c'est celui qu'il faudra saisir, pas le nom de la société. Le fichier
-est ignoré par git.
+Décision du 15/09/2026 : **pas de mot de passe**. Le client ouvre l'adresse et se trouve
+directement dans l'application, sans rien à saisir. C'est ce qui rend la démonstration fluide.
 
-```bash
-printf 'spi:%s\n' "$(openssl passwd -apr1)" > htpasswd && chmod 644 htpasswd && test -s htpasswd && echo "htpasswd écrit"
-```
+Le revers, à connaître précisément : l'application n'a aucune authentification (SEC-01), donc
+**toute personne qui connaît l'adresse peut lire et supprimer n'importe quel enregistrement** —
+et les robots d'indexation trouvent une adresse IP sur un port HTTP en quelques heures. C'est
+tenable ici parce que les données sont **fictives** et que la remise à zéro prend une minute
+(§ 8). Deux réflexes qui suffisent à vivre avec :
 
-`chmod 644` n'est pas un oubli : les processus ouvriers de nginx tournent sous l'utilisateur
-`nginx`, pas root. Un fichier en `600 root:root` leur est illisible et nginx répond **500** sur
-toutes les pages, sans jamais vérifier le mot de passe. Le fichier ne contient qu'un hachage
-salé — pas le mot de passe —, et le rendre lisible par les autres comptes du serveur est un
-compromis assumé pour une démonstration à données fictives.
+- **arrêter la démonstration quand elle ne sert pas** — `docker compose … down` (§ 8) ;
+- **la remettre à zéro juste avant un rendez-vous client**, pour partir d'un jeu propre.
 
-**Ce fichier doit exister avant le premier `up`** : Docker remplace un chemin absent par un
-dossier vide, et nginx refuse alors de démarrer (§ 11).
+Ne jamais servir de vraies données de cette façon. Pour rétablir un mot de passe partagé, tout
+est expliqué en tête de `frontend/nginx.demo.conf` : il reste deux lignes à décommenter.
 
 ## 5. Ports déjà pris et pare-feu
 
@@ -75,7 +73,7 @@ echo 'DEMO_HTTP_PORT=8088' >> .env
 Pare-feu : `ufw status`. S'il est **inactif sur un serveur partagé, le laisser ainsi** : l'activer
 avec seulement 22 et 80 couperait Odoo et Dockge. PostgreSQL (5432) et l'API (8080) de cette
 application ne sont de toute façon pas publiés hors de la machine ; seul le port de la
-démonstration l'est, derrière le mot de passe. Si un jour `ufw` est activé, y ajouter chaque port
+démonstration l'est. Si un jour `ufw` est activé, y ajouter chaque port
 des autres services **avant** `ufw enable`, et 22 en premier. Chez Hetzner, OVH ou DigitalOcean,
 un pare-feu « cloud » peut exister en plus dans la console du fournisseur.
 
@@ -101,14 +99,14 @@ Attendu, dans cet ordre : `Profil demo actif — chargement de données fictives
 
 ## 7. Vérifier
 
-Depuis le serveur — 401 sans identifiant, 200 avec (la deuxième commande demande le mot de passe) :
+Depuis le serveur — l'API doit répondre **200** et citer les résidences de démonstration :
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' http://localhost/api/projects
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8088/api/projects
 ```
 
 ```bash
-curl -s -u spi -o /dev/null -w '%{http_code}\n' http://localhost/api/projects
+curl -s http://localhost:8088/api/projects | grep -o 'SPI-DEMO-RES-[A-E]' | sort -u
 ```
 
 Sur le serveur, la répartition des ports — c'est la vérification la plus parlante : seul
@@ -125,15 +123,29 @@ Depuis le Mac — le port de la démonstration ouvert, 5432 et 8080 refusés :
 nc -zv <IP> 8088; nc -zv <IP> 5432; nc -zv <IP> 8080
 ```
 
-Dans le navigateur : `http://<IP>/` — ou `http://<IP>:8088/` si `DEMO_HTTP_PORT` est fixé, et
-remplacer `localhost` par `localhost:8088` dans les `curl` ci-dessus — demande l'identifiant, puis
-affiche le tableau de bord avec « Résidence Démo El Hana » et les quatre autres.
+Dans le navigateur : `http://<IP>:8088/` affiche **directement** le tableau de bord, avec
+« Résidence Démo El Hana » et les quatre autres. Aucune fenêtre d'identifiant ne doit apparaître.
 
-## 8. Donner l'accès au client
+## 8. Donner l'accès au client, et refermer après
 
-L'adresse `http://<IP>/`, l'identifiant et le mot de passe — **de vive voix**, pas par courriel.
-Le prévenir : le navigateur affiche « Non sécurisé » parce qu'il n'y a pas de HTTPS sans nom de
-domaine ; c'est normal pour une démonstration à données fictives (§ 12).
+Une seule chose à transmettre : l'adresse `http://<IP>:8088/`. Prévenez-le que le navigateur
+affichera « Non sécurisé » — il n'y a pas de HTTPS sans nom de domaine, et les données sont
+fictives (§ 12).
+
+Comme l'accès est libre (§ 4), le bon réflexe est d'**arrêter la démonstration entre deux
+séances** :
+
+```bash
+cd /opt/spi-ghomrassen && docker compose -f docker-compose.yml -f docker-compose.demo.yml down
+```
+
+et de la relancer avant le rendez-vous suivant (§ 6, sans `--build` si le code n'a pas changé) :
+
+```bash
+cd /opt/spi-ghomrassen && docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d
+```
+
+`down` sans `-v` conserve les données ; c'est `down -v` qui repart d'un jeu neuf (§ 9).
 
 ## 9. Remettre le jeu de démonstration à zéro
 
@@ -141,8 +153,8 @@ domaine ; c'est normal pour une démonstration à données fictives (§ 12).
 cd /opt/spi-ghomrassen && docker compose -f docker-compose.yml -f docker-compose.demo.yml down -v && docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d
 ```
 
-`-v` supprime la base **et** les pièces jointes ; au redémarrage le semis recrée tout. `.env` et
-`htpasswd` sont relus : les mots de passe ne changent pas.
+`-v` supprime la base **et** les pièces jointes ; au redémarrage le semis recrée tout. `.env` est relu : le mot de
+passe PostgreSQL ne change pas.
 
 ## 10. Mettre à jour après un push
 
@@ -164,9 +176,8 @@ docker compose logs --tail=200 backend
 
 | Symptôme | Cause | Remède |
 |---|---|---|
-| Toutes les pages en **500**, log nginx `open() "/etc/nginx/htpasswd" failed (13: Permission denied)` | fichier illisible par l'utilisateur `nginx` | `chmod 644 htpasswd` — effet immédiat, aucun redémarrage |
-| `frontend` en `Restarting`, log nginx `open() "/etc/nginx/htpasswd" failed` ou `is a directory` | `htpasswd` absent au premier `up` : Docker a créé un dossier | `rm -rf htpasswd`, refaire § 4, puis `up -d` |
-| Le navigateur redemande sans cesse l'identifiant | mauvais identifiant | c'est `spi`, pas le nom de la société |
+| Le navigateur demande encore un identifiant | ancienne configuration nginx encore montée | `git pull` puis `up -d --force-recreate frontend` |
+| Toutes les pages en **500**, log nginx `htpasswd ... (13: Permission denied)` | un `htpasswd` traîne et reste référencé | `git pull` (l'accès est libre depuis le 15/09/2026), puis `up -d --force-recreate frontend` |
 | `backend` en `Restarting` | Flyway ou semis en erreur | `logs backend`, m'envoyer les 50 dernières lignes |
 | Page blanche ou 502 juste après `up` | l'API démarre encore | attendre une minute, recharger |
 | `password authentication failed` dans `logs backend` | `.env` changé après la création du volume | § 9 (remise à zéro) ou remettre l'ancien mot de passe |
