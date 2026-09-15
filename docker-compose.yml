@@ -32,9 +32,12 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/spi_ghomrassen
       DB_USER: spi
       DB_PASSWORD: ${DB_PASSWORD:-spi}
-      # L'interface est servie par nginx sur le meme hote et appelle /api : aucune origine
-      # externe n'est autorisee par defaut.
-      APP_CORS_ALLOWED_ORIGINS: http://localhost
+      # L'interface est servie par nginx sur le meme hote et appelle /api. Attention : le
+      # navigateur envoie un en-tete Origin sur toute ECRITURE, meme en meme origine, et le
+      # CorsFilter refuse (403 « Invalid CORS request ») toute origine absente de cette liste.
+      # Elle doit donc porter l'adresse EXACTE par laquelle on ouvre l'application, port compris —
+      # sinon les lectures marchent et toute creation echoue (constate le 15/09/2026).
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost}
       # Pieces jointes (FE-05) : volume nomme, a sauvegarder avec la base.
       ATTACHMENTS_ROOT: /var/lib/spi-ghomrassen/attachments
     volumes:

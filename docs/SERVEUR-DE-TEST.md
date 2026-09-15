@@ -70,6 +70,19 @@ compose de démo remplace le `80:80` de la production — et l'adresse devient `
 echo 'DEMO_HTTP_PORT=8088' >> .env
 ```
 
+**Et, dans le même `.env`, l'adresse exacte par laquelle on ouvrira l'application** — c'est
+obligatoire, et c'est le piège le plus vicieux du déploiement :
+
+```bash
+echo "APP_CORS_ALLOWED_ORIGINS=http://$(hostname -I | awk '{print $1}'):8088" >> .env && cat .env
+```
+
+Le navigateur envoie un en-tête `Origin` sur toute **écriture**, même quand la page et l'API sont
+servies par le même serveur — mais **pas** sur les lectures. Si cette adresse ne correspond pas
+exactement (protocole, adresse, port, sans barre oblique finale), les écrans s'affichent
+parfaitement et **toute création répond « Accès refusé »**. Une IP qui change, un port qui change :
+cette ligne est à reprendre.
+
 Pare-feu : `ufw status`. S'il est **inactif sur un serveur partagé, le laisser ainsi** : l'activer
 avec seulement 22 et 80 couperait Odoo et Dockge. PostgreSQL (5432) et l'API (8080) de cette
 application ne sont de toute façon pas publiés hors de la machine ; seul le port de la
@@ -176,6 +189,7 @@ docker compose logs --tail=200 backend
 
 | Symptôme | Cause | Remède |
 |---|---|---|
+| Les écrans s'affichent mais toute création donne **« Accès refusé »** | `APP_CORS_ALLOWED_ORIGINS` ne correspond pas à l'adresse ouverte dans le navigateur | corriger la ligne dans `.env` (§ 5), puis `up -d --force-recreate backend` |
 | Le navigateur demande encore un identifiant | ancienne configuration nginx encore montée | `git pull` puis `up -d --force-recreate frontend` |
 | Toutes les pages en **500**, log nginx `htpasswd ... (13: Permission denied)` | un `htpasswd` traîne et reste référencé | `git pull` (l'accès est libre depuis le 15/09/2026), puis `up -d --force-recreate frontend` |
 | `backend` en `Restarting` | Flyway ou semis en erreur | `logs backend`, m'envoyer les 50 dernières lignes |
