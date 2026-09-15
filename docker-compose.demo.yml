@@ -10,6 +10,10 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod,demo
   frontend:
+    # « !override » remplace la liste du compose de base au lieu de s'y ajouter (Compose >= 2.24).
+    # Sur un serveur qui sert deja un site sur le port 80, fixer DEMO_HTTP_PORT dans .env.
+    ports: !override
+      - "${DEMO_HTTP_PORT:-80}:80"
     volumes:
       - ./frontend/nginx.demo.conf:/etc/nginx/conf.d/default.conf:ro
       - ./htpasswd:/etc/nginx/htpasswd:ro

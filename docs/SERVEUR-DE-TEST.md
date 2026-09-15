@@ -48,22 +48,27 @@ l'identifiant est `spi` (changez-le si vous voulez). Le fichier est ignoré par 
 **Ce fichier doit exister avant le premier `up`** : Docker remplace un chemin absent par un
 dossier vide, et nginx refuse alors de démarrer (§ 11).
 
-## 5. Pare-feu
+## 5. Ports déjà pris et pare-feu
+
+Ce serveur héberge déjà d'autres services (Odoo, Dockge). Avant de lancer, voir ce qui écoute :
 
 ```bash
-ufw status
+ss -tlnp | grep -E ':(80|443|5432|8080)\s' || echo "80, 443, 5432 et 8080 libres"
 ```
 
-S'il est inactif, n'ouvrir que SSH et HTTP — **22 d'abord**, sinon la session actuelle est la
-dernière :
+Si le port 80 est pris, publier la démonstration sur un autre port en l'écrivant dans `.env` — le
+compose de démo remplace le `80:80` de la production — et l'adresse devient `http://<IP>:8088/` :
 
 ```bash
-ufw allow 22/tcp && ufw allow 80/tcp && ufw --force enable && ufw status
+echo 'DEMO_HTTP_PORT=8088' >> .env
 ```
 
-Chez Hetzner, OVH ou DigitalOcean, un pare-feu « cloud » peut exister en plus dans la console du
-fournisseur : mêmes règles. PostgreSQL (5432) et l'API (8080) ne sont de toute façon plus
-publiés hors de la machine.
+Pare-feu : `ufw status`. S'il est **inactif sur un serveur partagé, le laisser ainsi** : l'activer
+avec seulement 22 et 80 couperait Odoo et Dockge. PostgreSQL (5432) et l'API (8080) de cette
+application ne sont de toute façon pas publiés hors de la machine ; seul le port de la
+démonstration l'est, derrière le mot de passe. Si un jour `ufw` est activé, y ajouter chaque port
+des autres services **avant** `ufw enable`, et 22 en premier. Chez Hetzner, OVH ou DigitalOcean,
+un pare-feu « cloud » peut exister en plus dans la console du fournisseur.
 
 ## 6. Lancer
 
@@ -103,8 +108,9 @@ Depuis le Mac — 80 ouvert, 5432 et 8080 refusés :
 nc -zv <IP> 80; nc -zv <IP> 5432; nc -zv <IP> 8080
 ```
 
-Dans le navigateur : `http://<IP>/` demande l'identifiant, puis affiche le tableau de bord avec
-« Résidence Démo El Hana » et les quatre autres.
+Dans le navigateur : `http://<IP>/` — ou `http://<IP>:8088/` si `DEMO_HTTP_PORT` est fixé, et
+remplacer `localhost` par `localhost:8088` dans les `curl` ci-dessus — demande l'identifiant, puis
+affiche le tableau de bord avec « Résidence Démo El Hana » et les quatre autres.
 
 ## 8. Donner l'accès au client
 

@@ -53,4 +53,10 @@ jobs:
       # et present ici. Seuls ces tests tournent : la suite H2 est deja couverte par le job Backend.
       - name: mvn verify -Ppostgres (tests PostgreSQL seuls)
         working-directory: backend
-        run: mvn -B verify -Ppostgres -Dgroups=postgres
+        run: mvn -B verify -Ppostgres -Dgroups=postgres -DfailIfNoTests=true
+      # La preuve que les classes ont tourne, lisible sur la page du run sans jeton ni connexion.
+      - name: Résumé des tests PostgreSQL
+        if: always()
+        working-directory: backend
+        run: |
+          { echo '### Tests PostgreSQL'; echo; echo '```'; grep -h "Tests run:" target/surefire-reports/*.txt 2>/dev/null || echo 'aucun rapport surefire'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
