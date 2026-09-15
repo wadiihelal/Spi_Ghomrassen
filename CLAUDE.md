@@ -1,166 +1,175 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # SPI Ghomrassen — conventions du dépôt
 
-Application interne d'un promoteur immobilier tunisien. `backend/` Spring Boot 3.3 / Java 17,
-`frontend/` Angular 19 / PrimeNG 17. Interface en français.
+Application interne d'un promoteur immobilier tunisien. `backend/` Spring Boot 3.3 / Java 17 /
+PostgreSQL 16 / Flyway, `frontend/` Angular 19 / PrimeNG 17. Interface en français, montants en
+dinars à trois décimales (millimes). Détails par module : `backend/README.md`, `frontend/README.md`.
+
+## Commandes
+
+```bash
+# Backend (depuis backend/)
+mvn -q verify                                    # suite H2 + Flyway ; ce que lance la CI
+mvn -q verify -Ppostgres                         # + tests @Tag("postgres") sur PostgreSQL 16 réel (Docker)
+mvn -q -Dtest=SalesBoardTest test                # une classe
+mvn -q -Dtest='SalesBoardTest#aNewApartmentIsInStock' test   # une méthode
+mvn spring-boot:run                              # sur PostgreSQL (docker compose up -d postgres)
+mvn spring-boot:run -Dspring-boot.run.profiles=test,demo -Dspring-boot.run.useTestClasspath=true
+                                                 # sans PostgreSQL : H2 en mémoire + données de démo
+
+# Frontend (depuis frontend/)
+npm start                                        # ng serve, http://localhost:4200, API sur :8080
+npx ng build                                     # TypeScript strict + strictTemplates ; pas de tests unitaires côté front
+
+# Tout
+docker compose up --build                        # PostgreSQL + API + console sur http://localhost
+```
+
+`spring-boot:run` et `mvn verify` se disputent `target/` : arrêter l'application avant de lancer
+la suite. Le profil `demo` charge des acquéreurs fictifs : jamais en production.
+Sur ce poste, si `mvn` n'est pas dans le PATH : `~/.m2/wrapper/dists/apache-maven-3.9.9/*/bin/mvn`.
 
 ## Ce qui ne se négocie pas
 
-- **Argent** : `BigDecimal`, `precision = 19, scale = 3` (millimes), `RoundingMode.HALF_UP`.
-  Jamais `double` ni `float`. Le serveur calcule (TVA, plafonds, totaux) ; le navigateur affiche.
-- **Découpage** : **un paquet par feature** (`expense/`, `client/`, `apartment/`…), tout ce qui
-  la concerne dedans. La discipline de dépendances ne change pas pour autant :
-  `contrôleur → interface de service → implémentation → dépôt`. Un nouveau service = une
-  interface `XService` + une implémentation `XServiceImpl` dans le paquet de la feature.
-  `shared/` est le bas du graphe : une feature l'utilise, il n'utilise aucune feature.
-- **DTO à la frontière** : les contrôleurs ne renvoient jamais d'entité JPA. Réponses dans
-  `dto/response` (records, ids à plat + libellés), mappées par MapStruct dans `mapper/`
-  (`unmappedTargetPolicy = ERROR`).
-- **Schéma** : Flyway uniquement (`db/migration/V<n>__*.sql`), portable PostgreSQL / H2.
-  `ddl-auto=validate`. On n'édite jamais une migration déjà livrée.
+- **Argent** : `BigDecimal`, `precision = 19, scale = 3`, `RoundingMode.HALF_UP`. Jamais
+  `double` ni `float`. Le serveur calcule (TVA, plafonds, totaux) ; le navigateur affiche.
+- **Découpage backend** : **un paquet par feature** (`expense/`, `client/`, `apartment/`…) qui
+  contient entité, dépôt, spécifications, requête, réponse, mapper, service, implémentation et
+  contrôleur. Les dépendances restent en couches : `Controller → XService (interface) →
+  XServiceImpl → Repository`. `shared/` est le bas du graphe : une feature l'utilise, il
+  n'utilise aucune feature. Ces règles sont **vérifiées par ArchUnit** (`ArchitectureTest`), qui
+  reconnaît les couches par nom de classe et annotation, pas par paquet.
+- **DTO à la frontière** : un contrôleur ne renvoie jamais d'entité JPA. Réponses = records
+  (ids à plat + libellés, jamais d'objet imbriqué), mappées par MapStruct
+  (`unmappedTargetPolicy = ERROR`). Une réponse a **une seule forme** partout où elle apparaît.
+- **Schéma** : Flyway uniquement (`db/migration/V<n>__*.sql`), SQL portable PostgreSQL / H2,
+  `ddl-auto=validate`. On n'édite jamais une migration livrée : on en ajoute une.
 - **Chaînes utilisateur** : français accentué, jamais concaténées en Java ; clés anglaises dans
-  `messages_fr.properties`, lues via `MessageService`.
-- **Tests** : toute règle financière (plafond, TVA, statut, situation client) s'accompagne d'un
-  test JUnit dans `backend/src/test`, nommé d'après la règle en clair. La suite tourne sur H2
-  avec les mêmes migrations que la production.
-- **Lecture** : finders `@Transactional(readOnly = true)`, associations `LAZY`, `@EntityGraph`
-  sur les listes, agrégats en JPQL — jamais `findAll()` puis regroupement en Java.
-- **Frontend** : `standalone`, `OnPush`, état asynchrone dans des signaux, RxJS restant libéré
-  par `takeUntilDestroyed`. Les tables métier paginent côté serveur (`LazyTable`).
+  `messages_fr.properties`, lues via `MessageService`. Un message **sans** `{0}` s'écrit avec une
+  apostrophe simple (`MessageFormat` ne tourne pas dessus) ; un message **avec** paramètre la
+  double. `MessageCatalogTest` le vérifie. Les accents d'`application.properties` s'écrivent en
+  `è` : le fichier est lu en ISO-8859-1.
+- **Tests** : toute règle financière (plafond, TVA, statut, cascade d'échéances, situation client)
+  s'accompagne d'un test JUnit nommé d'après la règle en clair. Voir « Écrire un test ».
+- **Lecture** : finders `@Transactional(readOnly = true)`, associations `LAZY`, `@EntityGraph` sur
+  les listes (y compris `findAll(Specification, Pageable)` redéclaré), agrégats en JPQL avec
+  `countQuery` — jamais `findAll()` puis regroupement en Java. Une page se résout avec un nombre
+  de requêtes indépendant du nombre de lignes (`QueryCountTest`).
+- **Écriture** : `@Version` partout ; `@Lock(PESSIMISTIC_WRITE)` là où un plafond se vérifie
+  puis s'écrit (acomptes, CONC-01).
+- **Frontend** : composants `standalone`, `ChangeDetectionStrategy.OnPush`, état asynchrone dans
+  des signaux, RxJS libéré par `takeUntilDestroyed`. Les tables métier paginent côté serveur via
+  `core/services/lazy-table.ts`. Les montants passent par `DinarPipe` (`full` par défaut,
+  `'short'` pour les indicateurs, `'bare'` quand l'unité est dans le texte).
 - **Périmètre projet** : un écran charge ses données sur `ProjectContextService.scope$`, jamais
-  sur `selectedProjectId` directement. Le signal vaut `null` avant résolution, et une requête
-  lancée sur ce `null` revient « tous projets » après la bonne : les chiffres d'un projet se
-  retrouvent affichés sous le nom d'un autre.
+  sur `selectedProjectId` directement. Le signal vaut `null` avant résolution ; une requête lancée
+  sur ce `null` revient « tous projets » après la bonne et l'écrase.
 - **Statuts dérivés** : l'état d'un encaissement, d'une échéance, d'une facture fournisseur se
-  calcule à la lecture. Rien de tel n'est stocké — il n'y a donc rien à resynchroniser. Seules
-  les décisions que les données ne permettent pas de deviner sont stockées (`sales_status`).
+  calcule à la lecture, jamais stocké. Seules les décisions que les données ne permettent pas de
+  deviner sont stockées (`sales_status` : réservé, livré).
 
 ## Décisions métier à ne pas rouvrir
 
-- **Pas d'authentification, pas de rôles** (décision du 02/09/2026) : l'API est protégée au
-  niveau réseau, voir `backend/README.md`. `audit_logs.actor` vaut `system`.
-- **Pas de retenue à la source** (CALC-02, même date) : colonnes supprimées en V3.
+- **Pas d'authentification, pas de rôles** (02/09/2026) : protection au niveau réseau, voir
+  `backend/README.md`. `audit_logs.actor` vaut `system`.
+- **Pas de retenue à la source** (CALC-02) : colonnes supprimées en V3.
 - **Pièces jointes sur le système de fichiers local** (`app.storage.root`), pas de S3.
-- **Sauvegardes : lacune assumée** pour l'instant, documentée dans `backend/README.md`.
-- **La TVA collectée n'est pas suivie** : les ventes sont enregistrées TTC. Le document de TVA
-  ne couvre donc que la TVA déductible et le dit noir sur blanc.
-- **Une référence de contrat de vente est attribuée par séquence** (`ACH-2026-00042`), comme
-  celles des dépenses et des acomptes. Saisie à la main, elle est conservée : c'est la reprise
-  d'un contrat antérieur à l'application. Le numéro d'une facture fournisseur, lui, vient du
-  fournisseur et reste saisi.
+- **Sauvegardes : lacune assumée**, documentée dans `backend/README.md`.
+- **La TVA collectée n'est pas suivie** : les ventes sont enregistrées TTC. Le document de TVA ne
+  couvre que la TVA déductible et le dit.
+- **Références par séquence** (`DEP-`, `ACC-`, `ACH-` + année + numéro), attribuées avant le
+  premier enregistrement ; une référence saisie est conservée (reprise d'un contrat antérieur).
+  Le numéro d'une facture fournisseur vient du fournisseur et reste saisi.
 - **Le reçu ne consomme pas de séquence** : il porte la référence de l'encaissement, pour qu'un
   reçu réimprimé reste le même document.
+- **Le compteur n'est pas remis à zéro chaque année** : l'année fait partie de la référence.
 
-## Vérifier avant de livrer
+## Architecture en trois lectures
 
-```bash
-cd backend && mvn -q verify             # 276 tests, H2 + Flyway, un contexte Spring partage
-cd backend && mvn -q verify -Ppostgres  # 293 tests : + PostgreSQL 16 reel, demande Docker
-cd frontend && npx ng build             # TypeScript strict + strictTemplates
+**Backend — une feature, un paquet.** `com.promoteur.app.<feature>` pour `advance`, `apartment`,
+`attachment`, `audit`, `client`, `dashboard`, `document`, `expense`, `invoice` (factures
+fournisseurs et leurs règlements), `project`, `purchase` (contrats de vente), `report`,
+`schedule` (échéanciers), `search`, `supplier`, `vat`. Transverses : `shared/` (BaseEntity,
+ListFilter, MessageService, ReferenceGeneratorService, PdfLetterhead, SpecificationSupport),
+`config/` (CORS, `CompanyProperties` pour l'en-tête des documents, initialiseurs de données),
+`exception/` (`GlobalExceptionHandler`, 11 familles d'erreurs en JSON français).
+
+**Le motif « dérivé, pas stocké »** revient trois fois et il faut le connaître avant de toucher
+aux totaux : `ClientPurchaseCalculationServiceImpl` (encaissé = paiement direct + acomptes,
+statut qui en découle), `PaymentScheduleServiceImpl.describe` (l'argent d'un contrat se répartit
+en cascade sur les échéances dans l'ordre), `SupplierInvoiceServiceImpl.settlementOf` (payé =
+somme des règlements, retard = reste dû et échéance passée). Aucun de ces états n'a de colonne ;
+un filtre sur un tel état se fait donc **après** mapping, pas en SQL.
+
+**Frontend.** `core/` porte ce qui est unique : `api.service.ts` (tous les appels HTTP),
+`project-context.service.ts` (le projet de travail, persisté côté serveur), `ui.service.ts`
+(toasts, confirmation de suppression), `layout/` (barre latérale, en-tête, recherche globale).
+`features/<écran>` = un composant chargé par `loadComponent`. `shared/` = modèles TypeScript,
+pipes, et les panneaux réutilisés dans plusieurs écrans (pièces jointes, éditeur d'échéancier,
+règlements fournisseurs). Le design system est en quatre couches CSS dans `src/styles/`
+(`tokens.css` → `base.css` → `components.css` (surcharges PrimeNG) → `app.css`) ; un écran ne
+définit que ce qui lui est propre. Les documents imprimables sont de simples liens vers
+`/api/documents/...` : le navigateur ouvre le PDF.
+
+## Écrire un test
+
+Quatre couches, chacune avec sa classe de base ; choisir la plus basse qui prouve la règle.
+
+| Couche | Base | Quand |
+|---|---|---|
+| Unitaire pur | aucune | logique sans base (`AmountInWordsTest`) |
+| Service sur H2 | `AbstractIntegrationTest` | règle métier, statut dérivé, cascade — **le cas courant** |
+| Web slice | `@WebMvcTest` + Mockito (`web/`) | codes HTTP, JSON d'erreur, validation ; Mockito n'est autorisé qu'ici |
+| Persistance | `AbstractPersistenceTest` (`persistence/`) | spécifications, graphe de chargement |
+| PostgreSQL réel | `AbstractPostgresTest` + `@Tag("postgres")` (`postgres/`) | dialecte, verrous, séquences sous concurrence |
+
+`AbstractIntegrationTest` partage **un** contexte Spring et une base H2 nettoyée **avant** chaque
+classe par `DatabaseCleaner` : ne pas ajouter de `@TestPropertySource` propre (cela casserait le
+cache de contexte) et semer les fixtures dans le `@BeforeAll` de la sous-classe. Deux classes
+restent isolées à dessein car elles testent l'amorçage : `StartupSeedTest`, `DemoProfileSeedTest`.
+Les tests PostgreSQL sont exclus par défaut et ne tournent qu'avec `-Ppostgres` ; leur pool est
+élargi à 25 parce que **toute écriture consomme deux connexions** (journal d'audit en
+`REQUIRES_NEW`) — constat de production non tranché, voir `backend/README.md`.
+
+`TEST_HARDENING_SPEC.md` décrit les cinq lots qui ont construit cette suite ; tous sont livrés.
+`/test-hardening status` (commande dans `.claude/commands/`) fait le point sans rien écrire.
+
+## Chantier en cours : retours de la démonstration client (15/09/2026)
+
+`DEMO_FEEDBACK_SPEC.md` découpe les trois demandes du client en quatre lots : publication sur
+GitHub (dépôt public, après un passage d'hygiène), justificatif embarqué dans le reçu PDF,
+profil `laptop` (un seul exécutable, H2 en mode fichier, port lié à `127.0.0.1`) et installateur
+Windows produit par GitHub Actions avec ses deux guides.
+
 ```
-
-Les tests marques `@Tag("postgres")` sont exclus par defaut : `mvn verify` reste utilisable
-sans demon Docker, et c'est ce que lance la CI. Voir `backend/README.md`, section
-« Tests sur PostgreSQL ».
-
-Sans PostgreSQL local, le backend se lance sur H2 avec les données de démonstration :
-
-```bash
-cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=test,demo -Dspring-boot.run.useTestClasspath=true
+/demo-feedback status   # où en est-on, sans rien écrire
+/demo-feedback lot1     # puis lot2, lot3, lot4 — dans cet ordre
 ```
-
-Le profil `demo` charge des acquéreurs fictifs : jamais en production.
-
-## Architecture par feature (09/09/2026)
-
-Le backend est passe d'un decoupage par couche (`controller/`, `service/`, `repository/`…) a
-**un paquet par feature**. Les 187 fichiers ont bouge, aucune ligne de logique metier n'a
-change, et les 276 tests passent a l'identique.
-
-Ce qui a bouge en plus du simple deplacement :
-
-- `SpecificationSupport` et `PdfLetterhead` etaient package-private ; leurs utilisateurs sont
-  desormais dans des paquets differents, ils sont donc **publics** dans `shared/`.
-- `ArchitectureTest` reconnait les couches **par nom de classe et annotation** et non plus par
-  paquet. La regle d'absence de cycles entre paquets a ete **retiree** : entre features, les
-  references croisees sont normales, la regle remontait plus de cent cycles sans signal. Elle
-  est remplacee par `sharedDoesNotDependOnAFeature`, l'invariant que ce decoupage a vraiment.
-- Une exclusion nommee de plus, et c'est un vrai defaut :
-  `shared/ReferenceGeneratorServiceImpl` lit trois depots de features pour verifier qu'une
-  reference tiree est libre. A corriger en inversant le controle.
-
-## Chantier en cours : durcissement des tests
-
-`TEST_HARDENING_SPEC.md` decoupe le travail en cinq lots (WP0 a WP4) : mutualisation du
-contexte Spring, tests PostgreSQL via Testcontainers, couche web (`@WebMvcTest`), couche
-persistance (`@DataJpaTest` sur les specifications), et regles d'architecture (ArchUnit).
-
-Un lot se livre avec la commande `/test-hardening` :
-
-```
-/test-hardening status   # ou en est-on, sans rien ecrire
-/test-hardening wp0      # puis wp1, wp2, wp3, wp4 — dans cet ordre
-```
-
-Etat de depart : 20 classes, 152 executions, dont **un seul test unitaire pur**
-(`AmountInWordsTest`). Les 19 autres classes sont des `@SpringBootTest` sur H2, alors que
-la production tourne sur PostgreSQL 16. Aucun test ne couvre les 19 controleurs ni le
-`GlobalExceptionHandler`.
-
-**WP0 livre** (08/09/2026) : les 17 classes d'integration heritent de
-`AbstractIntegrationTest` et partagent un seul contexte Spring et une seule base H2, nettoyee
-entre les classes par `DatabaseCleaner`. 19 demarrages de contexte -> 3. Phase de test 18,3 s
--> 9,3 s. `StartupSeedTest` et `DemoProfileSeedTest` restent isoles, `AmountInWordsTest` reste
-un test unitaire pur.
-
-**WP4 livre** (08/09/2026) — dernier lot. `ArchitectureTest` (ArchUnit) rend verifiables seize
-regles de ce fichier : le decoupage en couches, la frontiere DTO, « l'argent est un BigDecimal
-a l'echelle 3 », les finders en lecture seule, l'hygiene generale. Une vraie violation trouvee
-et corrigee : `AuditLogServiceImpl.search` tournait **sans transaction**. Trois exclusions,
-chacune commentee dans la classe : la marge de page de `DocumentServiceImpl` (geometrie, pas un
-montant), `MessageServiceImpl.get` (lit un bundle, aucune base), et les cycles de paquets
-`config` et `exception` — structurels, corrigeables en deplacant `CompanyProperties` et
-`GlobalExceptionHandler`, decision non prise.
-
-**WP3 livre** (08/09/2026) : les cinq specifications de `repository/specification` ont un test
-direct (`@DataJpaTest`, paquet `persistence`), plus le graphe de chargement de la liste des
-depenses et un garde-fou de serialisation des DTO. **Les jointures derapaient** : les chemins de
-recherche etaient construits dans un `List.of(...)` evalue avant l'appel, donc joints meme sans
-terme de recherche, et `root.join` en ajoutait une a chaque appel — six jointures pour trois
-associations une fois tous les filtres poses. Corrige par un `Supplier` et la reutilisation des
-jointures. Aucune ligne ne change : les associations sont toutes `@ManyToOne`, donc `totalElements`
-n'etait pas fausse.
-
-**WP2 livre** (08/09/2026) : la couche web est couverte — `GlobalExceptionHandlerTest` plus
-quatre slices `@WebMvcTest` (`ExpenseController`, `AttachmentController`, `ReportController`,
-`SearchController`) et un test de configuration CORS. `GlobalExceptionHandler` traite
-desormais 11 familles d'exceptions au lieu de 6 : **cinq requetes malformees repondaient 500**
-(violation d'integrite, valeur d'enum inconnue, identifiant non numerique, JSON illisible,
-parametre ou part multipart manquant). Les messages de validation sont francais de facon
-deterministe via `ValidationMessages.properties`. Mockito n'est autorise que dans ces slices.
-
-**WP1 livre** (08/09/2026) : quatre classes dans `com.promoteur.app.postgres` tournent contre
-un PostgreSQL 16 reel (Testcontainers, `AbstractPostgresTest`). Les 12 migrations et
-`ddl-auto=validate` sont confirmes sur le dialecte de production, et CONC-01 tient sous
-concurrence. Deux constats a trancher, documentes dans `backend/README.md` : la recherche
-globale est **sensible aux accents** (« bechir » ne trouve pas « Béchir »), et toute ecriture
-consomme **deux** connexions simultanement a cause du journal d'audit en `REQUIRES_NEW`, alors
-que le pool Hikari de production reste au defaut de 10.
 
 ## Où sont les choses
 
-| Besoin | Emplacement |
+| Besoin | Emplacement (`backend/src/main/java/com/promoteur/app/`) |
 |---|---|
-| Règles d'encaissement | `service/impl/ClientAdvanceServiceImpl`, `ClientPurchaseCalculationServiceImpl` |
-| Échéanciers | `service/impl/PaymentScheduleServiceImpl`, table `payment_installments` (V9) |
-| Règlements fournisseurs | `service/impl/SupplierInvoiceServiceImpl`, table `supplier_payments` (V10) |
-| Statut commercial des lots | `service/impl/ApartmentServiceImpl` (`salesBoard`, `changeSalesStatus`), V11 |
-| Documents imprimés | `service/impl/DocumentServiceImpl`, `PdfLetterhead`, `AmountInWordsServiceImpl` |
-| En-tête des documents | `app.company.*` dans `application.properties` |
-| TVA | `service/impl/VatCalculationServiceImpl`, table `vat_rate_options` |
-| Rapports et périmètre | `dto/report/ReportFilter`, `service/impl/ReportServiceImpl` |
-| Filtres des listes | `dto/ListFilter`, `repository/specification/*` |
-| Références de documents | `service/impl/ReferenceGeneratorServiceImpl`, séquences V6 (DEP, ACC) et V12 (ACH) |
-| Recherche globale | `service/impl/SearchServiceImpl`, requêtes `search(...)` des dépôts |
-| Pièces jointes | `service/impl/AttachmentServiceImpl`, `LocalFileSystemStorageService` |
-| Messages français | `src/main/resources/messages_fr.properties` |
-| OpenAPI | `/swagger-ui.html` en dev et test uniquement |
+| Plafond des acomptes, verrou, statut de paiement | `advance/ClientAdvanceServiceImpl`, `purchase/ClientPurchaseCalculationServiceImpl` |
+| Échéanciers et cascade | `schedule/PaymentScheduleServiceImpl`, table `payment_installments` (V9) |
+| Règlements fournisseurs, retards | `invoice/SupplierInvoiceServiceImpl`, table `supplier_payments` (V10) |
+| Statut commercial des lots, plan de vente | `apartment/ApartmentServiceImpl` (`salesBoard`, `changeSalesStatus`), V11 |
+| Documents PDF (reçu, situation, TVA) | `document/DocumentServiceImpl`, `shared/PdfLetterhead`, `document/AmountInWordsServiceImpl` |
+| En-tête des documents | `config/CompanyProperties` ← `app.company.*` |
+| TVA | `vat/VatCalculationServiceImpl`, table `vat_rate_options` |
+| Rapports et périmètre | `report/ReportFilter`, `report/ReportServiceImpl` |
+| Filtres des listes | `shared/ListFilter`, `<feature>/XSpecifications`, `shared/SpecificationSupport` |
+| Références | `shared/ReferenceGeneratorServiceImpl`, séquences V6 (DEP, ACC) et V12 (ACH) |
+| Recherche globale | `search/SearchServiceImpl`, méthodes `search(...)` des dépôts (sensible aux accents, constat ouvert) |
+| Pièces jointes | `attachment/AttachmentServiceImpl`, `attachment/LocalFileSystemStorageService` |
+| Journal d'audit | `audit/`, écrit en `REQUIRES_NEW` par chaque `*ServiceImpl` |
+| Messages français | `src/main/resources/messages_fr.properties`, `ValidationMessages.properties` |
+| Données de démo | `config/DemoDataInitializer` (profil `demo`), `config/ReferenceDataInitializer` |
+| OpenAPI | `/swagger-ui.html`, profils `dev` et `test` uniquement |
+
+Dette connue et nommée : `shared/ReferenceGeneratorServiceImpl` lit trois dépôts de features pour
+vérifier qu'une référence tirée est libre — seule exclusion de `sharedDoesNotDependOnAFeature`,
+à corriger en inversant le contrôle.
