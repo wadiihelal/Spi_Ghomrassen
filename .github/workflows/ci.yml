@@ -54,9 +54,16 @@ jobs:
       - name: mvn verify -Ppostgres (tests PostgreSQL seuls)
         working-directory: backend
         run: mvn -B verify -Ppostgres -Dgroups=postgres -DfailIfNoTests=true
-      # La preuve que les classes ont tourne, lisible sur la page du run sans jeton ni connexion.
+      # La preuve que les classes ont tourne. Les logs d'un run ne sont pas lisibles sans
+      # connexion GitHub, les annotations le sont : les comptes y sont publies, et l'etape echoue
+      # si moins de cinq classes @Tag("postgres") ou huit tests ont tourne — un vert vide est exclu.
       - name: Résumé des tests PostgreSQL
         if: always()
         working-directory: backend
         run: |
-          { echo '### Tests PostgreSQL'; echo; echo '```'; grep -h "Tests run:" target/surefire-reports/*.txt 2>/dev/null || echo 'aucun rapport surefire'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          files=$(ls target/surefire-reports/*.txt 2>/dev/null | wc -l)
+          total=$(grep -h "Tests run:" target/surefire-reports/*.txt 2>/dev/null | sed -E 's/Tests run: ([0-9]+).*/\1/' | awk '{s+=$1} END {print s+0}')
+          detail=$(for f in target/surefire-reports/*.txt; do printf '%s %s | ' "$(basename "$f" .txt | sed 's/.*\.//')" "$(grep -h 'Tests run:' "$f" | sed -E 's/, Time elapsed.*//')"; done)
+          echo "::notice title=Tests PostgreSQL ($files classes, $total tests)::$detail"
+          { echo "### Tests PostgreSQL ($files classes, $total tests)"; echo; echo "$detail" | tr '|' '\n'; } >> "$GITHUB_STEP_SUMMARY"
+          test "$files" -ge 5 && test "$total" -ge 8
