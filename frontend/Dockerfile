@@ -2,7 +2,10 @@
 FROM node:22-alpine AS build
 WORKDIR /build
 
-COPY package.json package-lock.json ./
+# .npmrc fait partie des fichiers d'installation : il porte legacy-peer-deps=true, sans quoi
+# « npm ci » refuse le conflit de peer dependency PrimeNG 17 / Angular 19. L'oublier ici casse
+# la construction de l'image alors que la CI et le poste, eux, passent.
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 COPY . .

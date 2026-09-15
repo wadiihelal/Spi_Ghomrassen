@@ -36,6 +36,17 @@ jobs:
         working-directory: frontend
         run: npx ng build
 
+  images:
+    name: Images Docker (ce qui est déployé)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Les jobs ci-dessus compilent dans leur propre environnement ; le serveur, lui, construit
+      # ces images. Un fichier oublie dans un COPY ne casse que cette construction-la — c'est
+      # arrive avec frontend/.npmrc le 15/09/2026. On construit donc ce qui part vraiment.
+      - name: docker compose build (serveur de test)
+        run: docker compose -f docker-compose.yml -f docker-compose.demo.yml build
+
   postgres:
     name: Backend (PostgreSQL)
     runs-on: ubuntu-latest
