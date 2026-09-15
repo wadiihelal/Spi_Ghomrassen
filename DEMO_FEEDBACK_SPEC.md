@@ -190,10 +190,10 @@ sur base vide), lecture des logs (`docker compose logs -f backend`).
 
 ## Critères d'acceptation Lot 1 bis
 
-- [x] `mvn -q verify` et `npx ng build` verts ; la CI construit aussi les images Docker déployées
-      (« Images Docker ») et sert les résidences « Démo » par l'API derrière le mot de passe
-      (« Démonstration de bout en bout »). Reste à Wadii le seul constat visuel du tableau de bord
-      dans un navigateur.
+- [x] `mvn -q verify` et `npx ng build` verts ; la CI construit les images Docker déployées et
+      rejoue le déploiement complet. **Le tableau de bord a été ouvert sur le serveur** le
+      15/09/2026 : `http://102.204.206.105:8088/` affiche directement le périmètre « Résidence Oasis
+      Ghomrassen », ses encaissements, son avancement et son stock de lots — sans écran d'accueil.
 - [x] `curl /api/projects` répond **200 sans rien demander**, l'interface et une route SPA aussi —
       prouvé sur machine vierge par le job CI « Démonstration de bout en bout », qui exécute les
       commandes du guide telles quelles. **Leçon conservée** : tant que le mot de passe existait, un
@@ -205,8 +205,10 @@ sur base vide), lecture des logs (`docker compose logs -f backend`).
 - [x] Le test PostgreSQL du semis `demo` passe avec `-Ppostgres` — `PostgresDemoSeedTest`, 2 tests, dans le
       job CI « Backend (PostgreSQL) » (run `34981710492`, 5 classes / 19 tests ; l'étape de contrôle
       échoue si moins de 5 classes ou 8 tests ont tourné).
-- [ ] `docs/SERVEUR-DE-TEST.md` existe et Wadii l'a suivi pour le premier déploiement — Claude
-      Code n'a pas d'accès au VPS et ne le vérifie pas.
+- [x] `docs/SERVEUR-DE-TEST.md` existe et Wadii l'a suivi pour le premier déploiement, le
+      15/09/2026 ; trois défauts rencontrés en chemin ont été corrigés à la source et sont désormais
+      couverts par la CI. Claude Code n'a jamais eu d'accès au VPS : toutes les commandes ont été
+      exécutées par Wadii.
 
 ---
 
