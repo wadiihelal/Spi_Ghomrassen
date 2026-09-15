@@ -58,7 +58,7 @@ La mise en service se fait en deux étapes, avec le même code et deux profils S
 
 | Étape | Profil | État | Principe |
 |---|---|---|---|
-| 1. **Serveur de test** | `prod,demo` | *en cours* | PostgreSQL + API + nginx via `docker-compose.yml` sur un VPS, rempli du jeu de données **fictif** : le client essaie l'application depuis son navigateur avant toute installation |
+| 1. **Serveur de test** | `prod,demo` | disponible — [docs/SERVEUR-DE-TEST.md](docs/SERVEUR-DE-TEST.md) | PostgreSQL + API + nginx via `docker-compose.yml` sur un VPS, rempli du jeu de données **fictif** : le client essaie l'application depuis son navigateur avant toute installation |
 | 2. **Poste du client** | `laptop` | *en préparation* | un exécutable unique installé sur son portable Windows, base en mode fichier et **vide**, aucun serveur |
 
 Le profil `demo` charge des acquéreurs fictifs et ne sert qu'à l'étape 1 — jamais sur des

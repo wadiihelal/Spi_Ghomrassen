@@ -193,6 +193,11 @@ Trois services : `postgres`, `backend` (image multi-étapes, JRE 17, utilisateur
 port publié) et `frontend` (build Node puis nginx sur le port 80, qui sert la console et relaie
 `/api/`). Voir « Sécurité » ci-dessus avant d'exposer le port 80.
 
+**Serveur de test** (15/09/2026) : `docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build`
+ajoute le profil `demo` et un mot de passe nginx devant tout le site (`frontend/nginx.demo.conf`,
+fichier `htpasswd` non versionné). PostgreSQL n'est publié qu'en `127.0.0.1:5432` et `DB_PASSWORD`
+vient d'un `.env` (défaut `spi` sur le poste). Pas à pas : `docs/SERVEUR-DE-TEST.md`.
+
 ## Vérifier
 
 ```bash

@@ -75,6 +75,9 @@ Sur ce poste, si `mvn` n'est pas dans le PATH : `~/.m2/wrapper/dists/apache-mave
 
 - **Pas d'authentification, pas de rôles** (02/09/2026) : protection au niveau réseau, voir
   `backend/README.md`. `audit_logs.actor` vaut `system`.
+- **Serveur de test = compose de production + profil `demo` + mot de passe nginx** (15/09/2026) :
+  `docker-compose.demo.yml` surcharge le compose, ne le remplace pas ; jamais de données réelles
+  dessus ; PostgreSQL lié à `127.0.0.1`. Pas à pas dans `docs/SERVEUR-DE-TEST.md`.
 - **Pas de retenue à la source** (CALC-02) : colonnes supprimées en V3.
 - **Pièces jointes sur le système de fichiers local** (`app.storage.root`), pas de S3.
 - **Sauvegardes : lacune assumée**, documentée dans `backend/README.md`.

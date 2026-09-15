@@ -35,3 +35,22 @@ jobs:
       - name: ng build
         working-directory: frontend
         run: npx ng build
+
+  postgres:
+    name: Backend (PostgreSQL)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      # Le compose du serveur de test (Lot 1 bis) doit rester fusionnable avec celui de production.
+      - name: docker compose config (serveur de test)
+        run: docker compose -f docker-compose.yml -f docker-compose.demo.yml config -q
+      # Les tests @Tag("postgres") demandent un demon Docker, absent du poste de developpement
+      # et present ici. Seuls ces tests tournent : la suite H2 est deja couverte par le job Backend.
+      - name: mvn verify -Ppostgres (tests PostgreSQL seuls)
+        working-directory: backend
+        run: mvn -B verify -Ppostgres -Dgroups=postgres
