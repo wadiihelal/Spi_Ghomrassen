@@ -12,6 +12,12 @@ npm start          # http://localhost:4200, API attendue sur http://localhost:80
 
 `npm ci` plutôt que `npm install` : le `package-lock.json` est la référence.
 
+`.npmrc` fixe `legacy-peer-deps=true` : PrimeNG 17 ne déclare qu'Angular 17 et 18 en peer
+dependency alors que le projet est sur Angular 19, combinaison qui fonctionne en pratique. Sans
+cette ligne, `npm ci` refuse d'installer sur une machine neuve — c'est ce qui a fait échouer le
+premier run de la CI. La sortie propre est la migration vers PrimeNG 19 (nouveau système de
+thèmes) : un chantier à part.
+
 ```bash
 npx ng build       # build de production, sortie dans dist/real-estate-frontend
 ```
