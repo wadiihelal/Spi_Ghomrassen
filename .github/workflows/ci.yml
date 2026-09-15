@@ -64,12 +64,14 @@ jobs:
         run: docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
       - name: L'interface et l'API répondent, sans rien demander
         run: |
-          # L'acces est libre depuis le 15/09/2026 : le client entre directement. On attend donc
-          # le 200 de l'API, seul signal prouvant que le backend a fini de demarrer et de semer —
-          # nginx, lui, sert des le depart et ne prouve rien a lui seul.
+          # On attend que les residences de demonstration SOIENT LA, pas que l'API reponde : le
+          # semis « demo » est un CommandLineRunner, il tourne APRES le message « Started » et
+          # Tomcat accepte deja les connexions pendant ce temps. Attendre un simple 200 mesurait
+          # donc un jeu de donnees a moitie charge — test instable, vert par chance jusqu'au
+          # 15/09/2026. Regle generale : n'attendre que le signal qui prouve l'assertion.
           code() { curl -s -o /dev/null -m 5 -w '%{http_code}' "$@" || true; }
           for i in $(seq 1 60); do
-            [ "$(code http://localhost:8088/api/projects)" = "200" ] && break
+            curl -s -m 5 http://localhost:8088/api/projects | grep -q SPI-DEMO-RES-A && break
             sleep 5
           done
           API=$(code http://localhost:8088/api/projects)

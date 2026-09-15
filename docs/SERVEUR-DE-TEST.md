@@ -107,8 +107,11 @@ Flyway crée le schéma, le semis `demo` charge cinq résidences et leurs acqué
 docker compose logs -f backend
 ```
 
-Attendu, dans cet ordre : `Profil demo actif — chargement de données fictives`, puis
-`Started SpiGhomrassenApplication`. `Ctrl-C` pour sortir des logs (les conteneurs continuent).
+Attendu, dans cet ordre : `Started RealEstateBackendApplication`, **puis**
+`Profil demo actif — chargement de données fictives`. Cet ordre surprend mais il est normal : le
+serveur accepte déjà les connexions pendant que les données de démonstration se créent. Ouvrir
+l'application dans cet intervalle montre des écrans **vides** — ce n'est pas une panne, il faut
+laisser passer une minute. `Ctrl-C` pour sortir des logs (les conteneurs continuent).
 
 ## 7. Vérifier
 
