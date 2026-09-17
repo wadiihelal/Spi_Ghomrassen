@@ -94,35 +94,55 @@ public class ReportController {
         return reportService.clientStatement(clientId, ReportFilter.of(projectId, year, month));
     }
 
-    @Operation(summary = "Export Excel des rapports pour un projet et un mois")
+    @Operation(summary = "Export Excel des rapports pour un projet et une période")
     @GetMapping("/export/excel")
     public ResponseEntity<byte[]> exportExcel(
             @RequestParam("year") Integer year,
-            @RequestParam("month") Integer month,
+            @RequestParam(required = false) Integer month,
             @RequestParam(required = false) String projectId
     ) {
         byte[] data = reportService.exportReportsExcel(ReportFilter.of(projectId, year, month));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
         headers.setContentDisposition(ContentDisposition.attachment()
-                .filename("rapport-spi-ghomrassen-" + year + "-" + String.format("%02d", month) + ".xlsx")
+                .filename(exportFileName(year, month, "xlsx"))
                 .build());
         return ResponseEntity.ok().headers(headers).body(data);
     }
 
-    @Operation(summary = "Export PDF des rapports pour un projet et un mois")
+    @Operation(summary = "Export PDF des rapports pour un projet et une période")
     @GetMapping("/export/pdf")
     public ResponseEntity<byte[]> exportPdf(
             @RequestParam("year") Integer year,
-            @RequestParam("month") Integer month,
+            @RequestParam(required = false) Integer month,
             @RequestParam(required = false) String projectId
     ) {
         byte[] data = reportService.exportReportsPdf(ReportFilter.of(projectId, year, month));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.setContentDisposition(ContentDisposition.attachment()
-                .filename("rapport-spi-ghomrassen-" + year + "-" + String.format("%02d", month) + ".pdf")
+                .filename(exportFileName(year, month, "pdf"))
                 .build());
         return ResponseEntity.ok().headers(headers).body(data);
+    }
+
+    /**
+     * Names the file after the period actually exported.
+     *
+     * <p>The month is optional because the reports screen offers «&nbsp;Toute l'année&nbsp;»:
+     * requiring it meant that choosing the whole year and clicking «&nbsp;Exporter&nbsp;»
+     * answered 400 (17/09/2026). The <b>year</b> stays required — omitting it used to fall
+     * through to the generic branch and answer 500, and {@code ReportControllerTest} guards
+     * that.</p>
+     */
+    private static String exportFileName(final Integer year, final Integer month, final String extension) {
+        final StringBuilder name = new StringBuilder("rapport-spi-ghomrassen");
+        if (year != null) {
+            name.append('-').append(year);
+            if (month != null) {
+                name.append('-').append(String.format("%02d", month));
+            }
+        }
+        return name.append('.').append(extension).toString();
     }
 }

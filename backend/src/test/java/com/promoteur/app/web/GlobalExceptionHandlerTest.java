@@ -62,6 +62,18 @@ class GlobalExceptionHandlerTest {
     private MockMvc mockMvc;
 
     @Test
+    @DisplayName("an unknown route answers 404 rather than 500")
+    void anUnknownRouteAnswers404RatherThan500() throws Exception {
+        // A URL matching no controller falls through to the static-resource handler. Without an
+        // explicit branch it reached the catch-all and every typo answered « Unexpected server
+        // error » — indistinguishable from a genuinely broken endpoint (17/09/2026).
+        this.mockMvc.perform(get("/api/route-qui-nexiste-pas"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Cette adresse n'existe pas sur le serveur."));
+    }
+
+    @Test
     @DisplayName("a missing resource answers 404 with the message the service raised")
     void aMissingResourceAnswers404() throws Exception {
         this.mockMvc.perform(get("/probe/not-found"))

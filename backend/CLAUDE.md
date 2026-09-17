@@ -222,9 +222,14 @@ Règles structurantes :
 | `HttpMessageNotReadableException`         | `400` — corps JSON illisible                          |
 | `MissingServletRequestParameterException` | `400` — paramètre obligatoire absent                  |
 | `MissingServletRequestPartException`      | `400` — part multipart absente                        |
+| `NoResourceFoundException`                | `404` — URL ne correspondant à aucun contrôleur       |
 | tout le reste                             | `500`, journalisé                                     |
 
-Les cinq dernières lignes ont été ajoutées par le WP2 : ces cas répondaient tous `500`
+`NoResourceFoundException` a été ajoutée le 17/09/2026 : une URL inconnue tombait dans la
+branche générique et répondait `500 Unexpected server error`, impossible à distinguer d'un
+point d'entrée réellement cassé — ce qui a ralenti le diagnostic de la panne de l'échéancier.
+
+Les cinq lignes précédentes ont été ajoutées par le WP2 : ces cas répondaient tous `500`
 « Unexpected server error ». Toute nouvelle branche **journalise** ce qui identifie la cause
 (contrainte violée, erreur de parsing) et ne renvoie **jamais** la valeur reçue : renvoyer la
 saisie dans un message est la façon dont une charge réfléchie atteint le toast de la console.

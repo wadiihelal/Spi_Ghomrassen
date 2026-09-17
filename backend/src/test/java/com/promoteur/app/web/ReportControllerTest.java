@@ -119,6 +119,20 @@ class ReportControllerTest {
     }
 
     @Test
+    @DisplayName("an export of a whole year is accepted without a month")
+    void anExportOfAWholeYearIsAcceptedWithoutAMonth() throws Exception {
+        // The reports screen offers « Toute l'année »; requiring the month here answered 400 on
+        // that perfectly legitimate choice (17/09/2026).
+        given(this.reportService.exportReportsExcel(any())).willReturn(new byte[]{1, 2});
+
+        this.mockMvc.perform(get("/api/reports/export/excel")
+                        .param("projectId", "ALL").param("year", "2026"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("rapport-spi-ghomrassen-2026.xlsx")));
+    }
+
+    @Test
     @DisplayName("an export without its year answers 400 rather than 500")
     void anExportWithoutItsYearAnswers400RatherThan500() throws Exception {
         // year and month are required on the export endpoints; omitting one used to fall through

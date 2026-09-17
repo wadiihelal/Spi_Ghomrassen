@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -137,6 +138,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleMissingPart(final MissingServletRequestPartException ex) {
         return this.buildResponse(HttpStatus.BAD_REQUEST,
                 this.messageService.get("error.missingRequestPart", ex.getRequestPartName()));
+    }
+
+    /**
+     * A URL that matches no controller. Spring lets it fall through to the static-resource
+     * handler, which raises {@link NoResourceFoundException}; without this branch it reached the
+     * catch-all below and every typo answered {@code 500 Unexpected server error}. That is wrong
+     * on its own, and it masks real failures: diagnosing the échéancier outage of 17/09/2026 was
+     * slowed by mistyped URLs answering exactly like a broken endpoint.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleUnknownRoute(final NoResourceFoundException ex) {
+        LOGGER.warn("Unknown route: {}", ex.getResourcePath());
+        return this.buildResponse(HttpStatus.NOT_FOUND, this.messageService.get("error.unknownRoute"));
     }
 
     @ExceptionHandler(Exception.class)
