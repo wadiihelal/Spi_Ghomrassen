@@ -126,7 +126,10 @@ jobs:
           # PostgreSQL depuis un poste sans Docker demande un aller-retour par le serveur du client.
           for f in target/surefire-reports/*.txt; do
             grep -qE "Failures: [1-9]|Errors: [1-9]" "$f" 2>/dev/null || continue
-            cause=$(head -60 "$f" | tr '\n' ' ' | tr -s ' ')
+            # Les « Caused by » portent le message du moteur ; le SQL genere, lui, remplit a lui
+            # seul la limite de 900 caracteres d'une annotation GitHub et masque la cause.
+            cause=$(grep -hE "^(Caused by|[[:space:]]*Caused by)" "$f" | head -6 | tr '\n' ' ' | tr -s ' ')
+            [ -z "$cause" ] && cause=$(head -12 "$f" | tr '\n' ' ' | tr -s ' ')
             echo "::error title=Échec PostgreSQL ($(basename "$f" .txt))::${cause:0:900}"
             { echo; echo "#### $(basename "$f" .txt)"; echo '```'; head -60 "$f"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           done
