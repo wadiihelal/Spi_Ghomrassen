@@ -14,12 +14,22 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     Page<AuditLog> findByEntityTypeAndEntityIdOrderByCreatedAtDesc(String entityType, Long entityId, Pageable pageable);
 
+    /**
+     * The journal's search, every filter optional.
+     *
+     * <p>{@code coalesce} rather than {@code (:param is null or …)}: PostgreSQL refuses a
+     * parameter whose type is only ever implied by an {@code IS NULL} and answers
+     * {@code could not determine data type of parameter $N}, where H2 accepts it — so the whole
+     * test suite stayed green while the journal answered 500 in production (17/09/2026). Every
+     * column compared here is {@code NOT NULL}, so a null filter matching the column against
+     * itself is always true and the meaning is unchanged.</p>
+     */
     @Query("""
             select a from AuditLog a
-            where (:entityType is null or a.entityType = :entityType)
-              and (:actor is null or a.actor = :actor)
-              and (:from is null or a.createdAt >= :from)
-              and (:to is null or a.createdAt <= :to)
+            where a.entityType = coalesce(:entityType, a.entityType)
+              and a.actor = coalesce(:actor, a.actor)
+              and a.createdAt >= coalesce(:from, a.createdAt)
+              and a.createdAt <= coalesce(:to, a.createdAt)
             order by a.createdAt desc
             """)
     Page<AuditLog> search(@Param("entityType") String entityType,

@@ -135,4 +135,4 @@ jobs:
             echo "::error title=Échec PostgreSQL ($(basename "$f" .txt))::${cause:0:900}"
             { echo; echo "#### $(basename "$f" .txt)"; echo '```'; head -60 "$f"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           done
-          test "$files" -ge 6 && test "$total" -ge 8
+          test "$files" -ge 7 && test "$total" -ge 8
