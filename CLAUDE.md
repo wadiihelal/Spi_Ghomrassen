@@ -144,7 +144,7 @@ Les tests PostgreSQL sont exclus par défaut et ne tournent qu'avec `-Ppostgres`
 
 `DEMO_FEEDBACK_SPEC.md` découpe les demandes du client en cinq lots : publication sur GitHub
 (livré le 15/09/2026 : `github.com/wadiihelal/Spi_Ghomrassen`), serveur de test sur un VPS avec
-le jeu `demo` pour une démonstration supplémentaire, justificatif embarqué dans le reçu PDF,
+le jeu `demo` pour une démonstration supplémentaire, manuel d'utilisation illustré de captures d'écran,
 profil `laptop` (un seul exécutable, H2 en mode fichier, port lié à `127.0.0.1`) et installateur
 Windows produit par GitHub Actions avec ses deux guides. Séquence réelle chez le client : serveur
 de test d'abord, portable ensuite et **sans urgence** — le client acquiert le PC après validation.

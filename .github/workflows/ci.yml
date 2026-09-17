@@ -121,4 +121,12 @@ jobs:
           detail=$(for f in target/surefire-reports/*.txt; do printf '%s %s | ' "$(basename "$f" .txt | sed 's/.*\.//')" "$(grep -h 'Tests run:' "$f" | sed -E 's/, Time elapsed.*//')"; done)
           echo "::notice title=Tests PostgreSQL ($files classes, $total tests)::$detail"
           { echo "### Tests PostgreSQL ($files classes, $total tests)"; echo; echo "$detail" | tr '|' '\n'; } >> "$GITHUB_STEP_SUMMARY"
-          test "$files" -ge 5 && test "$total" -ge 8
+          # En cas d'echec, publier la CAUSE en annotation : les journaux d'un run ne se lisent pas
+          # sans compte GitHub, une annotation si. Sans cela, diagnostiquer un defaut propre a
+          # PostgreSQL depuis un poste sans Docker demande un aller-retour par le serveur du client.
+          echoes=$(grep -h -A4 -E "^(Tests in error|Failed tests):" target/surefire-reports/*.txt 2>/dev/null | head -20 | tr '\n' ' ')
+          if [ -n "$echoes" ]; then
+            echo "::error title=Échec PostgreSQL::$echoes"
+            { echo; echo '```'; echo "$echoes"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          test "$files" -ge 6 && test "$total" -ge 8

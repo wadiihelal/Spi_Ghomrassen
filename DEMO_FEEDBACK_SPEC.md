@@ -8,7 +8,7 @@
 
 | # | Demande | Lot |
 |---|---|---|
-| 1 | Le reçu PDF doit contenir la capture d'écran du virement (le justificatif attaché) | Lot 2 |
+| 1 | Le **manuel d'utilisation PDF** doit contenir des captures d'écran de l'application | Lot 2 |
 | 2 | Le code doit être publié sur le GitHub personnel de Wadii, avec un guide de déploiement | Lots 1 et 4 |
 | 3 | L'application tourne **sur le portable du client** (Windows), sans serveur ni VPS | Lots 3 et 4 |
 
@@ -40,9 +40,9 @@ test.
   `jpackage`. Wadii travaille sur macOS : `jpackage` ne produit un installateur que pour l'OS
   qui l'exécute, donc **le `.msi` est construit par GitHub Actions sur `windows-latest`**,
   jamais sur le Mac.
-- **Le reçu réimprimé reste le même document** (décision existante) : la référence ne change
-  pas. Le contenu, lui, peut s'enrichir d'un justificatif ajouté après la première impression.
-  C'est accepté et documenté dans `CLAUDE.md` (Lot 2).
+- **Le manuel est généré, jamais édité à la main.** Sa source vit dans `docs/manuel/` ; les
+  captures d'écran viennent du jeu `demo` et sont rejouées par script, pour que le manuel suive
+  l'interface au lieu de la décrire de mémoire (Lot 2).
 
 ## État du dépôt au moment d'écrire cette spec
 
@@ -54,6 +54,8 @@ test.
   `spi-ghomrassen` et l'usage de `gh` prévus au §1.2 sont périmés : `gh` n'est pas installé sur le Mac.
 - `.github/workflows/ci.yml` existe déjà (Maven + Angular sur `ubuntu-latest`).
 - `h2` est en portée `test` dans `backend/pom.xml`.
+- `docs/Manuel-utilisation-SPI-Ghomrassen.pdf` (45 pages, producteur `pypdf`, aucune image) n'a
+  **pas de source dans le dépôt** : ni script, ni Markdown, ni HTML. Voir Lot 2 §2.1.
 - `frontend/src/environments/environment.prod.ts` pointe déjà sur `apiUrl: '/api'`.
 - `frontend/nginx.conf` contient la règle SPA (`try_files … /index.html`) et le proxy `/api`
   qu'il faudra reproduire côté Spring Boot.
@@ -212,80 +214,218 @@ sur base vide), lecture des logs (`docker compose logs -f backend`).
 
 ---
 
-# Lot 2 — Justificatif dans le reçu de paiement
+# Lot 2 — Manuel d'utilisation illustré
 
 ## Contexte
 
-- Reçu : `document/DocumentServiceImpl.paymentReceipt(Long advanceId)`, rendu avec OpenPDF
-  (`com.lowagie.text.*`) via la méthode privée `render(...)` qui crée le `PdfWriter`.
-- Justificatifs : `attachment/FileAttachmentRepository
-  .findByOwnerTypeAndOwnerIdOrderByUploadedAtDesc(AttachmentOwnerType.CLIENT_ADVANCE, id)`.
-  Contenu binaire via `attachment/StorageService.load(storageKey)`. Trois types acceptés à
-  l'upload : `application/pdf`, `image/jpeg`, `image/png` (FE-05, 10 Mo max).
-- Le client paie souvent par virement et envoie une capture d'écran de la confirmation :
-  c'est ce fichier qu'il veut voir **dans** le reçu.
+- `docs/Manuel-utilisation-SPI-Ghomrassen.pdf` : 45 pages A4, 16 chapitres et 4 annexes,
+  « expliqué écran par écran » — et **aucune image**. Le client veut voir les écrans dont le
+  manuel parle.
+- Producteur `pypdf`. Polices embarquées : **Bitter** (titres), **Source Sans 3** (texte),
+  **JetBrains Mono** (références). Maquette : couverture bleu-vert foncé, bandeau de chapitre,
+  encadrés `À RETENIR` / `ATTENTION` / `ASTUCE`, étapes numérotées à pastille, pied de page
+  `SP Immobilière GHOMRASSEN — Manuel d'utilisation   n / N`.
+- **Le script qui a produit ce PDF n'est pas dans le dépôt.** Aucun `.py`, `.md` ou `.html`
+  ne le mentionne. Sans source, on ne peut ni insérer une image ni corriger une phrase.
+- Défaut visible à corriger au passage : les étapes dont la description est vide affichent un
+  « . » orphelin sur la ligne suivante (p. 25, étapes 1, 5, 6 et 8).
+- Données pour les captures : **uniquement le jeu `demo`** (acquéreurs fictifs). En local :
+  `docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build` puis
+  `http://localhost` ; ou le serveur de test du Lot 1 bis. Jamais des données réelles.
+- Le job `demo` de `.github/workflows/ci.yml` démarre déjà cette pile et attend que les
+  résidences soient semées : les captures peuvent y être rejouées.
 
-## Comportement attendu
+## 2.1 — Retrouver ou reconstruire la source (point d'arrêt)
 
-Après le bloc des signatures, le reçu gagne une ou plusieurs pages d'annexe :
+**Demander à Wadii** s'il a encore le script et les fichiers qui ont produit le PDF (autre
+dossier, autre session, autre outil). Deux issues :
 
-1. Un titre `Justificatif de paiement` (ou `Justificatifs de paiement` s'il y en a plusieurs),
-   via `PdfLetterhead.heading(...)`.
-2. **Un justificatif par page**, dans l'ordre chronologique d'upload (`uploadedAt` croissant —
-   le dépôt renvoie l'inverse, trier côté service).
-3. Sous chaque justificatif, une légende : nom d'origine du fichier et date d'upload au format
-   `PdfLetterhead.date(...)`.
-4. **Images (JPEG, PNG)** : `com.lowagie.text.Image.getInstance(bytes)`, mises à l'échelle avec
-   `scaleToFit` pour tenir dans les marges de la page, ratio préservé, jamais agrandies au-delà
-   de leur taille native. Centrées.
-5. **Justificatif PDF** : importer chaque page du fichier avec `PdfReader` +
-   `writer.getImportedPage(reader, n)` et la poser via `PdfContentByte.addTemplate` à l'échelle
-   de la page. La méthode `render(...)` ne donne aujourd'hui accès qu'au `Document` : l'étendre
-   pour exposer aussi le `PdfWriter` au bloc de rendu.
-6. **Fichier absent du stockage** (`Resource.exists()` faux) : le reçu s'imprime quand même,
-   avec à la place de l'image une ligne `Justificatif « <nom> » introuvable sur le stockage`, et
-   un `WARN` dans le journal. Un reçu ne doit jamais échouer à cause d'une pièce jointe.
-7. **Aucun justificatif** : le reçu est strictement identique à aujourd'hui — pas de titre vide.
-8. Le reçu porte toujours la référence de l'encaissement, jamais de séquence (décision
-   existante).
+- **Il les a** : les ranger dans `docs/manuel/`, les versionner, puis passer au §2.2 en
+  conservant la chaîne existante si elle sait insérer des images ; sinon la remplacer.
+- **Il ne les a pas** : reconstruire la source depuis le PDF.
+  1. `pdftotext -layout docs/Manuel-utilisation-SPI-Ghomrassen.pdf` → un fichier par chapitre
+     dans `docs/manuel/chapitres/NN-titre.md` (`01-prendre-en-main.md` … `16-que-faire-si.md`,
+     `A-memo.md` … `D-glossaire.md`). Couverture et page « Comment lire ce manuel » dans
+     `00-couverture.md`.
+  2. Markdown avec trois extensions, et pas davantage : encadrés `:::retenir` /
+     `:::attention` / `:::astuce`, chemin de menu `{menu}Travail quotidien › Paiements clients`,
+     référence en `code`. Texte de bouton ou de champ en **gras** — c'est la convention du
+     manuel, elle sert au contrôle du §2.6.
+  3. Vérifier la parité : `check_parity.py` compare le texte du PDF d'origine et celui du PDF
+     reconstruit, normalisés (espaces, césures, numéros de page). **Aucun paragraphe perdu.**
 
-Aucune modification du frontend : le bouton d'impression appelle déjà
-`GET /api/documents/advances/{id}/receipt`.
+Dans les deux cas, le PDF actuel reste dans l'historique git ; pas de copie d'archive.
 
-## Tests (`backend/src/test/java/com/promoteur/app/document/`)
+## 2.2 — Chaîne de fabrication (`docs/manuel/`)
 
-Compléter la classe de test du module document (l'équivalent de l'ancien `DocumentTest`) :
+```
+docs/manuel/
+├── README.md            comment régénérer captures et PDF, règle « demo uniquement »
+├── requirements.txt     weasyprint, markdown-it-py, pypdf, playwright, pillow, pyyaml
+├── build.py             Markdown → HTML → PDF, échoue si une image manque
+├── captures.py          Playwright : rejoue captures.yaml contre une instance demo
+├── captures.yaml        la liste déclarative des figures (§2.4)
+├── check_parity.py      texte ancien PDF ≡ texte nouveau PDF
+├── check_labels.py      chaque **libellé** du manuel existe dans frontend/src
+├── template.html + style.css
+├── fonts/               Bitter, Source Sans 3, JetBrains Mono (licence OFL, versionnables)
+├── chapitres/           la source
+└── captures/            les PNG produits, versionnés
+```
 
-- `@DisplayName("a receipt without proof files renders exactly as before")` — nombre de pages
-  inchangé, texte extrait sans le mot « Justificatif ».
-- `@DisplayName("each image proof adds one page to the receipt")` — deux PNG attachés → page
-  count = pages de base + 2. Lire avec `com.lowagie.text.pdf.PdfReader`.
-- `@DisplayName("proof files appear in upload order")` — deux fichiers, les légendes se suivent
-  dans l'ordre chronologique dans le texte extrait.
-- `@DisplayName("a PDF proof has all its pages imported")` — attacher un PDF de 2 pages (généré
-  dans le test avec OpenPDF) → +2 pages.
-- `@DisplayName("a proof missing from storage does not prevent the receipt from printing")` —
-  supprimer le fichier sur disque après l'upload, le reçu sort, le texte contient
-  « introuvable ».
-- `@DisplayName("the receipt still carries the advance reference")` — non-régression.
+- **WeasyPrint** pour le PDF, pas Chromium : le sommaire a besoin de `target-counter()` pour
+  les numéros de page, le pied de page de `counter(page) / counter(pages)`, la couverture d'une
+  page nommée. Chromium (`page.pdf()`) ne sait faire aucun des trois proprement.
+- **pypdf** pose les métadonnées, identiques à aujourd'hui (`Title`, `Subject`, `Author`) ;
+  la couverture passe en **Version 1.1**, édition du mois de génération.
+- `python build.py` écrit `docs/Manuel-utilisation-SPI-Ghomrassen.pdf` **au même chemin** :
+  les liens existants restent valables. Le build **échoue** — pas un avertissement — si une
+  image référencée manque ou si une capture listée dans `captures.yaml` n'a pas de fichier.
+- Une figure = image + légende numérotée « Figure 9.2 — La fenêtre Nouvel acompte ».
+  Largeur maximale = largeur du texte ; jamais d'agrandissement au-delà de la taille native.
+- Polices : Bitter, Source Sans 3 et JetBrains Mono sont sous licence OFL, elles vont dans le
+  dépôt public sans problème. Vérifier que WeasyPrint les charge via `@font-face`, pas depuis
+  le système : la CI n'a pas les mêmes polices que le Mac.
 
-Fixtures : générer les PNG dans le test avec `java.awt.image.BufferedImage` + `ImageIO`, ne
-pas versionner de binaires.
+## 2.3 — Captures d'écran automatisées
+
+`captures.py` lit `captures.yaml` et rejoue chaque entrée avec Playwright (Chromium) :
+
+```yaml
+- id: 09-nouvel-acompte
+  chapitre: 9
+  route: /advances
+  actions:
+    - click: { role: button, name: "Nouvel acompte" }
+    - wait: { role: dialog }
+  cadrage: dialog                # page | dialog | selector
+  pastilles:                     # dans l'ordre des étapes du §9.1
+    - { role: combobox, name: "Appartement" }
+    - { role: textbox,  name: "Référence" }
+    - { role: textbox,  name: "Date acompte" }
+    - { role: spinbutton, name: "Montant" }
+    - { role: combobox, name: "Mode de paiement" }
+  legende: "La fenêtre Nouvel acompte, avec le bloc de simulation"
+```
+
+Règles :
+
+- Viewport **1440 × 900**, `device_scale_factor=2`, `locale="fr-FR"`,
+  `timezone_id="Africa/Tunis"`, `color_scheme="light"`, `reduced_motion="reduce"`. Attendre la
+  fin des requêtes réseau (`wait_for_load_state("networkidle")`) et le texte attendu, jamais un
+  `sleep`.
+- **Les éléments sont trouvés par leur libellé français exact**
+  (`get_by_role("button", name="Nouvel acompte")`), les mêmes textes que le manuel cite en gras.
+  Un libellé qui change dans l'interface casse la capture : c'est voulu — le manuel ne peut plus
+  se désynchroniser silencieusement de l'écran. Pas de `data-testid` à ajouter au frontend.
+- **Pastilles** : avant la capture, injecter dans le DOM un badge par champ cité (cercle de la
+  couleur des titres, chiffre blanc, même style que les étapes du manuel), positionné en haut à
+  gauche de l'élément. Le lecteur relie l'étape 3 du texte à la pastille 3 de l'image.
+- **Cadrage** : `page` → plein écran ; `dialog` → `locator.screenshot()` du dialogue PrimeNG
+  avec 24 px de marge ; `selector` → un composant précis (bloc de simulation, panneau des
+  pièces jointes, sélecteur de projet).
+- **Documents PDF de l'application** (reçu, situation client, récapitulatif TVA) : appeler
+  l'API, puis `pdftoppm -r 150 -png -f 1 -l 1` sur la réponse → la première page devient une
+  figure. Ce sont les seules captures qui ne passent pas par le navigateur.
+- **Poids** : PNG optimisés par Pillow (`optimize=True`, palette quand l'image le permet).
+  Cible ≤ 400 Ko par capture, **PDF final ≤ 10 Mo**.
+- `python captures.py --base-url http://localhost` régénère tout ; `--only "09-*"` un
+  sous-ensemble. `--base-url` est obligatoire : pas de valeur par défaut silencieuse.
+- Les captures sont **versionnées** dans `docs/manuel/captures/` : `build.py` fonctionne sans
+  application qui tourne. On les régénère quand l'interface change, pas à chaque build.
+
+## 2.4 — Liste des figures
+
+Trente-quatre captures, au moins une par chapitre. Les libellés viennent des gabarits Angular
+(`frontend/src/app/features/**/*.html`) ; Claude Code les confirme un par un avant d'écrire
+`captures.yaml`, et signale toute étape du manuel dont le libellé n'existe plus.
+
+| Ch. | Id | Route | Cadrage | Contenu |
+|---|---|---|---|---|
+| 1 | `01-tableau-de-bord` | `/dashboard` | page | L'écran d'accueil complet |
+| 1 | `01-menu` | `/dashboard` | selector | Le menu de gauche, toutes les entrées visibles |
+| 1 | `01-selecteur-projet` | `/dashboard` | selector | Le sélecteur de projet en scope |
+| 3 | `03-projets-liste` | `/projects` | page | La liste |
+| 3 | `03-nouveau-projet` | `/projects` | dialog | **Nouveau projet**, pastilles sur les champs |
+| 3 | `03-projet-detail` | `/projects/:id` | page | La fiche d'un projet demo |
+| 4 | `04-appartements-liste` | `/apartments` | page | Le stock |
+| 4 | `04-generer-bloc` | `/apartments` | dialog | La génération d'un bloc entier (§4.2) |
+| 5 | `05-plan-de-vente` | `/sales-board` | page | Le plan par bloc et étage |
+| 5 | `05-etat-commercial` | `/sales-board` | selector | Le menu des quatre états (§5.2) |
+| 6 | `06-clients-liste` | `/clients` | page | La liste |
+| 6 | `06-nouveau-client` | `/clients` | dialog | **Nouveau client** |
+| 7 | `07-ventes-liste` | `/purchases` | page | La liste |
+| 7 | `07-nouvelle-vente` | `/purchases` | dialog | **Nouvelle vente**, pastilles (§7.2) |
+| 7 | `07-plafond` | `/purchases` | dialog | La règle du plafond visible (§7.5) |
+| 8 | `08-echeanciers` | `/schedules` | page | L'écran Échéancier (§8.5) |
+| 8 | `08-plan-de-paiement` | `/purchases` | dialog | **Échéancier de la vente** (§8.2) |
+| 9 | `09-paiements-liste` | `/advances` | page | La liste, compteur **Virements** visible |
+| 9 | `09-nouvel-acompte` | `/advances` | dialog | **Nouvel acompte**, pastilles 1 à 8 (§9.1) |
+| 9 | `09-simulation` | `/advances` | selector | Le bloc de simulation, six cases (§9.3) |
+| 9 | `09-plafond-bloquant` | `/advances` | dialog | Cases rouges, **Enregistrer** inactif (§9.4) |
+| 9 | `09-recu` | API | pdf | Première page d'un reçu demo (§9.5) |
+| 10 | `10-fournisseurs-liste` | `/suppliers` | page | La liste |
+| 10 | `10-nouveau-fournisseur` | `/suppliers` | dialog | **Nouveau fournisseur** |
+| 11 | `11-factures-liste` | `/supplier-invoices` | page | La liste, colonne **Retards** |
+| 11 | `11-nouvelle-facture` | `/supplier-invoices` | dialog | **Nouvelle facture** |
+| 11 | `11-reglements` | `/supplier-invoices` | dialog | **Règlements de la facture** (§11.3) |
+| 12 | `12-nouvelle-depense` | `/expenses` | dialog | **Nouvelle dépense**, TVA calculée |
+| 13 | `13-pieces-jointes` | `/expenses` | selector | Le panneau avec un fichier attaché |
+| 14 | `14-rapports` | `/reports` | page | L'écran et ses boutons **PDF** |
+| 14 | `14-situation-client` | API | pdf | Première page d'une situation (§14.5) |
+| 15 | `15-recherche` | `/dashboard` | selector | La recherche globale avec résultats |
+| 15 | `15-journal` | `/audit` | page | Le journal des opérations |
+| 16 | `16-message-plafond` | `/advances` | dialog | Un message bloquant tel que le chapitre le décrit |
+
+Le chapitre 2 (« L'ordre de travail ») et les annexes n'ont pas de capture : ce sont des
+textes de méthode. Le chapitre 16 réutilise `09-plafond-bloquant` si aucun autre message n'est
+reproductible sur le jeu `demo`.
+
+## 2.5 — Intégration continue (souhaitable, pas bloquant)
+
+Dans `ci.yml`, un job `manuel` après le job `demo`, qui a déjà la pile en marche :
+`pip install -r docs/manuel/requirements.txt && playwright install chromium`, puis
+`captures.py --base-url http://localhost`, puis `build.py`, et le PDF en artefact du run.
+Le job **ne compare pas les pixels** (le rendu varie d'une machine à l'autre) : il échoue
+seulement si une capture manque ou si `check_labels.py` trouve un libellé disparu.
+
+## 2.6 — Contrôles
+
+- `check_parity.py` : texte du PDF 1.0 ⊆ texte du PDF 1.1 (normalisés). Seuls les ajouts sont
+  admis : légendes de figures, numéro de version, date d'édition.
+- `check_labels.py` : chaque **libellé en gras** des chapitres existe dans
+  `frontend/src/app/**/*.html` (ou dans `messages_fr.properties` pour les messages du ch. 16).
+  Première passe en avertissement ; le rapport final liste les écarts.
+- `build.py` depuis un clone propre, sans application qui tourne : PDF produit, 45 à 60 pages,
+  chaque chapitre 1 et 3 à 16 a au moins une figure, poids ≤ 10 Mo, métadonnées conservées,
+  couverture en version 1.1.
+- `captures.py` contre la pile `demo` locale : les 34 fichiers listés existent, aucun n'est
+  vide, aucun ne dépasse 400 Ko après optimisation.
+- Le « . » orphelin des étapes a disparu (p. 25 et partout ailleurs — `grep` du rendu texte).
+- **Relecture par Wadii** de cinq pages : couverture, sommaire, §9.1 avec pastilles, une figure
+  de document PDF, glossaire. Claude Code ne peut pas juger la lisibilité d'une capture.
 
 ## Documentation
 
-Ajouter à `CLAUDE.md`, section « Décisions métier à ne pas rouvrir » :
-
-> **Le reçu embarque les justificatifs attachés à l'encaissement** (15/09/2026) : un par page,
-> en annexe, dans l'ordre d'upload. La référence du reçu ne change pas ; son contenu suit les
-> pièces jointes du moment.
+- `docs/manuel/README.md` : les deux commandes, la règle « demo uniquement », quand régénérer
+  les captures (à chaque changement d'écran), comment ajouter une figure.
+- `CLAUDE.md`, « Où sont les choses » : `Manuel d'utilisation | docs/manuel/ (source
+  Markdown, captures.yaml, build.py) — le PDF dans docs/ est un artefact, jamais édité à la main`.
+- `CLAUDE.md`, « Décisions » : *Le manuel est généré depuis `docs/manuel/` (15/09/2026). Les
+  captures viennent du jeu `demo` et sont trouvées par les libellés que le manuel cite — un
+  libellé qui change casse le build du manuel, c'est le but.*
 
 ## Critères d'acceptation Lot 2
 
-- [ ] Les 6 tests passent, `mvn -q verify` vert.
-- [ ] Un reçu sans pièce jointe est octet pour octet le même qu'avant (hors horodatage PDF).
-- [ ] Une image de 4000×3000 tient dans la page sans déborder des marges.
-- [ ] `CLAUDE.md` porte la nouvelle décision.
+- [ ] La question de la source (§2.1) a été posée à Wadii et tranchée avant toute reconstruction.
+- [ ] `docs/manuel/` existe avec les dix fichiers du §2.2 ; `build.py` régénère le PDF au même
+      chemin depuis un clone propre.
+- [ ] Les 34 captures du §2.4 sont dans `docs/manuel/captures/`, produites par `captures.py`,
+      pas à la main.
+- [ ] `check_parity.py` passe : rien du texte 1.0 n'a été perdu.
+- [ ] Le « . » orphelin a disparu.
+- [ ] PDF ≤ 10 Mo, version 1.1, métadonnées identiques.
+- [ ] Wadii a relu les cinq pages du §2.6.
 
 ---
 
@@ -510,10 +650,11 @@ Release).
 En français, un lot = un ou plusieurs commits, format du dépôt :
 
 ```
-feat(document): le reçu embarque les justificatifs attachés à l'encaissement
+docs(manuel): le manuel d'utilisation est généré depuis docs/manuel et illustré
 
-Un justificatif par page, en annexe, dans l'ordre d'upload. Un fichier absent
-du stockage n'empêche plus l'impression : une ligne le signale à la place.
+Trente-quatre captures d'écran rejouées par script sur le jeu demo, une par
+écran décrit. Le PDF dans docs/ devient un artefact de build.py ; le texte de
+la version 1.0 est conservé mot pour mot (check_parity.py).
 ```
 
 ## Rapport final
@@ -533,5 +674,7 @@ du stockage n'empêche plus l'impression : une ligne le signale à la place.
   c'est le profil `prod` existant.
 - Sauvegarde vers le cloud (OneDrive, Drive) : le client copie `backups/` lui-même ; une
   synchronisation automatique est une évolution possible.
-- Le justificatif dans la **situation client** (`clientStatement`) et le **récapitulatif TVA** :
-  le client a parlé du reçu. À proposer après validation du Lot 2.
+- **Embarquer le justificatif de virement dans le reçu PDF** : une première lecture de la demande
+  du client, écartée le 15/09/2026 — il parlait du manuel. Reste une idée à lui proposer.
+- Une version du manuel **en arabe**, ou une version courte « prise en main » de 4 pages : la
+  chaîne de `docs/manuel/` le permettrait, ce n'est pas demandé.
