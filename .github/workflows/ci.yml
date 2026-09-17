@@ -124,9 +124,10 @@ jobs:
           # En cas d'echec, publier la CAUSE en annotation : les journaux d'un run ne se lisent pas
           # sans compte GitHub, une annotation si. Sans cela, diagnostiquer un defaut propre a
           # PostgreSQL depuis un poste sans Docker demande un aller-retour par le serveur du client.
-          echoes=$(grep -h -A4 -E "^(Tests in error|Failed tests):" target/surefire-reports/*.txt 2>/dev/null | head -20 | tr '\n' ' ')
-          if [ -n "$echoes" ]; then
-            echo "::error title=Échec PostgreSQL::$echoes"
-            { echo; echo '```'; echo "$echoes"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          fi
+          for f in target/surefire-reports/*.txt; do
+            grep -qE "Failures: [1-9]|Errors: [1-9]" "$f" 2>/dev/null || continue
+            cause=$(head -60 "$f" | tr '\n' ' ' | tr -s ' ')
+            echo "::error title=Échec PostgreSQL ($(basename "$f" .txt))::${cause:0:900}"
+            { echo; echo "#### $(basename "$f" .txt)"; echo '```'; head -60 "$f"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          done
           test "$files" -ge 6 && test "$total" -ge 8
