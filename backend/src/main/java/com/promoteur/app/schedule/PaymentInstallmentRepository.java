@@ -27,8 +27,8 @@ public interface PaymentInstallmentRepository extends JpaRepository<PaymentInsta
             select i from PaymentInstallment i
             where (:projectId is null or i.purchase.project.id = :projectId)
               and (:clientId is null or i.purchase.client.id = :clientId)
-              and (:dueFrom is null or i.dueDate >= :dueFrom)
-              and (:dueTo is null or i.dueDate <= :dueTo)
+              and (i.dueDate >= coalesce(:dueFrom, i.dueDate))
+              and (i.dueDate <= coalesce(:dueTo, i.dueDate))
             order by i.dueDate asc, i.purchase.id asc, i.sequenceNo asc
             """)
     List<PaymentInstallment> findForSchedule(@Param("projectId") Long projectId,

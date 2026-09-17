@@ -69,8 +69,8 @@ public interface ClientPurchaseRepository extends JpaRepository<ClientPurchase, 
             select p from ClientPurchase p
             where (:clientId is null or p.client.id = :clientId)
               and (:projectId is null or p.project.id = :projectId)
-              and (:from is null or p.purchaseDate >= :from)
-              and (:to is null or p.purchaseDate <= :to)
+              and (p.purchaseDate >= coalesce(:from, p.purchaseDate))
+              and (p.purchaseDate <= coalesce(:to, p.purchaseDate))
             """)
     List<ClientPurchase> findForReport(@Param("clientId") Long clientId,
                                        @Param("projectId") Long projectId,
@@ -86,8 +86,8 @@ public interface ClientPurchaseRepository extends JpaRepository<ClientPurchase, 
                 count(p), coalesce(sum(p.totalAmount), 0), coalesce(sum(p.paidAmount), 0))
             from ClientPurchase p
             where (:projectId is null or p.project.id = :projectId)
-              and (:from is null or p.purchaseDate >= :from)
-              and (:to is null or p.purchaseDate <= :to)
+              and (p.purchaseDate >= coalesce(:from, p.purchaseDate))
+              and (p.purchaseDate <= coalesce(:to, p.purchaseDate))
             """)
     PurchaseSummary summary(@Param("projectId") Long projectId,
                             @Param("from") LocalDate from,
@@ -100,8 +100,8 @@ public interface ClientPurchaseRepository extends JpaRepository<ClientPurchase, 
             select new com.promoteur.app.report.AmountByLabelDto(p.project.name, sum(p.totalAmount))
             from ClientPurchase p
             where (:projectId is null or p.project.id = :projectId)
-              and (:from is null or p.purchaseDate >= :from)
-              and (:to is null or p.purchaseDate <= :to)
+              and (p.purchaseDate >= coalesce(:from, p.purchaseDate))
+              and (p.purchaseDate <= coalesce(:to, p.purchaseDate))
             group by p.project.name
             order by sum(p.totalAmount) desc
             """,
@@ -109,8 +109,8 @@ public interface ClientPurchaseRepository extends JpaRepository<ClientPurchase, 
                     select count(distinct p.project.name)
                     from ClientPurchase p
                     where (:projectId is null or p.project.id = :projectId)
-                      and (:from is null or p.purchaseDate >= :from)
-                      and (:to is null or p.purchaseDate <= :to)
+                      and (p.purchaseDate >= coalesce(:from, p.purchaseDate))
+                      and (p.purchaseDate <= coalesce(:to, p.purchaseDate))
                     """)
     Page<AmountByLabelDto> sumByProject(@Param("projectId") Long projectId,
                                         @Param("from") LocalDate from,

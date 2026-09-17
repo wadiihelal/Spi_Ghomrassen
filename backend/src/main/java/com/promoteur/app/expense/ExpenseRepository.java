@@ -52,8 +52,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
     @Query("""
             select e from Expense e
             where (:projectId is null or e.project.id = :projectId)
-              and (:from is null or e.expenseDate >= :from)
-              and (:to is null or e.expenseDate <= :to)
+              and (e.expenseDate >= coalesce(:from, e.expenseDate))
+              and (e.expenseDate <= coalesce(:to, e.expenseDate))
             """)
     List<Expense> findForReport(@Param("projectId") Long projectId,
                                 @Param("from") LocalDate from,
@@ -67,8 +67,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
             select new com.promoteur.app.report.AmountByLabelDto(e.category.name, sum(e.amountTtc))
             from Expense e
             where (:projectId is null or e.project.id = :projectId)
-              and (:from is null or e.expenseDate >= :from)
-              and (:to is null or e.expenseDate <= :to)
+              and (e.expenseDate >= coalesce(:from, e.expenseDate))
+              and (e.expenseDate <= coalesce(:to, e.expenseDate))
             group by e.category.name
             order by sum(e.amountTtc) desc
             """,
@@ -76,8 +76,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
                     select count(distinct e.category.name)
                     from Expense e
                     where (:projectId is null or e.project.id = :projectId)
-                      and (:from is null or e.expenseDate >= :from)
-                      and (:to is null or e.expenseDate <= :to)
+                      and (e.expenseDate >= coalesce(:from, e.expenseDate))
+                      and (e.expenseDate <= coalesce(:to, e.expenseDate))
                     """)
     Page<AmountByLabelDto> sumByCategory(@Param("projectId") Long projectId,
                                          @Param("from") LocalDate from,
@@ -91,8 +91,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
             select new com.promoteur.app.report.AmountByLabelDto(e.project.name, sum(e.amountTtc))
             from Expense e
             where (:projectId is null or e.project.id = :projectId)
-              and (:from is null or e.expenseDate >= :from)
-              and (:to is null or e.expenseDate <= :to)
+              and (e.expenseDate >= coalesce(:from, e.expenseDate))
+              and (e.expenseDate <= coalesce(:to, e.expenseDate))
             group by e.project.name
             order by sum(e.amountTtc) desc
             """,
@@ -100,8 +100,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
                     select count(distinct e.project.name)
                     from Expense e
                     where (:projectId is null or e.project.id = :projectId)
-                      and (:from is null or e.expenseDate >= :from)
-                      and (:to is null or e.expenseDate <= :to)
+                      and (e.expenseDate >= coalesce(:from, e.expenseDate))
+                      and (e.expenseDate <= coalesce(:to, e.expenseDate))
                     """)
     Page<AmountByLabelDto> sumByProject(@Param("projectId") Long projectId,
                                         @Param("from") LocalDate from,
@@ -115,8 +115,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
             select new com.promoteur.app.report.CountAndTotal(count(e), coalesce(sum(e.amountTtc), 0))
             from Expense e
             where (:projectId is null or e.project.id = :projectId)
-              and (:from is null or e.expenseDate >= :from)
-              and (:to is null or e.expenseDate <= :to)
+              and (e.expenseDate >= coalesce(:from, e.expenseDate))
+              and (e.expenseDate <= coalesce(:to, e.expenseDate))
             """)
     CountAndTotal countAndTotal(@Param("projectId") Long projectId,
                                 @Param("from") LocalDate from,
@@ -132,8 +132,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
                 year(e.expenseDate), month(e.expenseDate), sum(e.amountTtc))
             from Expense e
             where (:projectId is null or e.project.id = :projectId)
-              and (:from is null or e.expenseDate >= :from)
-              and (:to is null or e.expenseDate <= :to)
+              and (e.expenseDate >= coalesce(:from, e.expenseDate))
+              and (e.expenseDate <= coalesce(:to, e.expenseDate))
             group by year(e.expenseDate), month(e.expenseDate)
             order by year(e.expenseDate), month(e.expenseDate)
             """,
@@ -141,8 +141,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
                     select count(distinct concat(year(e.expenseDate), '-', month(e.expenseDate)))
                     from Expense e
                     where (:projectId is null or e.project.id = :projectId)
-                      and (:from is null or e.expenseDate >= :from)
-                      and (:to is null or e.expenseDate <= :to)
+                      and (e.expenseDate >= coalesce(:from, e.expenseDate))
+                      and (e.expenseDate <= coalesce(:to, e.expenseDate))
                     """)
     Page<MonthlyAmount> sumByMonth(@Param("projectId") Long projectId,
                                    @Param("from") LocalDate from,

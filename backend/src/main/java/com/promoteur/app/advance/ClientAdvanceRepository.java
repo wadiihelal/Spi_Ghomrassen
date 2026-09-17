@@ -64,8 +64,8 @@ public interface ClientAdvanceRepository extends JpaRepository<ClientAdvance, Lo
             select a from ClientAdvance a
             where (:clientId is null or a.client.id = :clientId)
               and (:projectId is null or a.project.id = :projectId)
-              and (:from is null or a.advanceDate >= :from)
-              and (:to is null or a.advanceDate <= :to)
+              and (a.advanceDate >= coalesce(:from, a.advanceDate))
+              and (a.advanceDate <= coalesce(:to, a.advanceDate))
             """)
     List<ClientAdvance> findForReport(@Param("clientId") Long clientId,
                                       @Param("projectId") Long projectId,
@@ -91,8 +91,8 @@ public interface ClientAdvanceRepository extends JpaRepository<ClientAdvance, Lo
             select new com.promoteur.app.report.CountAndTotal(count(a), coalesce(sum(a.amount), 0))
             from ClientAdvance a
             where (:projectId is null or a.project.id = :projectId)
-              and (:from is null or a.advanceDate >= :from)
-              and (:to is null or a.advanceDate <= :to)
+              and (a.advanceDate >= coalesce(:from, a.advanceDate))
+              and (a.advanceDate <= coalesce(:to, a.advanceDate))
             """)
     CountAndTotal countAndTotal(@Param("projectId") Long projectId,
                                 @Param("from") LocalDate from,
@@ -106,8 +106,8 @@ public interface ClientAdvanceRepository extends JpaRepository<ClientAdvance, Lo
                 cast(a.paymentMethod as string), sum(a.amount))
             from ClientAdvance a
             where (:projectId is null or a.project.id = :projectId)
-              and (:from is null or a.advanceDate >= :from)
-              and (:to is null or a.advanceDate <= :to)
+              and (a.advanceDate >= coalesce(:from, a.advanceDate))
+              and (a.advanceDate <= coalesce(:to, a.advanceDate))
             group by a.paymentMethod
             order by sum(a.amount) desc
             """,
@@ -115,8 +115,8 @@ public interface ClientAdvanceRepository extends JpaRepository<ClientAdvance, Lo
                     select count(distinct a.paymentMethod)
                     from ClientAdvance a
                     where (:projectId is null or a.project.id = :projectId)
-                      and (:from is null or a.advanceDate >= :from)
-                      and (:to is null or a.advanceDate <= :to)
+                      and (a.advanceDate >= coalesce(:from, a.advanceDate))
+                      and (a.advanceDate <= coalesce(:to, a.advanceDate))
                     """)
     Page<AmountByLabelDto> sumByPaymentMethod(@Param("projectId") Long projectId,
                                               @Param("from") LocalDate from,

@@ -54,6 +54,13 @@ Sur ce poste, si `mvn` n'est pas dans le PATH : `~/.m2/wrapper/dists/apache-mave
   `è` : le fichier est lu en ISO-8859-1.
 - **Tests** : toute règle financière (plafond, TVA, statut, cascade d'échéances, situation client)
   s'accompagne d'un test JUnit nommé d'après la règle en clair. Voir « Écrire un test ».
+- **Filtre de date optionnel en JPQL** : `(colonne >= coalesce(:from, colonne))`, **jamais**
+  `(:from is null or colonne >= :from)`. PostgreSQL refuse un paramètre dont le type n'est
+  déductible que d'un `IS NULL` — `could not determine data type of parameter $N` — là où H2
+  l'accepte : la faute passe donc toute la suite de tests et ne tombe qu'en production
+  (17/09/2026, échéancier et rapports). `coalesce` donne le type par la colonne. Les paramètres
+  `Long` et `String` ne sont pas concernés. Toute colonne ainsi comparée doit être `NOT NULL`,
+  sinon la sémantique change pour les lignes sans date.
 - **Lecture** : finders `@Transactional(readOnly = true)`, associations `LAZY`, `@EntityGraph` sur
   les listes (y compris `findAll(Specification, Pageable)` redéclaré), agrégats en JPQL avec
   `countQuery` — jamais `findAll()` puis regroupement en Java. Une page se résout avec un nombre

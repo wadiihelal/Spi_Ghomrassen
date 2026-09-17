@@ -38,18 +38,18 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
                 coalesce((select sum(p.totalAmount) from ClientPurchase p
                           where p.client = c
                             and (:projectId is null or p.project.id = :projectId)
-                            and (:from is null or p.purchaseDate >= :from)
-                            and (:to is null or p.purchaseDate <= :to)), 0),
+                            and (p.purchaseDate >= coalesce(:from, p.purchaseDate))
+                            and (p.purchaseDate <= coalesce(:to, p.purchaseDate))), 0),
                 coalesce((select sum(a.amount) from ClientAdvance a
                           where a.client = c
                             and (:projectId is null or a.project.id = :projectId)
-                            and (:from is null or a.advanceDate >= :from)
-                            and (:to is null or a.advanceDate <= :to)), 0)
+                            and (a.advanceDate >= coalesce(:from, a.advanceDate))
+                            and (a.advanceDate <= coalesce(:to, a.advanceDate))), 0)
                     + coalesce((select sum(p2.paidAmount) from ClientPurchase p2
                           where p2.client = c
                             and (:projectId is null or p2.project.id = :projectId)
-                            and (:from is null or p2.purchaseDate >= :from)
-                            and (:to is null or p2.purchaseDate <= :to)), 0))
+                            and (p2.purchaseDate >= coalesce(:from, p2.purchaseDate))
+                            and (p2.purchaseDate <= coalesce(:to, p2.purchaseDate))), 0))
             from Client c
             where (:projectId is null or c.project.id = :projectId)
               and (:clientId is null or c.id = :clientId)
